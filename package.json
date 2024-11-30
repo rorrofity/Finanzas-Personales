@@ -1,0 +1,65 @@
+{
+  "name": "finanzas-personales",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal Finance Tracking Application",
+  "scripts": {
+    "start": "node backend/server.js",
+    "client": "set PORT=3000 && react-scripts start",
+    "server": "nodemon backend/server.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
+    "@mui/icons-material": "^6.1.8",
+    "@mui/material": "^6.1.8",
+    "@mui/x-data-grid": "^7.22.3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "axios": "^0.27.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "csv-parse": "^5.3.0",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "express-fileupload": "^1.4.0",
+    "iconv-lite": "^0.6.3",
+    "jsonwebtoken": "^8.5.1",
+    "pg": "^8.7.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.3.0",
+    "react-scripts": "^5.0.1",
+    "recharts": "^2.13.3",
+    "web-vitals": "^4.2.4"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "concurrently": "^7.2.2",
+    "nodemon": "^2.0.16"
+  },
+  "keywords": [
+    "finanzas",
+    "personal finance",
+    "expense tracking"
+  ],
+  "author": "Rodrigo",
+  "license": "MIT",
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
