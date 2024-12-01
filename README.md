@@ -36,6 +36,16 @@ El sistema soporta la importación automática de estados de cuenta bancarios en
 - Prevención de duplicados
 - Procesamiento inteligente de fechas y montos
 - Feedback detallado del proceso de importación
+- Detección automática de pagos basada en montos negativos
+- Cálculo preciso de deuda total considerando gastos y pagos
+
+### Dashboard Financiero
+
+- Resumen mensual de gastos, ingresos y pagos
+- Cálculo automático de deuda total
+- Visualización de tendencias financieras
+- Gráficos interactivos de gastos por categoría
+- Actualización en tiempo real de totales
 
 ## Tecnologías Utilizadas
 

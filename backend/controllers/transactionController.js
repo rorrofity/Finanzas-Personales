@@ -20,160 +20,81 @@ const parseCSV = async (fileContent) => {
       return;
     }
 
-    console.log('=== CONTENIDO EXACTO DEL ARCHIVO ===');
-    console.log(fileContent);
-    console.log('Longitud del contenido:', fileContent.length);
-    console.log('=== FIN CONTENIDO EXACTO ===');
-
-    const parser = csv.parse({
-      columns: false,
-      skip_empty_lines: true,
-      trim: true,
-      delimiter: ',',
-      relax_quotes: true,
-      relax_column_count: true, // Permitir diferente número de columnas
-      quote: '"',
-      encoding: 'utf8'
-    });
-
-    let isHeaderFound = false;
-    let columnIndexes = null;
-    let isTransactionSection = false;
+    const lines = fileContent.split('\n');
+    
     let lineCount = 0;
+    let isInMovimientosNacionales = false;
+    let columnIndexes = null;
 
-    parser.on('readable', function() {
-      let record;
-      while ((record = parser.read()) !== null) {
-        lineCount++;
-        console.log(`\nLínea ${lineCount}:`, record);
-        
-        // Limpiar registro y eliminar campos vacíos al final
-        record = record.map(val => val ? val.trim() : '');
-        
-        // Encontrar el último elemento no vacío
-        let lastNonEmptyIndex = record.length - 1;
-        while (lastNonEmptyIndex >= 0 && !record[lastNonEmptyIndex]) {
-          lastNonEmptyIndex--;
-        }
-        record = record.slice(0, lastNonEmptyIndex + 1);
-        
-        const nonEmptyFields = record.filter(field => field && field.trim() !== '');
+    for (const line of lines) {
+      lineCount++;
+      const record = line.trim();
 
-        if (nonEmptyFields.length === 0) continue;
+      if (!record) continue;
 
-        // Buscar sección de movimientos
-        const lineText = nonEmptyFields.join(' ');
-        if (lineText.includes('Movimientos Nacionales')) {
-          console.log('¡Encontrada sección de Movimientos Nacionales!');
-          isTransactionSection = true;
+      // Detectar la sección de Movimientos Nacionales
+      if (record.includes('Movimientos Nacionales')) {
+        isInMovimientosNacionales = true;
+        continue;
+      }
+
+      if (!isInMovimientosNacionales) continue;
+
+      // Buscar el encabezado
+      if (!columnIndexes) {
+        const headerText = record.toLowerCase();
+        
+        if (headerText.includes('fecha') && headerText.includes('descripción') && headerText.includes('monto')) {
+          columnIndexes = {
+            fecha: headerText.indexOf('fecha'),
+            descripcion: headerText.indexOf('descripción'),
+            monto: headerText.indexOf('monto'),
+            cuotas: headerText.indexOf('cuotas')
+          };
           continue;
         }
+      }
 
-        // Buscar encabezados
-        if (isTransactionSection && !isHeaderFound) {
-          const headerText = record.join(',');
-          console.log('Analizando posible encabezado:', headerText);
-          
-          if (headerText.includes('Fecha')) {
-            columnIndexes = {
-              fecha: record.findIndex(col => col && col.trim() === 'Fecha'),
-              descripcion: record.findIndex(col => col && (col.trim() === 'Descripción' || col.trim() === 'Descripcion')),
-              cuotas: record.findIndex(col => col && col.trim() === 'Cuotas')
+      if (columnIndexes && record.length > 10) {
+        try {
+          const fecha = record.substring(columnIndexes.fecha, columnIndexes.fecha + 10).trim();
+          const descripcion = record.substring(columnIndexes.descripcion, columnIndexes.monto).trim();
+          let monto = record.substring(columnIndexes.monto).split(' ')[0].trim();
+          const cuotas = columnIndexes.cuotas !== -1 ? record.substring(columnIndexes.cuotas).trim() : '';
+
+          if (fecha && descripcion && monto) {
+            // Procesar el monto
+            monto = monto.replace(/\./g, '').replace(',', '.');
+            monto = parseFloat(monto);
+
+            // Determinar el tipo basado en el monto y la descripción
+            let tipo = 'gasto';
+            if (monto < 0) {
+              tipo = 'pago';
+            } else if (descripcion.toLowerCase().includes('abono')) {
+              tipo = 'ingreso';
+            }
+
+            const transaction = {
+              fecha,
+              descripcion,
+              monto,
+              tipo
             };
-            console.log('Índices de columnas encontrados:', columnIndexes);
-            isHeaderFound = true;
-            continue;
-          }
-        }
 
-        // Procesar transacciones
-        if (isHeaderFound && columnIndexes) {
-          try {
-            const fecha = record[columnIndexes.fecha];
-            const descripcion = record[columnIndexes.descripcion];
-            const cuotas = record[columnIndexes.cuotas];
-            
-            // Encontrar el último campo no vacío que podría ser el monto
-            let monto = '';
-            for (let i = record.length - 1; i >= 0; i--) {
-              if (record[i] && record[i].trim() !== '') {
-                monto = record[i];
-                break;
-              }
+            if (transaction.fecha && transaction.descripcion && !isNaN(transaction.monto)) {
+              records.push(transaction);
             }
-
-            // Solo procesar si tenemos al menos fecha y monto
-            if (fecha && monto && fecha.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-              console.log('Procesando transacción:', { fecha, descripcion, monto, cuotas });
-
-              // Limpiar el monto y eliminar los decimales ',00' si existen
-              if (monto.endsWith(',00')) {
-                monto = monto.slice(0, -3);
-              }
-              
-              // Si el monto usa punto como separador de miles y coma como decimal
-              if (monto.includes('.') && monto.includes(',')) {
-                console.log('Formato con punto de miles y coma decimal');
-                monto = monto.replace(/\./g, ''); // Quitar puntos de miles
-                monto = monto.replace(',', '.'); // Reemplazar coma decimal por punto
-              }
-              // Si el monto solo usa coma (sin puntos), asumimos que es decimal
-              else if (monto.includes(',') && !monto.includes('.')) {
-                console.log('Formato con coma decimal');
-                monto = monto.replace(',', '.');
-              }
-              
-              console.log('Monto después de procesar:', monto);
-              
-              // Convertir a número y multiplicar por 1000 para pasar de miles a pesos chilenos
-              let montoNum = Math.round(parseFloat(monto) * 1000);
-              
-              // Determinar el tipo basado en la descripción
-              const tipo = descripcion === 'Pago PAP Cuenta Corriente' ? 'pago' : 'gasto';
-              console.log('Tipo asignado:', tipo, 'para descripción:', descripcion);
-              
-              if (!isNaN(montoNum)) {
-                const transaction = {
-                  'Fecha': fecha,
-                  'Descripción': descripcion || '',
-                  'Monto ($)': montoNum,
-                  'Cuotas': cuotas ? cuotas.split('/')[0].trim() : '1',
-                  'tipo': tipo
-                };
-                console.log('¡Transacción válida encontrada!', transaction);
-                records.push(transaction);
-              }
-            }
-          } catch (error) {
-            console.error('Error procesando línea:', error);
-            // Continuar con la siguiente línea
-            continue;
           }
+        } catch (error) {
+          // Ignorar errores de parseo de líneas individuales
         }
       }
-    });
-
-    parser.on('error', function(err) {
-      console.error('Error al parsear CSV:', err);
-      // No rechazar la promesa, solo registrar el error
-      console.error('Continuando a pesar del error...');
-    });
-
-    parser.on('end', function() {
-      console.log(`\nParseo completado. ${records.length} registros válidos encontrados.`);
-      console.log('Registros finales:', records);
-      resolve(records);
-    });
-
-    try {
-      const stream = new Readable();
-      stream.push(fileContent);
-      stream.push(null);
-      stream.pipe(parser);
-    } catch (error) {
-      console.error('Error al crear stream:', error);
-      reject(error);
     }
+
+    console.log(`\nParseo completado. ${records.length} registros válidos encontrados.`);
+    console.log('Registros finales:', records);
+    resolve(records);
   });
 };
 
@@ -400,11 +321,14 @@ async function processExcelFile(filePath, userId, originalFilename) {
           descripcion: descripcion,
           monto: monto,
           cuotas: row[columnMap.cuotas] ? String(row[columnMap.cuotas]).split('/')[0] : '01',
-          tipo: tipo
+          tipo: monto < 0 ? 'pago' : tipo, // Si el monto es negativo, es un pago
+          user_id: userId
         };
 
+        // Guardar el monto original para el log
+        totalAmount += Math.abs(monto);
+
         // Agregar a la suma total y al log
-        totalAmount += monto;
         transactionLog.push({
           descripcion,
           monto,
@@ -733,14 +657,63 @@ const updateTransactionCategory = async (req, res) => {
   }
 };
 
+const fixTransactionDates = async (req, res) => {
+    const userId = req.user.id;
+    
+    try {
+        // Obtener todas las transacciones con fechas futuras
+        const findFutureQuery = `
+            SELECT id, fecha, descripcion
+            FROM transactions
+            WHERE user_id = $1
+            AND fecha > CURRENT_DATE
+            AND EXTRACT(YEAR FROM fecha) > EXTRACT(YEAR FROM CURRENT_DATE)
+        `;
+        
+        const futureTransactions = await db.query(findFutureQuery, [userId]);
+        
+        if (futureTransactions.rows.length > 0) {
+            // Corregir las fechas cambiando solo el año a 2023
+            const updateQuery = `
+                UPDATE transactions
+                SET fecha = fecha - interval '1 year'
+                WHERE id = ANY($1::uuid[])
+                RETURNING id, fecha, descripcion
+            `;
+            
+            const transactionIds = futureTransactions.rows.map(t => t.id);
+            const updatedTransactions = await db.query(updateQuery, [transactionIds]);
+            
+            console.log('Transacciones corregidas:', updatedTransactions.rows);
+            
+            res.json({
+                message: `Se corrigieron ${updatedTransactions.rows.length} transacciones con fechas futuras`,
+                correctedTransactions: updatedTransactions.rows
+            });
+        } else {
+            res.json({
+                message: 'Se corrigieron 0 transacciones con fechas futuras',
+                correctedTransactions: []
+            });
+        }
+    } catch (error) {
+        console.error('Error al corregir fechas:', error);
+        res.status(500).json({ 
+            error: 'Error al corregir fechas de transacciones',
+            details: error.message
+        });
+    }
+};
+
 module.exports = {
-  importTransactions,
-  getTransactions,
-  getCategoryAnalysis,
-  getAllTransactions,
-  deleteTransaction,
-  deleteMultipleTransactions,
-  createTransaction,
-  updateTransaction,
-  updateTransactionCategory
+    importTransactions,
+    getTransactions,
+    getCategoryAnalysis,
+    getAllTransactions,
+    deleteTransaction,
+    deleteMultipleTransactions,
+    createTransaction,
+    updateTransaction,
+    updateTransactionCategory,
+    fixTransactionDates
 };

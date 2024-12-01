@@ -375,6 +375,49 @@ rawData.slice(0, 10).forEach((row, index) => {
 
 El sistema de importación de transacciones está diseñado para ser flexible y extensible, permitiendo procesar diferentes formatos de estados de cuenta bancarios.
 
+#### Procesamiento de Transacciones
+
+1. **Detección de Tipo de Transacción**
+   ```javascript
+   // Determinación automática del tipo de transacción
+   let tipo = 'gasto';  // Por defecto
+   if (monto < 0) {
+     tipo = 'pago';     // Montos negativos son pagos
+   } else if (descripcion.toLowerCase().includes('abono')) {
+     tipo = 'ingreso';  // Abonos son ingresos
+   }
+   ```
+
+2. **Cálculo de Deuda Total**
+   ```sql
+   -- Cálculo de deuda mensual
+   SELECT 
+     COALESCE(SUM(CASE WHEN tipo = 'gasto' THEN monto ELSE 0 END), 0) as total_gastos,
+     COALESCE(SUM(CASE WHEN tipo = 'pago' THEN ABS(monto) ELSE 0 END), 0) as total_pagos,
+     (
+       COALESCE(SUM(CASE WHEN tipo = 'gasto' THEN monto ELSE 0 END), 0) -
+       COALESCE(SUM(CASE WHEN tipo = 'pago' THEN ABS(monto) ELSE 0 END), 0)
+     ) as deuda_total
+   ```
+
+3. **Validación de Datos**
+   - Verificación de formato de fecha (DD/MM/YYYY)
+   - Validación de montos numéricos
+   - Detección de transacciones duplicadas
+   - Normalización de descripciones
+
+#### Dashboard y Visualización
+
+1. **Cálculo de Totales**
+   - Gastos: Suma de todas las transacciones tipo 'gasto'
+   - Pagos: Suma del valor absoluto de transacciones tipo 'pago'
+   - Deuda: Diferencia entre gastos totales y pagos totales
+
+2. **Gráficos y Tendencias**
+   - Visualización mensual de gastos vs pagos
+   - Tendencia de deuda a lo largo del tiempo
+   - Distribución de gastos por categoría
+
 #### Templates Soportados Actualmente
 
 El sistema actualmente soporta dos formatos específicos de archivos Excel:

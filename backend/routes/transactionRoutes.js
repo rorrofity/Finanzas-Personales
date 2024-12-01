@@ -90,5 +90,6 @@ router.get('/summary', transactionController.getTransactions);
 router.get('/category-analysis', transactionController.getCategoryAnalysis);
 router.delete('/', transactionController.deleteMultipleTransactions);
 router.put('/:id/category', transactionController.updateTransactionCategory);
+router.post('/fix-dates', auth, transactionController.fixTransactionDates);
 
 module.exports = router;

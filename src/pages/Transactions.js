@@ -30,16 +30,7 @@ import {
 import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import axios from 'axios';
 
-const categories = [
-  'Alimentación',
-  'Transporte',
-  'Vivienda',
-  'Servicios',
-  'Entretenimiento',
-  'Salud',
-  'Educación',
-  'Otros',
-];
+
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
@@ -140,6 +131,18 @@ const Transactions = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'monto') {
+      // Si el monto es negativo, automáticamente cambiar el tipo a "pago"
+      const montoValue = parseFloat(value);
+      if (!isNaN(montoValue) && montoValue < 0) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: value,
+          tipo: 'pago'
+        }));
+        return;
+      }
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -376,7 +379,7 @@ const Transactions = () => {
       currency: 'CLP',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(num);
+    }).format(Math.abs(num));
   };
 
   if (loading) {
@@ -494,7 +497,7 @@ const Transactions = () => {
                       <TableCell>
                         <Select
                           size="small"
-                          value={transaction.tipo || 'gasto'}
+                          value={transaction.tipo}
                           onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
                           sx={{
                             minWidth: 100,

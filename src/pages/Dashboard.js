@@ -55,22 +55,29 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const formatCurrency = (amount) => {
+    if (amount === undefined || amount === null) {
+      return '$0';
+    }
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(Math.abs(amount));
+      currency: 'CLP'
+    }).format(num);
   };
 
   const fetchDashboardData = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
+      // Primero intentamos corregir las fechas
+      const fixDatesResponse = await axios.post('/api/transactions/fix-dates');
+
+      // Luego obtenemos los datos del dashboard
       const response = await axios.get('/api/dashboard');
       setData(response.data);
-      setError(null);
     } catch (err) {
       setError('Error al cargar los datos del dashboard');
-      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
@@ -95,11 +102,12 @@ const Dashboard = () => {
     const treemapData = [{
       name: 'Gastos por Categoría',
       children: data.categories.map((category, index) => ({
-        name: category.categoria,
+        name: category.name,
         size: Math.abs(category.total),
         percentage: ((Math.abs(category.total) / totalGastos) * 100).toFixed(1),
         color: COLORS[index % COLORS.length],
-        rawAmount: category.total
+        rawAmount: category.total,
+        count: category.count
       }))
     }];
 
@@ -339,13 +347,14 @@ const Dashboard = () => {
             <Typography 
               component="p" 
               variant="h3"
+              color="error"
               sx={{ 
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
                 letterSpacing: '-0.5px'
               }}
             >
-              {formatCurrency(Math.abs(data.currentMonth.total_gastos || 0))}
+              {data?.currentMonth ? formatCurrency(data.currentMonth.total_gastos) : '$0'}
             </Typography>
           </Paper>
         </Grid>
@@ -382,13 +391,14 @@ const Dashboard = () => {
             <Typography 
               component="p" 
               variant="h3"
+              color="success.main"
               sx={{ 
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
                 letterSpacing: '-0.5px'
               }}
             >
-              {formatCurrency(Math.abs(data.currentMonth.total_pagos || 0))}
+              {data?.currentMonth ? formatCurrency(data.currentMonth.total_pagos) : '$0'}
             </Typography>
           </Paper>
         </Grid>
@@ -425,15 +435,26 @@ const Dashboard = () => {
             <Typography 
               component="p" 
               variant="h3" 
-              color={data.currentMonth.deuda_total > 0 ? "error" : "success"}
+              color={data?.currentMonth?.deuda_total > 0 ? "error" : "success.main"}
               sx={{ 
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
                 letterSpacing: '-0.5px'
               }}
             >
-              {formatCurrency(Math.abs(data.currentMonth.deuda_total || 0))}
-              {data.currentMonth.deuda_total > 0 ? ' (Debes)' : ' (A favor)'}
+              {data?.currentMonth ? formatCurrency(data.currentMonth.deuda_total) : '$0'}
+              <Typography 
+                component="span" 
+                variant="h6" 
+                color="inherit"
+                sx={{ 
+                  ml: 1,
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 500
+                }}
+              >
+                {data?.currentMonth?.deuda_total > 0 ? '(Debes)' : '(A favor)'}
+              </Typography>
             </Typography>
           </Paper>
         </Grid>
@@ -469,9 +490,9 @@ const Dashboard = () => {
                 <BarChart
                   data={data.trend.map(item => ({
                     mes: new Date(item.mes).toLocaleDateString('es-CL', { month: 'short', year: 'numeric' }),
-                    gastos: Math.abs(item.total_gastos),
-                    pagos: Math.abs(item.total_pagos),
-                    deuda: Math.abs(item.deuda_mensual)
+                    gastos: item.total_gastos,
+                    pagos: item.total_pagos,
+                    deuda: item.deuda_mensual
                   }))}
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
@@ -480,11 +501,7 @@ const Dashboard = () => {
                   <YAxis />
                   <Tooltip 
                     formatter={(value, name) => {
-                      return [formatCurrency(value), 
-                        name === 'deuda' 
-                          ? `${name} ${value > 0 ? '(Debes)' : '(A favor)'}`
-                          : name
-                      ];
+                      return [formatCurrency(value), name];
                     }}
                   />
                   <Legend />
