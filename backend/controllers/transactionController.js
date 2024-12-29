@@ -12,8 +12,15 @@ const transactionModel = new Transaction(db);
 
 const parseCSV = async (fileContent) => {
   return new Promise((resolve, reject) => {
+    console.log('\n=== INICIO DE PROCESAMIENTO DE ARCHIVO ===');
+    console.log('Longitud del contenido:', fileContent.length, 'caracteres');
+
     const records = [];
-    
+    let lineCount = 0;
+    let isInMovimientosNacionales = false;
+    let columnIndexes = null;
+    let totalMonto = 0;
+
     if (!fileContent || fileContent.trim() === '') {
       console.error('Error: El contenido del archivo está vacío');
       reject(new Error('El contenido del archivo está vacío'));
@@ -21,11 +28,8 @@ const parseCSV = async (fileContent) => {
     }
 
     const lines = fileContent.split('\n');
+    console.log('Total de líneas en el archivo:', lines.length);
     
-    let lineCount = 0;
-    let isInMovimientosNacionales = false;
-    let columnIndexes = null;
-
     for (const line of lines) {
       lineCount++;
       const record = line.trim();
@@ -34,6 +38,7 @@ const parseCSV = async (fileContent) => {
 
       // Detectar la sección de Movimientos Nacionales
       if (record.includes('Movimientos Nacionales')) {
+        console.log(`\nLínea ${lineCount}: Encontrada sección de Movimientos Nacionales`);
         isInMovimientosNacionales = true;
         continue;
       }
@@ -51,6 +56,7 @@ const parseCSV = async (fileContent) => {
             monto: headerText.indexOf('monto'),
             cuotas: headerText.indexOf('cuotas')
           };
+          console.log('Encabezados encontrados:', columnIndexes);
           continue;
         }
       }
@@ -63,11 +69,10 @@ const parseCSV = async (fileContent) => {
           const cuotas = columnIndexes.cuotas !== -1 ? record.substring(columnIndexes.cuotas).trim() : '';
 
           if (fecha && descripcion && monto) {
-            // Procesar el monto
+            const montoOriginal = monto;
             monto = monto.replace(/\./g, '').replace(',', '.');
             monto = parseFloat(monto);
 
-            // Determinar el tipo basado en el monto y la descripción
             let tipo = 'gasto';
             if (monto < 0) {
               tipo = 'pago';
@@ -75,25 +80,32 @@ const parseCSV = async (fileContent) => {
               tipo = 'ingreso';
             }
 
-            const transaction = {
-              fecha,
-              descripcion,
-              monto,
-              tipo
-            };
+            console.log(`\nLínea ${lineCount}:`);
+            console.log('  Fecha:', fecha);
+            console.log('  Descripción:', descripcion);
+            console.log('  Monto Original:', montoOriginal);
+            console.log('  Monto Procesado:', monto);
+            console.log('  Tipo:', tipo);
 
-            if (transaction.fecha && transaction.descripcion && !isNaN(transaction.monto)) {
-              records.push(transaction);
+            totalMonto += (tipo === 'gasto' ? monto : 0);
+
+            if (fecha.match(/^\d{2}\/\d{2}\/\d{4}$/) && !isNaN(monto)) {
+              records.push({ fecha, descripcion, monto, tipo });
+            } else {
+              console.log('  ⚠️ DESCARTADA: Formato inválido');
             }
           }
         } catch (error) {
-          // Ignorar errores de parseo de líneas individuales
+          console.log(`\nError procesando línea ${lineCount}:`, error.message);
         }
       }
     }
 
-    console.log(`\nParseo completado. ${records.length} registros válidos encontrados.`);
-    console.log('Registros finales:', records);
+    console.log('\n=== RESUMEN DE PROCESAMIENTO ===');
+    console.log('Total de registros válidos:', records.length);
+    console.log('Total monto de gastos:', totalMonto);
+    console.log('=== FIN DE PROCESAMIENTO ===\n');
+
     resolve(records);
   });
 };
@@ -239,78 +251,139 @@ async function processExcelFile(filePath, userId, originalFilename) {
     }
 
     const transactions = [];
-    const existingTransactions = new Set();
+    const existingTransactionsInDB = new Set();
+    const existingTransactionsInFile = new Set();
     let totalAmount = 0;
     let transactionLog = [];
+    let skippedDuplicates = 0;
 
     // Obtener transacciones existentes para el usuario usando nuestro modelo personalizado
     try {
       const existing = await transactionModel.getAllTransactions(userId);
       
       // Crear un Set de transacciones existentes para búsqueda rápida
+      const dbTransactionCounters = new Map();
       existing.forEach(t => {
         // Asegurarse de que la fecha sea un objeto Date
-        const fecha = t.fecha instanceof Date ? t.fecha : new Date(t.fecha);
-        const key = `${fecha.toISOString()}_${t.descripcion}_${t.monto}`;
-        existingTransactions.add(key);
+        const fecha = t.fecha instanceof Date ? 
+          t.fecha : 
+          new Date(t.fecha);
+
+        const monto = t.monto;
+        const tipo = monto < 0 ? 'pago' : 'gasto';
+        const montoStr = Math.abs(monto).toString().padStart(20, '0');
+        const dbFechaStr = fecha.toISOString().split('T')[0];
+        const baseKey = `${dbFechaStr}-${t.descripcion}-${tipo}-${montoStr}`;
+        
+        // Incrementar el contador para esta transacción base en la DB
+        const count = (dbTransactionCounters.get(baseKey) || 0) + 1;
+        dbTransactionCounters.set(baseKey, count);
+        
+        // Añadir el contador a la clave final
+        const key = `${baseKey}-${count}`;
+        existingTransactionsInDB.add(key);
       });
+      
+      console.log('Transacciones existentes en DB:', existingTransactionsInDB.size);
     } catch (error) {
       console.error('Error al obtener transacciones existentes:', error);
       // Continuar con un Set vacío si hay error
     }
 
+    // Primera pasada: recolectar todas las transacciones únicas del archivo
+    const fileTransactions = [];
+    let totalRowsProcessed = 0;
+    let invalidRows = 0;
+    const transactionCounters = new Map(); // Contador para transacciones similares
+
+    console.log('\n=== INICIO DE PROCESAMIENTO DE FILAS ===');
+    console.log('Número total de filas en el archivo:', rawData.length);
+    console.log('Índice de inicio:', startIndex + 1);
+
     for (let i = startIndex + 1; i < rawData.length; i++) {
       const row = rawData[i];
-      if (!row) continue;
+      totalRowsProcessed++;
 
-      if (!row[columnMap.fecha] || !row[columnMap.descripcion] || !row[columnMap.monto]) continue;
+      if (!row) {
+        console.log(`Fila ${i}: Vacía`);
+        invalidRows++;
+        continue;
+      }
+
+      // Log de la fila actual para diagnóstico
+      console.log(`\nProcesando fila ${i}:`);
+      console.log('Fecha:', row[columnMap.fecha]);
+      console.log('Descripción:', row[columnMap.descripcion]);
+      console.log('Monto:', row[columnMap.monto]);
+
+      if (!row[columnMap.fecha] || !row[columnMap.descripcion] || !row[columnMap.monto]) {
+        console.log('Fila descartada: Faltan campos requeridos');
+        invalidRows++;
+        continue;
+      }
 
       try {
         let fecha;
-        const fechaStr = row[columnMap.fecha];
+        const rawFechaStr = row[columnMap.fecha];
         
-        if (fechaStr instanceof Date) {
-          fecha = fechaStr;
-        } else if (typeof fechaStr === 'number') {
-          fecha = parseExcelDate(fechaStr);
-        } else if (typeof fechaStr === 'string') {
-          // Convertir el formato dd/mm/yyyy a Date
-          const [day, month, year] = fechaStr.split('/').map(num => parseInt(num, 10));
+        if (rawFechaStr instanceof Date) {
+          fecha = rawFechaStr;
+        } else if (typeof rawFechaStr === 'number') {
+          fecha = parseExcelDate(rawFechaStr);
+        } else if (typeof rawFechaStr === 'string') {
+          const [day, month, year] = rawFechaStr.split('/').map(num => parseInt(num, 10));
           fecha = new Date(year, month - 1, day);
         } else {
-          console.warn('Formato de fecha no reconocido:', fechaStr);
+          console.warn('Formato de fecha no reconocido:', rawFechaStr);
           continue;
         }
 
         let monto = row[columnMap.monto];
         if (typeof monto === 'string') {
-          // Limpiar el monto de caracteres no numéricos
           monto = monto.replace(/[^\d.-]/g, '');
         }
         monto = parseFloat(monto);
 
-        // Solo validar que el monto sea un número
         if (isNaN(monto)) {
           console.warn('Monto inválido:', monto, 'en fila:', i + 1);
           continue;
         }
 
         const descripcion = String(row[columnMap.descripcion]).trim();
+        const currentFechaStr = fecha.toISOString().split('T')[0];
+        const tipo = monto < 0 ? 'pago' : 'gasto';
+        const montoStr = Math.abs(monto).toString().padStart(20, '0');
+        const baseKey = `${currentFechaStr}-${descripcion}-${tipo}-${montoStr}`;
         
-        // Verificar si la transacción ya existe
-        const transactionKey = `${fecha.toISOString()}_${descripcion}_${monto}`;
-        if (existingTransactions.has(transactionKey)) {
-          console.log('Transacción duplicada omitida:', { fecha, descripcion, monto });
+        // Incrementar el contador para esta transacción base
+        const count = (transactionCounters.get(baseKey) || 0) + 1;
+        transactionCounters.set(baseKey, count);
+        
+        // Añadir el contador a la clave final
+        const transactionKey = `${baseKey}-${count}`;
+
+        // Solo verificar duplicados dentro del archivo
+        if (existingTransactionsInFile.has(transactionKey)) {
+          console.log('\n=== DUPLICADO ENCONTRADO ===');
+          console.log('Fila:', i);
+          console.log('Fecha:', currentFechaStr);
+          console.log('Descripción:', descripcion);
+          console.log('Monto:', monto);
+          console.log('Clave de transacción:', transactionKey);
+          console.log('===========================\n');
+          skippedDuplicates++;
           continue;
         }
 
-        // Determinar el tipo de transacción basado en los patrones
-        let tipo = template.defaultType;
+        existingTransactionsInFile.add(transactionKey);
+
+        // Determinar el tipo de transacción
+        let tipoTransaccion = template.defaultType;
         if (template.typePatterns) {
           const descripcionLower = descripcion.toLowerCase();
           for (const [tipoPattern, patterns] of Object.entries(template.typePatterns)) {
             if (patterns.some(pattern => descripcionLower.includes(pattern))) {
-              tipo = tipoPattern;
+              tipoTransaccion = tipoPattern;
               break;
             }
           }
@@ -321,22 +394,13 @@ async function processExcelFile(filePath, userId, originalFilename) {
           descripcion: descripcion,
           monto: monto,
           cuotas: row[columnMap.cuotas] ? String(row[columnMap.cuotas]).split('/')[0] : '01',
-          tipo: monto < 0 ? 'pago' : tipo, // Si el monto es negativo, es un pago
+          tipo: monto < 0 ? 'pago' : tipoTransaccion,
           user_id: userId
         };
 
-        // Guardar el monto original para el log
         totalAmount += Math.abs(monto);
-
-        // Agregar a la suma total y al log
-        transactionLog.push({
-          descripcion,
-          monto,
-          tipo
-        });
-
-        transactions.push(transaction);
-        existingTransactions.add(transactionKey);
+        transactionLog.push({ descripcion, monto, tipo: tipoTransaccion });
+        fileTransactions.push(transaction);
       } catch (error) {
         console.error('Error procesando fila:', error);
         console.error('Datos de la fila:', row);
@@ -344,8 +408,50 @@ async function processExcelFile(filePath, userId, originalFilename) {
       }
     }
 
+    console.log('\n=== ESTADÍSTICAS DE PROCESAMIENTO ===');
+    console.log('Total de filas procesadas:', totalRowsProcessed);
+    console.log('Filas inválidas o vacías:', invalidRows);
+    console.log('Transacciones válidas encontradas:', fileTransactions.length);
+    console.log('Duplicados en el archivo:', skippedDuplicates);
+
+    // Segunda pasada: filtrar las transacciones que ya existen en la base de datos
+    let dbDuplicates = 0;
+    const newTransactionCounters = new Map();
+    
+    transactions.push(...fileTransactions.filter(t => {
+      const monto = t.monto;
+      const tipo = monto < 0 ? 'pago' : 'gasto';
+      const montoStr = Math.abs(monto).toString().padStart(20, '0');
+      const baseKey = `${t.fecha.toISOString().split('T')[0]}-${t.descripcion}-${tipo}-${montoStr}`;
+      
+      // Incrementar el contador para esta nueva transacción
+      const count = (newTransactionCounters.get(baseKey) || 0) + 1;
+      newTransactionCounters.set(baseKey, count);
+      
+      // Añadir el contador a la clave final
+      const transactionKey = `${baseKey}-${count}`;
+      const exists = existingTransactionsInDB.has(transactionKey);
+      if (exists) {
+        console.log('\n=== DUPLICADO ENCONTRADO ===');
+        console.log('Fila:', i);
+        console.log('Fecha:', t.fecha.toISOString().split('T')[0]);
+        console.log('Descripción:', t.descripcion);
+        console.log('Monto:', t.monto);
+        console.log('Clave de transacción:', transactionKey);
+        console.log('===========================\n');
+        dbDuplicates++;
+      }
+      return !exists;
+    }));
+
     console.log('\n=== RESUMEN DE TRANSACCIONES ===');
-    console.log('Número total de transacciones:', transactions.length);
+    console.log('Número total de filas en el archivo:', rawData.length);
+    console.log('Filas procesadas:', totalRowsProcessed);
+    console.log('Filas inválidas o vacías:', invalidRows);
+    console.log('Transacciones válidas encontradas:', fileTransactions.length);
+    console.log('Duplicados encontrados en el archivo:', skippedDuplicates);
+    console.log('Duplicados encontrados en base de datos:', dbDuplicates);
+    console.log('Transacciones únicas a insertar:', transactions.length);
     console.log('Monto total:', totalAmount.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' }));
     console.log('\nDetalle de transacciones:');
     transactionLog.forEach((t, i) => {
@@ -525,11 +631,14 @@ const getCategoryAnalysis = async (req, res) => {
 
 const getAllTransactions = async (req, res) => {
   try {
-    const transactions = await transactionModel.getAllTransactions(req.user.id);
+    const userId = req.user.id;
+    const { orderBy, orderDirection } = req.query;
+    
+    const transactions = await transactionModel.getAllTransactions(userId, orderBy, orderDirection);
     res.json(transactions);
   } catch (error) {
-    console.error('Error obteniendo transacciones:', error);
-    res.status(500).json({ error: 'Error al obtener transacciones' });
+    console.error('Error en getAllTransactions:', error);
+    res.status(500).json({ error: error.message });
   }
 };
 

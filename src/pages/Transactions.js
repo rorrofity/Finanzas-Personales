@@ -27,10 +27,13 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import { 
+  Delete as DeleteIcon, 
+  Edit as EditIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon 
+} from '@mui/icons-material';
 import axios from 'axios';
-
-
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
@@ -40,6 +43,8 @@ const Transactions = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [orderBy, setOrderBy] = useState('fecha');
+  const [orderDirection, setOrderDirection] = useState('DESC');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [openImportDialog, setOpenImportDialog] = useState(false);
@@ -73,7 +78,12 @@ const Transactions = () => {
 
   const fetchTransactions = async () => {
     try {
-      const response = await axios.get('/api/transactions');
+      const response = await axios.get('/api/transactions', {
+        params: {
+          orderBy,
+          orderDirection
+        }
+      });
       setTransactions(response.data || []);
       setError(null);
     } catch (err) {
@@ -382,6 +392,36 @@ const Transactions = () => {
     }).format(Math.abs(num));
   };
 
+  // Función para manejar el ordenamiento
+  const handleSort = (field) => {
+    if (orderBy === field) {
+      setOrderDirection(orderDirection === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      setOrderBy(field);
+      setOrderDirection('ASC');
+    }
+  };
+
+  // Componente para el encabezado ordenable
+  const SortableTableCell = ({ field, label }) => (
+    <TableCell>
+      <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => handleSort(field)}>
+        {label}
+        <IconButton size="small">
+          {orderBy === field ? (
+            orderDirection === 'ASC' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />
+          ) : (
+            <ArrowUpwardIcon sx={{ opacity: 0.3 }} />
+          )}
+        </IconButton>
+      </Box>
+    </TableCell>
+  );
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [orderBy, orderDirection]);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -439,11 +479,11 @@ const Transactions = () => {
                     onChange={handleSelectAll}
                   />
                 </TableCell>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Descripción</TableCell>
-                <TableCell>Monto</TableCell>
-                <TableCell>Categoría</TableCell>
-                <TableCell>Tipo</TableCell>
+                <SortableTableCell field="fecha" label="Fecha" />
+                <SortableTableCell field="descripcion" label="Descripción" />
+                <SortableTableCell field="monto" label="Monto" />
+                <SortableTableCell field="category_name" label="Categoría" />
+                <SortableTableCell field="tipo" label="Tipo" />
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>

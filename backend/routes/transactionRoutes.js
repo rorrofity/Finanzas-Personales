@@ -92,4 +92,44 @@ router.delete('/', transactionController.deleteMultipleTransactions);
 router.put('/:id/category', transactionController.updateTransactionCategory);
 router.post('/fix-dates', auth, transactionController.fixTransactionDates);
 
+// Ruta para debugging de transacciones
+router.get('/debug-last-import', async (req, res) => {
+  try {
+    // Obtener las últimas transacciones importadas (ajusta el rango de fechas según necesites)
+    const result = await pool.query(`
+      SELECT 
+        fecha,
+        descripcion,
+        monto,
+        tipo,
+        created_at
+      FROM transactions 
+      WHERE user_id = $1 
+      AND created_at >= NOW() - INTERVAL '1 hour'
+      ORDER BY fecha ASC, descripcion ASC
+    `, [req.user.id]);
+
+    // Calcular totales
+    const totals = await pool.query(`
+      SELECT 
+        COUNT(*) as total_count,
+        SUM(CASE WHEN tipo = 'gasto' THEN monto ELSE 0 END) as total_gastos,
+        SUM(CASE WHEN tipo = 'pago' THEN ABS(monto) ELSE 0 END) as total_pagos,
+        COUNT(CASE WHEN tipo = 'gasto' THEN 1 END) as num_gastos,
+        COUNT(CASE WHEN tipo = 'pago' THEN 1 END) as num_pagos
+      FROM transactions 
+      WHERE user_id = $1 
+      AND created_at >= NOW() - INTERVAL '1 hour'
+    `, [req.user.id]);
+
+    res.json({
+      transactions: result.rows,
+      summary: totals.rows[0]
+    });
+  } catch (error) {
+    console.error('Error en debug-last-import:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 module.exports = router;

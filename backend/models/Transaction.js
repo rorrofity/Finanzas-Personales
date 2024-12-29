@@ -3,43 +3,79 @@ class Transaction {
     this.query = db.query;
   }
 
+  async removeUniqueConstraint() {
+    try {
+      const query = `
+        ALTER TABLE transactions 
+        DROP CONSTRAINT IF EXISTS transactions_user_id_fecha_descripcion_monto_key;
+      `;
+      await this.query(query);
+      console.log('Restricción de unicidad eliminada con éxito');
+    } catch (error) {
+      console.error('Error al eliminar la restricción de unicidad:', error);
+      // No lanzamos el error aquí para permitir que la importación continúe incluso si la restricción ya no existe
+    }
+  }
+
   async importFromCSV(userId, transactionData) {
     let insertedCount = 0;
     let skippedCount = 0;
     const results = [];
 
     try {
-      for (const transaction of transactionData) {
+      // Eliminar la restricción de unicidad antes de comenzar
+      await this.removeUniqueConstraint();
+
+      console.log('=== INICIO DE IMPORTACIÓN ===');
+      console.log('Usuario:', userId);
+      console.log('Transacciones a procesar:', transactionData.length);
+      
+      // Obtener las transacciones existentes ANTES de comenzar la importación
+      const existingTransactionsQuery = `
+        SELECT fecha, descripcion, monto 
+        FROM transactions 
+        WHERE user_id = $1
+      `;
+      
+      const existingTransactionsResult = await this.query(existingTransactionsQuery, [userId]);
+      console.log('Transacciones existentes encontradas:', existingTransactionsResult.rows.length);
+      
+      // Crear un conjunto de transacciones existentes para búsqueda rápida
+      const existingTransactions = new Set();
+      existingTransactionsResult.rows.forEach(t => {
+        // Formatear la fecha para que coincida con el formato de las nuevas transacciones
+        const fecha = t.fecha instanceof Date ? t.fecha : new Date(t.fecha);
+        const fechaStr = fecha.toISOString().split('T')[0];
+        const key = `${fechaStr}-${t.descripcion}-${t.monto}`;
+        existingTransactions.add(key);
+      });
+
+      // Procesar todas las transacciones nuevas
+      for (const [index, transaction] of transactionData.entries()) {
         try {
+          console.log(`\nProcesando transacción ${index + 1}/${transactionData.length}`);
+          
           // Asegurarse de que la fecha sea un objeto Date
           const fecha = transaction.fecha instanceof Date ? 
             transaction.fecha : 
             new Date(transaction.fecha);
+
+          // Formatear la fecha para la comparación
+          const fechaStr = fecha.toISOString().split('T')[0];
 
           // Asegurarse de que el monto sea un número
           const monto = typeof transaction.monto === 'number' ? 
             transaction.monto : 
             parseFloat(transaction.monto);
 
-          // Verificar si la transacción ya existe
-          const checkQuery = `
-            SELECT id FROM transactions 
-            WHERE user_id = $1 
-            AND fecha = $2 
-            AND descripcion = $3 
-            AND monto = $4
-          `;
-          
-          const existingTransaction = await this.query(checkQuery, [
-            userId,
-            fecha,
-            transaction.descripcion,
-            monto
-          ]);
+          // Crear una clave única para esta transacción
+          const transactionKey = `${fechaStr}-${transaction.descripcion}-${monto}`;
+          console.log('Clave de transacción:', transactionKey);
 
-          if (existingTransaction.rows.length > 0) {
-            console.log('Transacción duplicada encontrada:', {
-              fecha: fecha,
+          // Solo verificar contra las transacciones que existían antes de comenzar
+          if (existingTransactions.has(transactionKey)) {
+            console.log('Transacción duplicada encontrada en base de datos:', {
+              fecha: fechaStr,
               descripcion: transaction.descripcion,
               monto: monto
             });
@@ -83,58 +119,66 @@ class Transaction {
             transaction.cuotas || '01'
           ];
 
+          const result = await this.query(insertQuery, values);
           console.log('Insertando nueva transacción:', {
-            fecha: fecha,
+            fecha: fechaStr,
             descripcion: transaction.descripcion,
             monto: monto,
             tipo: transaction.tipo || 'gasto'
           });
 
-          const result = await this.query(insertQuery, values);
           results.push(result.rows[0]);
           insertedCount++;
         } catch (error) {
-          console.error('Error procesando transacción individual:', error);
-          console.error('Datos de la transacción:', transaction);
-          // Continuar con la siguiente transacción
-          continue;
+          console.error('Error procesando transacción:', error);
+          if (error.code === '23505') { // Error de duplicado
+            console.log('Transacción duplicada detectada, saltando:', {
+              fecha: fechaStr,
+              descripcion: transaction.descripcion,
+              monto: monto
+            });
+            skippedCount++;
+          } else {
+            // Para otros errores, los registramos pero continuamos con la siguiente transacción
+            console.error('Error al procesar la transacción, continuando con la siguiente:', error);
+          }
         }
-      }
-
-      const totalProcessed = insertedCount + skippedCount;
-      let message = `Procesamiento completado. `;
-      if (insertedCount > 0) {
-        message += `Se insertaron ${insertedCount} transacciones nuevas. `;
-      }
-      if (skippedCount > 0) {
-        message += `Se omitieron ${skippedCount} transacciones existentes.`;
       }
 
       return {
-        insertedTransactions: results,
-        message,
+        message: 'Importación completada con éxito',
         stats: {
+          total: transactionData.length,
           inserted: insertedCount,
-          skipped: skippedCount,
-          total: totalProcessed
-        }
+          skipped: skippedCount
+        },
+        insertedTransactions: results
       };
 
     } catch (error) {
-      console.error('Error completo:', error);
-      throw new Error(`Error importando transacciones: ${error.message}`);
+      console.error('Error en importFromCSV:', error);
+      throw error;
     }
   }
 
-  async getAllTransactions(userId) {
+  async getAllTransactions(userId, orderBy = 'fecha', orderDirection = 'DESC') {
     try {
+      // Validar los campos de ordenamiento permitidos
+      const allowedFields = ['fecha', 'descripcion', 'monto', 'category_name', 'tipo'];
+      const field = allowedFields.includes(orderBy) ? orderBy : 'fecha';
+      
+      // Validar la dirección del ordenamiento
+      const direction = orderDirection.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+      // Construir la consulta con ordenamiento dinámico
       const query = `
         SELECT t.*, c.name as category_name
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.user_id = $1
-        ORDER BY t.fecha DESC, t.created_at DESC
+        ORDER BY ${field === 'category_name' ? 'c.name' : 't.' + field} ${direction}, t.created_at DESC
       `;
+      
       const result = await this.query(query, [userId]);
       return result.rows;
     } catch (error) {
