@@ -23,6 +23,23 @@ async function runMigrations() {
                 await db.query(sql);
                 console.log(`✓ Migración ${file} ejecutada exitosamente`);
             } catch (error) {
+                // Permitir que migraciones idempotentes continúen si los objetos ya existen
+                const benignCodes = new Set([
+                    '42P07', // duplicate_table
+                    '42710', // duplicate_object (constraint/index)
+                    '23505', // unique_violation (posibles índices únicos)
+                ]);
+                const benignMessages = [
+                    'already exists',
+                    'relation',
+                    'duplicate key value violates unique constraint',
+                ];
+
+                if (benignCodes.has(error.code) || benignMessages.some(m => (error.message || '').toLowerCase().includes(m))) {
+                    console.warn(`! Aviso: ${file} omitida parcialmente por objeto existente (${error.code || 'no-code'}). Continuando...`);
+                    continue;
+                }
+
                 console.error(`✗ Error ejecutando migración ${file}:`, error.message);
                 throw error;
             }

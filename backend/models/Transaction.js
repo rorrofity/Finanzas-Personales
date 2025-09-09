@@ -17,7 +17,7 @@ class Transaction {
     }
   }
 
-  async importFromCSV(userId, transactionData) {
+  async importFromCSV(userId, transactionData, importId = null) {
     let insertedCount = 0;
     let skippedCount = 0;
     const results = [];
@@ -104,8 +104,9 @@ class Transaction {
               category_id,
               descripcion, 
               tipo,
-              cuotas
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+              cuotas,
+              import_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
           `;
 
@@ -116,7 +117,8 @@ class Transaction {
             categoryId,
             transaction.descripcion,
             transaction.tipo || 'gasto',
-            transaction.cuotas || '01'
+            transaction.cuotas || '01',
+            importId
           ];
 
           const result = await this.query(insertQuery, values);
@@ -161,10 +163,10 @@ class Transaction {
     }
   }
 
-  async getAllTransactions(userId, orderBy = 'fecha', orderDirection = 'DESC') {
+  async getAllTransactions(userId, orderBy = 'fecha', orderDirection = 'DESC', startDate = null, endDate = null, periodYear = null, periodMonth = null) {
     try {
       // Validar los campos de ordenamiento permitidos
-      const allowedFields = ['fecha', 'descripcion', 'monto', 'category_name', 'tipo'];
+      const allowedFields = ['fecha', 'descripcion', 'monto', 'category_name', 'tipo', 'provider', 'network'];
       const field = allowedFields.includes(orderBy) ? orderBy : 'fecha';
       
       // Validar la dirección del ordenamiento
@@ -172,14 +174,26 @@ class Transaction {
 
       // Construir la consulta con ordenamiento dinámico
       const query = `
-        SELECT t.*, c.name as category_name
+        SELECT 
+          t.*, 
+          c.name as category_name,
+          i.provider,
+          i.network
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
+        LEFT JOIN imports i ON t.import_id = i.id
         WHERE t.user_id = $1
-        ORDER BY ${field === 'category_name' ? 'c.name' : 't.' + field} ${direction}, t.created_at DESC
+        ${periodYear && periodMonth ? 'AND i.period_year = $2 AND i.period_month = $3' : (startDate && endDate ? 'AND t.fecha >= $2 AND t.fecha <= $3' : '')}
+        ORDER BY ${field === 'category_name' ? 'c.name' : (field === 'provider' ? 'i.provider' : (field === 'network' ? 'i.network' : 't.' + field))} ${direction}, t.created_at DESC
       `;
       
-      const result = await this.query(query, [userId]);
+      const params = [userId];
+      if (periodYear && periodMonth) {
+        params.push(periodYear, periodMonth);
+      } else if (startDate && endDate) {
+        params.push(startDate, endDate);
+      }
+      const result = await this.query(query, params);
       return result.rows;
     } catch (error) {
       console.error('Error completo:', error);

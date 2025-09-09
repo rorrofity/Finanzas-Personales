@@ -1,5 +1,61 @@
 const db = require('../config/database');
 
+const getMonthlySummary = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { startDate, endDate, periodYear, periodMonth } = req.query;
+        console.log('[getMonthlySummary] user:', userId, 'periodYear:', periodYear, 'periodMonth:', periodMonth, 'startDate:', startDate, 'endDate:', endDate);
+
+        let rows = [{ gastos: 0, ingresos: 0, pagos: 0 }];
+        if (periodYear && periodMonth) {
+            console.log('[getMonthlySummary] Using IMPORT PERIOD filter');
+            // Filtrar por período del import si se especifica
+            const summaryByPeriodQuery = `
+                SELECT 
+                    COALESCE(SUM(CASE WHEN t.tipo = 'gasto' THEN t.monto ELSE 0 END), 0) AS gastos,
+                    COALESCE(SUM(CASE WHEN t.tipo = 'ingreso' THEN t.monto ELSE 0 END), 0) AS ingresos,
+                    COALESCE(SUM(CASE WHEN t.tipo = 'pago' THEN ABS(t.monto) ELSE 0 END), 0) AS pagos
+                FROM transactions t
+                LEFT JOIN imports i ON t.import_id = i.id
+                WHERE t.user_id = $1
+                  AND i.period_year = $2::int
+                  AND i.period_month = $3::int
+            `;
+            const resp = await db.query(summaryByPeriodQuery, [userId, parseInt(periodYear, 10), parseInt(periodMonth, 10)]);
+            rows = resp.rows;
+        } else if (startDate && endDate) {
+            console.log('[getMonthlySummary] Using DATE RANGE filter');
+            // Nota: t.fecha es de tipo DATE, por lo que comparar con YYYY-MM-DD es suficiente
+            const summaryQuery = `
+                SELECT 
+                    COALESCE(SUM(CASE WHEN t.tipo = 'gasto' THEN t.monto ELSE 0 END), 0) AS gastos,
+                    COALESCE(SUM(CASE WHEN t.tipo = 'ingreso' THEN t.monto ELSE 0 END), 0) AS ingresos,
+                    COALESCE(SUM(CASE WHEN t.tipo = 'pago' THEN ABS(t.monto) ELSE 0 END), 0) AS pagos
+                FROM transactions t
+                WHERE t.user_id = $1
+                  AND t.fecha >= $2::date
+                  AND t.fecha <= $3::date
+            `;
+            const resp = await db.query(summaryQuery, [userId, startDate, endDate]);
+            rows = resp.rows;
+        }
+
+        const row = rows[0] || { gastos: 0, ingresos: 0, pagos: 0 };
+        // v1: pagos son montos que reducen deuda, por lo que suman al saldo neto
+        const saldoNeto = Number(row.ingresos) - Number(row.gastos) + Number(row.pagos);
+
+        return res.json({
+            gastos: Number(row.gastos),
+            ingresos: Number(row.ingresos),
+            pagos: Number(row.pagos),
+            saldoNeto
+        });
+    } catch (error) {
+        console.error('Error en getMonthlySummary:', error);
+        res.status(500).json({ error: 'Error al obtener resumen mensual' });
+    }
+};
+
 const getDashboardData = async (req, res) => {
     console.log('=== Dashboard Request ===');
     console.log('User:', req.user);
@@ -224,5 +280,6 @@ const getDashboardData = async (req, res) => {
 };
 
 module.exports = {
-    getDashboardData
+    getDashboardData,
+    getMonthlySummary
 };

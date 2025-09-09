@@ -474,6 +474,44 @@ const importTransactions = async (req, res) => {
 
     console.log('Archivo recibido:', req.file);
 
+    // Validar metadata de importación
+    const providerRaw = (req.body?.provider || '').toLowerCase().trim();
+    const networkRaw = (req.body?.network || '').toLowerCase().trim();
+
+    const allowedProviders = new Set(['banco_chile', 'banco_cencosud']);
+    if (!allowedProviders.has(providerRaw)) {
+      return res.status(400).json({ error: 'Debes seleccionar un banco válido: Banco de Chile o Banco Cencosud' });
+    }
+
+    let network = null;
+    if (providerRaw === 'banco_chile') {
+      const allowedNetworks = new Set(['visa', 'mastercard']);
+      if (!allowedNetworks.has(networkRaw)) {
+        return res.status(400).json({ error: 'Para Banco de Chile debes seleccionar Visa o Mastercard' });
+      }
+      network = networkRaw;
+    }
+
+    const provider = providerRaw;
+
+    // Periodo de estado de cuenta (opcional en v1, recomendado)
+    let periodYear = null;
+    let periodMonth = null;
+    if (req.body?.periodYear) {
+      const py = parseInt(req.body.periodYear, 10);
+      if (!Number.isInteger(py) || py < 2000 || py > 2100) {
+        return res.status(400).json({ error: 'periodYear inválido' });
+      }
+      periodYear = py;
+    }
+    if (req.body?.periodMonth) {
+      const pm = parseInt(req.body.periodMonth, 10);
+      if (!Number.isInteger(pm) || pm < 1 || pm > 12) {
+        return res.status(400).json({ error: 'periodMonth inválido' });
+      }
+      periodMonth = pm;
+    }
+
     const fileExtension = path.extname(req.file.originalname).toLowerCase();
 
     // Validar el tipo de archivo
@@ -560,14 +598,52 @@ const importTransactions = async (req, res) => {
     console.log(`Se encontraron ${processedTransactions.length} transacciones para procesar`);
     console.log('Primeras 3 transacciones:', processedTransactions.slice(0, 3));
 
+    // Crear registro de importación
+    let importId = null;
+    try {
+      const importInsert = await db.query(
+        `INSERT INTO imports (user_id, provider, network, product_type, original_filename, period_year, period_month)
+         VALUES ($1, $2, $3, 'credit_card', $4, $5, $6)
+         RETURNING id`,
+        [req.user.id, provider, network, req.file.originalname, periodYear, periodMonth]
+      );
+      importId = importInsert.rows[0]?.id || null;
+    } catch (e) {
+      console.error('Error creando registro de importación:', e);
+      // No abortamos, pero seguimos sin importId
+    }
+
     const transactionModel = new Transaction(db);
-    const importResult = await transactionModel.importFromCSV(req.user.id, processedTransactions);
+    const importResult = await transactionModel.importFromCSV(req.user.id, processedTransactions, importId);
+
+    // Actualizar métricas de importación si se creó el registro
+    if (importId) {
+      try {
+        await db.query(
+          `UPDATE imports
+           SET detected_rows = $1,
+               inserted_count = $2,
+               skipped_count = $3
+           WHERE id = $4`,
+          [processedTransactions.length, importResult.stats.inserted, importResult.stats.skipped, importId]
+        );
+      } catch (e) {
+        console.error('Error actualizando métricas de importación:', e);
+      }
+    }
 
     res.status(201).json({
       success: true,
       message: importResult.message,
       stats: importResult.stats,
-      transactions: importResult.insertedTransactions
+      transactions: importResult.insertedTransactions,
+      import: {
+        id: importId,
+        provider,
+        network,
+        periodYear,
+        periodMonth
+      }
     });
 
   } catch (error) {
@@ -632,9 +708,19 @@ const getCategoryAnalysis = async (req, res) => {
 const getAllTransactions = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { orderBy, orderDirection } = req.query;
+    const { orderBy, orderDirection, startDate, endDate, periodYear, periodMonth } = req.query;
+    console.log('[getAllTransactions] user:', userId, 'orderBy:', orderBy, 'orderDirection:', orderDirection, 'periodYear:', periodYear, 'periodMonth:', periodMonth, 'startDate:', startDate, 'endDate:', endDate);
     
-    const transactions = await transactionModel.getAllTransactions(userId, orderBy, orderDirection);
+    const transactions = await transactionModel.getAllTransactions(
+      userId,
+      orderBy,
+      orderDirection,
+      startDate || null,
+      endDate || null,
+      periodYear ? parseInt(periodYear, 10) : null,
+      periodMonth ? parseInt(periodMonth, 10) : null
+    );
+    console.log('[getAllTransactions] returned count:', Array.isArray(transactions) ? transactions.length : 'n/a');
     res.json(transactions);
   } catch (error) {
     console.error('Error en getAllTransactions:', error);

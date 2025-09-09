@@ -7,7 +7,7 @@ import {
   Drawer,
   IconButton,
   List,
-  ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Toolbar,
@@ -126,8 +126,7 @@ const DashboardLayout = () => {
         <Box sx={{ overflow: 'auto' }}>
           <List>
             {menuItems.map((item) => (
-              <ListItem
-                button
+              <ListItemButton
                 key={item.text}
                 onClick={() => navigate(item.path)}
                 sx={{
@@ -149,7 +148,7 @@ const DashboardLayout = () => {
                   primary={item.text}
                   sx={{ opacity: open ? 1 : 0 }}
                 />
-              </ListItem>
+              </ListItemButton>
             ))}
           </List>
         </Box>

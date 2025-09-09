@@ -31,6 +31,8 @@ import {
   Cell
 } from 'recharts';
 import axios from 'axios';
+import MonthPicker from '../components/MonthPicker';
+import { usePeriod } from '../contexts/PeriodContext';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 
@@ -53,6 +55,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const theme = useTheme();
   const navigate = useNavigate();
+  const { startISO, endISO, label, year, month } = usePeriod();
 
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) {
@@ -65,17 +68,88 @@ const Dashboard = () => {
     }).format(num);
   };
 
+  useEffect(() => {
+    fetchDashboardData();
+  }, [year, month]);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       setError(null);
+      // Corregir fechas (si aplica) y luego cargar summary y transacciones del período
+      try {
+        await axios.post('/api/transactions/fix-dates');
+      } catch (e) {
+        console.warn('fix-dates no disponible, continuando:', e?.response?.status || e?.message);
+      }
+      const startDate = startISO?.slice(0, 10);
+      const endDate = endISO?.slice(0, 10);
+      const periodYear = year;
+      const periodMonth = month;
+      // Obtener summary (tolerante a errores) y transacciones del período
+      let summaryData = { gastos: 0, ingresos: 0, pagos: 0, saldoNeto: 0 };
+      try {
+        const res = await axios.get('/api/dashboard/summary', { params: { periodYear, periodMonth } });
+        summaryData = res.data || summaryData;
+      } catch (e) {
+        console.warn('Resumen mensual no disponible, usando valores por defecto:', e?.response?.status || e?.message);
+      }
 
-      // Primero intentamos corregir las fechas
-      const fixDatesResponse = await axios.post('/api/transactions/fix-dates');
+      let transactions = [];
+      try {
+        const txRes = await axios.get('/api/transactions', { params: { periodYear, periodMonth } });
+        transactions = txRes.data || [];
+      } catch (e) {
+        console.warn('Error al cargar transacciones del período:', e?.response?.status || e?.message);
+        transactions = [];
+      }
+      // Build categories treemap-like data
+      const categoryMap = new Map();
+      transactions
+        .filter(t => t.tipo === 'gasto')
+        .forEach(t => {
+          const name = t.category_name || 'Sin categorizar';
+          const current = categoryMap.get(name) || { name, total: 0, count: 0 };
+          current.total += Number(t.monto) || 0;
+          current.count += 1;
+          categoryMap.set(name, current);
+        });
+      const categories = Array.from(categoryMap.values()).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
 
-      // Luego obtenemos los datos del dashboard
-      const response = await axios.get('/api/dashboard');
-      setData(response.data);
+      // Fallback: compute monthly totals from transactions if summary not available or zero
+      const computed = transactions.reduce((acc, t) => {
+        const amount = Number(t.monto) || 0;
+        if (t.tipo === 'gasto') acc.gastos += amount > 0 ? amount : 0;
+        if (t.tipo === 'pago') acc.pagos += Math.abs(amount);
+        if (t.tipo === 'ingreso') acc.ingresos += amount;
+        return acc;
+      }, { gastos: 0, ingresos: 0, pagos: 0 });
+      const useComputed = (!summaryData || (summaryData.gastos === 0 && summaryData.pagos === 0 && transactions.length > 0));
+
+      const latestTransactions = transactions
+        .slice()
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+        .slice(0, 5)
+        .map(t => ({
+          id: t.id,
+          descripcion: t.descripcion,
+          monto: t.monto,
+          fecha: t.fecha,
+          tipo: t.tipo,
+          categoria: t.category_name || 'Sin categorizar'
+        }));
+
+      setData({
+        currentMonth: {
+          total_gastos: useComputed ? computed.gastos : (summaryData.gastos || 0),
+          total_ingresos: useComputed ? computed.ingresos : (summaryData.ingresos || 0),
+          total_pagos: useComputed ? computed.pagos : (summaryData.pagos || 0),
+          deuda_total: useComputed ? (computed.ingresos - computed.gastos + computed.pagos) : (summaryData.saldoNeto || 0)
+        },
+        categories,
+        trend: [],
+        latestTransactions
+      });
     } catch (err) {
       setError('Error al cargar los datos del dashboard');
     } finally {
@@ -85,7 +159,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [startISO, endISO]);
 
   useEffect(() => {
     window.refreshDashboardData = fetchDashboardData;
@@ -259,7 +333,7 @@ const Dashboard = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.latestTransactions.map((transaction) => (
+            {data.latestTransactions && data.latestTransactions.length > 0 ? data.latestTransactions.map((transaction, index) => (
               <TableRow key={transaction.id}>
                 <TableCell>{new Date(transaction.fecha).toLocaleDateString('es-CL')}</TableCell>
                 <TableCell>{transaction.descripcion}</TableCell>
@@ -267,7 +341,11 @@ const Dashboard = () => {
                 <TableCell>{transaction.categoria}</TableCell>
                 <TableCell>{transaction.tipo}</TableCell>
               </TableRow>
-            ))}
+            )) : (
+              <TableRow>
+                <TableCell colSpan={5} align="center">No hay transacciones este mes</TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -296,6 +374,7 @@ const Dashboard = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 6 }}>
+      <MonthPicker />
       {/* Título principal del Dashboard */}
       <Typography 
         variant="h3" 
@@ -430,7 +509,7 @@ const Dashboard = () => {
                 letterSpacing: '-0.5px'
               }}
             >
-              Deuda a la Fecha
+              Saldo neto del mes
             </Typography>
             <Typography 
               component="p" 
@@ -618,7 +697,8 @@ const Dashboard = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data.latestTransactions.map((transaction, index) => (
+                {data.latestTransactions && data.latestTransactions.length > 0 ? (
+                  data.latestTransactions.map((transaction, index) => (
                   <TableRow 
                     key={transaction.id}
                     sx={{
@@ -658,12 +738,20 @@ const Dashboard = () => {
                       {transaction.categoria}
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">No hay transacciones este mes</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>
         </Paper>
       </Grid>
+      <Box mt={2} textAlign="right" sx={{ opacity: 0.7 }}>
+        <Typography variant="caption">Mostrando datos del mes seleccionado.</Typography>
+      </Box>
     </Container>
   );
 };

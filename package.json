@@ -5,12 +5,14 @@
   "description": "Personal Finance Tracking Application",
   "scripts": {
     "start": "node backend/server.js",
-    "client": "set PORT=3000 && react-scripts start",
+    "client": "PORT=3000 react-scripts start",
     "server": "nodemon backend/server.js",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "migrate": "node backend/scripts/run-migrations.js",
+    "cleanup-uploads": "node backend/scripts/cleanup-uploads.js"
   },
   "dependencies": {
     "@emotion/react": "^11.13.5",
@@ -24,7 +26,6 @@
     "axios": "^0.27.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "csv-parse": "^5.3.0",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
     "express-fileupload": "^1.4.0",

@@ -1,9 +1,3 @@
--- Create database
-CREATE DATABASE finanzas_personales;
-
--- Connect to the database
-\c finanzas_personales;
-
 -- Create users table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

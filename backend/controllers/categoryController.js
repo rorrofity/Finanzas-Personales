@@ -1,4 +1,4 @@
-const pool = require('../db');
+const db = require('../config/database');
 
 // Obtener todas las categorías del usuario
 const getCategories = async (req, res) => {
@@ -10,7 +10,7 @@ const getCategories = async (req, res) => {
             WHERE user_id = $1 OR user_id IS NULL
             ORDER BY name
         `;
-        const result = await pool.query(query, [userId]);
+        const result = await db.query(query, [userId]);
         res.json(result.rows);
     } catch (error) {
         console.error('Error al obtener categorías:', error);
@@ -29,7 +29,7 @@ const createCategory = async (req, res) => {
             VALUES ($1, $2, $3)
             RETURNING id, name, description, created_at
         `;
-        const result = await pool.query(query, [name, description, userId]);
+        const result = await db.query(query, [name, description, userId]);
         res.status(201).json(result.rows[0]);
     } catch (error) {
         if (error.code === '23505') { // Error de duplicado
@@ -54,7 +54,7 @@ const updateCategory = async (req, res) => {
             WHERE id = $3 AND user_id = $4
             RETURNING id, name, description, created_at
         `;
-        const result = await pool.query(query, [name, description, id, userId]);
+        const result = await db.query(query, [name, description, id, userId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Categoría no encontrada' });
@@ -83,7 +83,7 @@ const deleteCategory = async (req, res) => {
             FROM transactions 
             WHERE category_id = $1
         `;
-        const checkResult = await pool.query(checkQuery, [id]);
+        const checkResult = await db.query(checkQuery, [id]);
         
         if (checkResult.rows[0].count > 0) {
             return res.status(400).json({ 
@@ -96,7 +96,7 @@ const deleteCategory = async (req, res) => {
             WHERE id = $1 AND user_id = $2
             RETURNING id
         `;
-        const result = await pool.query(query, [id, userId]);
+        const result = await db.query(query, [id, userId]);
 
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Categoría no encontrada' });

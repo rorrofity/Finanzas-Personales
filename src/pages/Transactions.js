@@ -34,6 +34,8 @@ import {
   ArrowDownward as ArrowDownwardIcon 
 } from '@mui/icons-material';
 import axios from 'axios';
+import MonthPicker from '../components/MonthPicker';
+import { usePeriod } from '../contexts/PeriodContext';
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
@@ -50,6 +52,20 @@ const Transactions = () => {
   const [openImportDialog, setOpenImportDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [provider, setProvider] = useState(localStorage.getItem('import_provider') || '');
+  const [network, setNetwork] = useState(localStorage.getItem('import_network') || '');
+  // Período del extracto (Mes/Año) para importar: por defecto el mes siguiente al actual
+  const computeNextMonth = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1; // 1-12
+    const nextM = m === 12 ? 1 : m + 1;
+    const nextY = m === 12 ? y + 1 : y;
+    return { nextY, nextM };
+  };
+  const { nextY, nextM } = computeNextMonth();
+  const [importYear, setImportYear] = useState(nextY);
+  const [importMonth, setImportMonth] = useState(nextM);
   const [formData, setFormData] = useState({
     fecha: '',
     descripcion: '',
@@ -60,6 +76,8 @@ const Transactions = () => {
   const [selectedTransactions, setSelectedTransactions] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
+
+  const { startISO, endISO, year, month } = usePeriod();
 
   useEffect(() => {
     fetchTransactions();
@@ -78,10 +96,13 @@ const Transactions = () => {
 
   const fetchTransactions = async () => {
     try {
+      setLoading(true);
       const response = await axios.get('/api/transactions', {
         params: {
           orderBy,
-          orderDirection
+          orderDirection,
+          periodYear: year,
+          periodMonth: month
         }
       });
       setTransactions(response.data || []);
@@ -212,9 +233,27 @@ const Transactions = () => {
       setError('Por favor selecciona un archivo CSV o Excel');
       return;
     }
+    if (!provider) {
+      setError('Debes seleccionar un banco (Banco de Chile o Banco Cencosud)');
+      return;
+    }
+    if (provider === 'banco_chile' && !network) {
+      setError('Para Banco de Chile debes seleccionar Visa o Mastercard');
+      return;
+    }
+    if (!importYear || !importMonth) {
+      setError('Debes seleccionar el Mes y Año del extracto');
+      return;
+    }
 
     const formData = new FormData();
     formData.append('file', selectedFile);
+    formData.append('provider', provider);
+    if (provider === 'banco_chile') {
+      formData.append('network', network);
+    }
+    formData.append('periodYear', String(importYear));
+    formData.append('periodMonth', String(importMonth));
 
     try {
       setLoading(true);
@@ -419,8 +458,9 @@ const Transactions = () => {
   );
 
   useEffect(() => {
+    setPage(0);
     fetchTransactions();
-  }, [orderBy, orderDirection]);
+  }, [orderBy, orderDirection, year, month]);
 
   if (loading) {
     return (
@@ -440,6 +480,7 @@ const Transactions = () => {
 
   return (
     <Box sx={{ p: 3 }}>
+      <MonthPicker />
       <Paper>
         <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h6">Transacciones</Typography>
@@ -484,14 +525,16 @@ const Transactions = () => {
                 <SortableTableCell field="monto" label="Monto" />
                 <SortableTableCell field="category_name" label="Categoría" />
                 <SortableTableCell field="tipo" label="Tipo" />
+                <SortableTableCell field="provider" label="Banco" />
+                <SortableTableCell field="network" label="Tarjeta" />
                 <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {transactions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    No hay transacciones disponibles
+                  <TableCell colSpan={10} align="center">
+                    No hay transacciones este mes
                   </TableCell>
                 </TableRow>
               ) : (
@@ -549,6 +592,18 @@ const Transactions = () => {
                           <MenuItem value="gasto">Gasto</MenuItem>
                           <MenuItem value="pago">Pago</MenuItem>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const p = transaction.provider;
+                          if (!p) return '-';
+                          if (p === 'banco_chile') return 'Banco de Chile';
+                          if (p === 'banco_cencosud') return 'Banco Cencosud';
+                          return p;
+                        })()}
+                      </TableCell>
+                      <TableCell>
+                        {transaction.network ? (transaction.network.charAt(0).toUpperCase() + transaction.network.slice(1)) : '-'}
                       </TableCell>
                       <TableCell>
                         <Tooltip title="Editar">
@@ -701,6 +756,95 @@ const Transactions = () => {
                   <LinearProgress variant="determinate" value={uploadProgress} />
                 </Box>
               )}
+              {/* Período del Extracto (Mes/Año) */}
+              <Box mt={3} display="flex" gap={2}>
+                <FormControl fullWidth>
+                  <InputLabel id="import-month-label">Mes</InputLabel>
+                  <Select
+                    labelId="import-month-label"
+                    label="Mes"
+                    value={importMonth}
+                    onChange={(e) => setImportMonth(Number(e.target.value))}
+                  >
+                    <MenuItem value={1}>enero</MenuItem>
+                    <MenuItem value={2}>febrero</MenuItem>
+                    <MenuItem value={3}>marzo</MenuItem>
+                    <MenuItem value={4}>abril</MenuItem>
+                    <MenuItem value={5}>mayo</MenuItem>
+                    <MenuItem value={6}>junio</MenuItem>
+                    <MenuItem value={7}>julio</MenuItem>
+                    <MenuItem value={8}>agosto</MenuItem>
+                    <MenuItem value={9}>septiembre</MenuItem>
+                    <MenuItem value={10}>octubre</MenuItem>
+                    <MenuItem value={11}>noviembre</MenuItem>
+                    <MenuItem value={12}>diciembre</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel id="import-year-label">Año</InputLabel>
+                  <Select
+                    labelId="import-year-label"
+                    label="Año"
+                    value={importYear}
+                    onChange={(e) => setImportYear(Number(e.target.value))}
+                  >
+                    {Array.from({ length: 7 }).map((_, idx) => {
+                      const y = new Date().getFullYear() + 1 - idx; // próximo año hacia atrás 6
+                      return (
+                        <MenuItem key={y} value={y}>{y}</MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {/* Selección de Banco */}
+              <Box mt={3}>
+                <FormControl fullWidth>
+                  <InputLabel id="provider-label">Banco</InputLabel>
+                  <Select
+                    labelId="provider-label"
+                    label="Banco"
+                    value={provider}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setProvider(value);
+                      localStorage.setItem('import_provider', value);
+                      // Reset network when changing provider
+                      if (value !== 'banco_chile') {
+                        setNetwork('');
+                        localStorage.removeItem('import_network');
+                      }
+                    }}
+                  >
+                    <MenuItem value=""><em>Selecciona un banco</em></MenuItem>
+                    <MenuItem value="banco_chile">Banco de Chile</MenuItem>
+                    <MenuItem value="banco_cencosud">Banco Cencosud</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+              {/* Selección de Tarjeta (solo Banco de Chile) */}
+              {provider === 'banco_chile' && (
+                <Box mt={2}>
+                  <FormControl fullWidth>
+                    <InputLabel id="network-label">Tarjeta</InputLabel>
+                    <Select
+                      labelId="network-label"
+                      label="Tarjeta"
+                      value={network}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNetwork(value);
+                        localStorage.setItem('import_network', value);
+                      }}
+                    >
+                      <MenuItem value=""><em>Selecciona tarjeta</em></MenuItem>
+                      <MenuItem value="visa">Visa</MenuItem>
+                      <MenuItem value="mastercard">Mastercard</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              )}
             </Box>
           </Box>
         </DialogContent>
@@ -710,7 +854,13 @@ const Transactions = () => {
             onClick={handleImport}
             variant="contained"
             color="primary"
-            disabled={!selectedFile || loading}
+            disabled={
+              !selectedFile ||
+              loading ||
+              !provider ||
+              (provider === 'banco_chile' && !network) ||
+              !importYear || !importMonth
+            }
           >
             {loading ? 'Importando...' : 'Importar'}
           </Button>

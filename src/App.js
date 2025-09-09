@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { PeriodProvider } from './contexts/PeriodContext';
 import theme from './theme';
 
 // Layouts
@@ -27,6 +28,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
+        <PeriodProvider>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -47,6 +49,7 @@ function App() {
             <Route path="profile" element={<Profile />} />
           </Route>
         </Routes>
+        </PeriodProvider>
       </AuthProvider>
     </ThemeProvider>
   );

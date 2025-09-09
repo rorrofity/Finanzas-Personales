@@ -95,8 +95,9 @@ router.post('/fix-dates', auth, transactionController.fixTransactionDates);
 // Ruta para debugging de transacciones
 router.get('/debug-last-import', async (req, res) => {
   try {
+    const db = require('../config/database');
     // Obtener las últimas transacciones importadas (ajusta el rango de fechas según necesites)
-    const result = await pool.query(`
+    const result = await db.query(`
       SELECT 
         fecha,
         descripcion,
@@ -110,7 +111,7 @@ router.get('/debug-last-import', async (req, res) => {
     `, [req.user.id]);
 
     // Calcular totales
-    const totals = await pool.query(`
+    const totals = await db.query(`
       SELECT 
         COUNT(*) as total_count,
         SUM(CASE WHEN tipo = 'gasto' THEN monto ELSE 0 END) as total_gastos,
