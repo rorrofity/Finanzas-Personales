@@ -26,6 +26,9 @@ import {
   InputLabel,
   Snackbar,
   Alert,
+  Chip,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import { 
   Delete as DeleteIcon, 
@@ -76,6 +79,12 @@ const Transactions = () => {
   const [selectedTransactions, setSelectedTransactions] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
+  const [hideDismissed, setHideDismissed] = useState(false);
+  const [showInfo, setShowInfo] = useState(() => {
+    // Mostrar alerta informativa por sesión, una sola vez
+    const dismissed = sessionStorage.getItem('dismiss_info_desestimar');
+    return dismissed !== '1';
+  });
 
   const { startISO, endISO, year, month } = usePeriod();
 
@@ -404,6 +413,11 @@ const Transactions = () => {
           message: 'Tipo de transacción actualizado correctamente',
           severity: 'success'
         });
+
+        // Si existe un refresco del dashboard expuesto globalmente
+        if (typeof window.refreshDashboardData === 'function') {
+          window.refreshDashboardData();
+        }
       }
     } catch (error) {
       console.error('Error updating transaction type:', error);
@@ -481,6 +495,18 @@ const Transactions = () => {
   return (
     <Box sx={{ p: 3 }}>
       <MonthPicker />
+      {showInfo && (
+        <Alert
+          severity="info"
+          sx={{ mb: 2 }}
+          onClose={() => {
+            setShowInfo(false);
+            sessionStorage.setItem('dismiss_info_desestimar', '1');
+          }}
+        >
+          Marca como Desestimar los pagos del período anterior para que no afecten este mes.
+        </Alert>
+      )}
       <Paper>
         <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h6">Transacciones</Typography>
@@ -498,6 +524,15 @@ const Transactions = () => {
           >
             Importar CSV
           </Button>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={hideDismissed}
+                onChange={(e) => setHideDismissed(e.target.checked)}
+              />
+            }
+            label="Ocultar desestimados en tabla"
+          />
           {selectedTransactions.length > 0 && (
             <Button
               variant="contained"
@@ -531,14 +566,14 @@ const Transactions = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {transactions.length === 0 ? (
+              {(hideDismissed ? transactions.filter(t => t.tipo !== 'desestimar') : transactions).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} align="center">
                     No hay transacciones este mes
                   </TableCell>
                 </TableRow>
               ) : (
-                transactions
+                (hideDismissed ? transactions.filter(t => t.tipo !== 'desestimar') : transactions)
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((transaction) => (
                     <TableRow key={transaction.id}>
@@ -550,7 +585,12 @@ const Transactions = () => {
                         />
                       </TableCell>
                       <TableCell>{new Date(transaction.fecha).toLocaleDateString()}</TableCell>
-                      <TableCell>{transaction.descripcion}</TableCell>
+                      <TableCell>
+                        {transaction.descripcion}{' '}
+                        {transaction.tipo === 'desestimar' && (
+                          <Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />
+                        )}
+                      </TableCell>
                       <TableCell>
                         {formatAmount(transaction.monto)}
                       </TableCell>
@@ -591,6 +631,7 @@ const Transactions = () => {
                         >
                           <MenuItem value="gasto">Gasto</MenuItem>
                           <MenuItem value="pago">Pago</MenuItem>
+                          <MenuItem value="desestimar">Desestimar</MenuItem>
                         </Select>
                       </TableCell>
                       <TableCell>
@@ -707,6 +748,7 @@ const Transactions = () => {
             >
               <MenuItem value="gasto">Gasto</MenuItem>
               <MenuItem value="pago">Pago</MenuItem>
+              <MenuItem value="desestimar">Desestimar</MenuItem>
             </TextField>
           </Box>
         </DialogContent>

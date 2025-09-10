@@ -49,6 +49,18 @@ const COLORS = [
   '#E91E63', // rosa
 ];
 
+// Brand styles for credit cards
+const CARD_BRANDS = {
+  visa: {
+    color: '#1A1F71', // Visa deep blue
+    logo: '/assets/cards/visa.png'
+  },
+  mastercard: {
+    color: '#EB001B', // MasterCard red (we'll blend with orange via gradient-like alpha)
+    logo: '/assets/cards/mastercard.png'
+  }
+};
+
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -125,6 +137,35 @@ const Dashboard = () => {
         return acc;
       }, { gastos: 0, ingresos: 0, pagos: 0 });
       const useComputed = (!summaryData || (summaryData.gastos === 0 && summaryData.pagos === 0 && transactions.length > 0));
+      const saldoNetoComputed = computed.pagos - computed.gastos;
+
+      // Credit Cards block: compute Visa, Mastercard, Consolidated (exclude 'desestimar')
+      const ccTx = transactions.filter(t => (t.network === 'visa' || t.network === 'mastercard') && t.tipo !== 'desestimar');
+      const calcByNetwork = (network) => {
+        const list = ccTx.filter(t => t.network === network);
+        const totals = list.reduce((acc, t) => {
+          const amount = Number(t.monto) || 0;
+          if (t.tipo === 'gasto') acc.gastos += amount > 0 ? amount : 0;
+          if (t.tipo === 'pago') acc.pagos += Math.abs(amount);
+          return acc;
+        }, { gastos: 0, pagos: 0 });
+        const saldo = totals.pagos - totals.gastos;
+        return { gastos: totals.gastos, pagos: totals.pagos, saldo };
+      };
+      const visaMetrics = calcByNetwork('visa');
+      const mcMetrics = calcByNetwork('mastercard');
+      const consolidatedList = ccTx; // both networks
+      const consolidatedTotals = consolidatedList.reduce((acc, t) => {
+        const amount = Number(t.monto) || 0;
+        if (t.tipo === 'gasto') acc.gastos += amount > 0 ? amount : 0;
+        if (t.tipo === 'pago') acc.pagos += Math.abs(amount);
+        return acc;
+      }, { gastos: 0, pagos: 0 });
+      const consolidatedMetrics = {
+        gastos: consolidatedTotals.gastos,
+        pagos: consolidatedTotals.pagos,
+        saldo: consolidatedTotals.pagos - consolidatedTotals.gastos
+      };
 
       const latestTransactions = transactions
         .slice()
@@ -144,7 +185,12 @@ const Dashboard = () => {
           total_gastos: useComputed ? computed.gastos : (summaryData.gastos || 0),
           total_ingresos: useComputed ? computed.ingresos : (summaryData.ingresos || 0),
           total_pagos: useComputed ? computed.pagos : (summaryData.pagos || 0),
-          deuda_total: useComputed ? (computed.ingresos - computed.gastos + computed.pagos) : (summaryData.saldoNeto || 0)
+          saldo_neto: useComputed ? saldoNetoComputed : ((summaryData.pagos || 0) - (summaryData.gastos || 0))
+        },
+        creditCards: {
+          visa: visaMetrics,
+          mastercard: mcMetrics,
+          consolidated: consolidatedMetrics
         },
         categories,
         trend: [],
@@ -159,7 +205,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [startISO, endISO]);
+  }, [year, month]);
 
   useEffect(() => {
     window.refreshDashboardData = fetchDashboardData;
@@ -437,6 +483,8 @@ const Dashboard = () => {
             </Typography>
           </Paper>
         </Grid>
+
+        
         <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
           <Paper
             elevation={2}
@@ -501,6 +549,7 @@ const Dashboard = () => {
             <Typography 
               component="h2" 
               variant="h5" 
+              title="Pagos − Gastos (excluye desestimados)"
               sx={{ 
                 color: theme.palette.primary.main,
                 fontFamily: 'Inter, sans-serif',
@@ -511,32 +560,130 @@ const Dashboard = () => {
             >
               Saldo neto del mes
             </Typography>
-            <Typography 
-              component="p" 
-              variant="h3" 
-              color={data?.currentMonth?.deuda_total > 0 ? "error" : "success.main"}
-              sx={{ 
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 600,
-                letterSpacing: '-0.5px'
-              }}
-            >
-              {data?.currentMonth ? formatCurrency(data.currentMonth.deuda_total) : '$0'}
-              <Typography 
-                component="span" 
-                variant="h6" 
-                color="inherit"
-                sx={{ 
-                  ml: 1,
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 500
-                }}
-              >
-                {data?.currentMonth?.deuda_total > 0 ? '(Debes)' : '(A favor)'}
-              </Typography>
-            </Typography>
+            {(() => {
+              const saldo = data?.currentMonth?.saldo_neto ?? 0;
+              const color = saldo > 0 ? 'success.main' : (saldo < 0 ? 'error.main' : 'text.primary');
+              const legend = saldo > 0 ? '(A favor)' : (saldo < 0 ? '(Debes)' : '');
+              return (
+                <Typography 
+                  component="p" 
+                  variant="h3" 
+                  color={color}
+                  sx={{ 
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: 600,
+                    letterSpacing: '-0.5px'
+                  }}
+                >
+                  {formatCurrency(saldo)}
+                  {legend && (
+                    <Typography 
+                      component="span" 
+                      variant="h6" 
+                      color="inherit"
+                      sx={{ 
+                        ml: 1,
+                        fontFamily: 'Inter, sans-serif',
+                        fontWeight: 500
+                      }}
+                    >
+                      {legend}
+                    </Typography>
+                  )}
+                </Typography>
+              );
+            })()}
           </Paper>
         </Grid>
+
+        {/* Bloque Tarjetas de Crédito (debajo de los totales) */}
+        <Grid item xs={12}>
+          <Typography 
+            component="h2" 
+            variant="h5" 
+            sx={{ 
+              mt: 1,
+              color: theme.palette.primary.main,
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 700,
+              letterSpacing: '-0.5px'
+            }}
+          >
+            Tarjetas de Crédito
+          </Typography>
+        </Grid>
+
+        {(() => {
+          const cards = [
+            { key: 'visa', title: 'Visa', metrics: data?.creditCards?.visa },
+            { key: 'mastercard', title: 'Mastercard', metrics: data?.creditCards?.mastercard }
+          ];
+
+          const renderCard = ({ key, title, metrics }) => {
+            const gastos = metrics?.gastos || 0;
+            const pagos = metrics?.pagos || 0;
+            const saldo = metrics?.saldo || 0;
+            const legend = saldo > 0 ? '(A favor)' : (saldo < 0 ? '(Debes)' : '');
+            const saldoColor = saldo > 0 ? 'success.main' : (saldo < 0 ? 'error.main' : 'text.primary');
+            const hasData = (gastos !== 0 || pagos !== 0 || saldo !== 0);
+            const brand = CARD_BRANDS[key] || { color: theme.palette.divider };
+            const bgTint = alpha(brand.color, 0.04);
+            return (
+              <Grid item xs={12} md={6} key={key} sx={{ display: 'flex' }}>
+                <Paper
+                  elevation={2}
+                  sx={{ 
+                    p: 3, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    height: '100%', 
+                    minHeight: 220, 
+                    width: '100%',
+                    position: 'relative',
+                    borderTop: `4px solid ${brand.color}`,
+                    backgroundColor: bgTint
+                  }}
+                >
+                  {/* Optional brand logo (hidden if not found) */}
+                  <img 
+                    src={brand.logo}
+                    alt={`${title} logo`} 
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    style={{ position: 'absolute', right: 12, top: 12, height: 28, opacity: 0.9 }}
+                  />
+
+                  <Typography component="h3" variant="h6" sx={{ fontWeight: 700, mb: 2, color: theme.palette.text.primary }}>
+                    {title}
+                  </Typography>
+                  <Box sx={{ mb: 1 }}>
+                    <Typography variant="body2" sx={{ opacity: 0.75 }}>Gastos del Mes</Typography>
+                    <Typography variant="h5" color="error" sx={{ fontWeight: 600 }}>{formatCurrency(gastos)}</Typography>
+                  </Box>
+                  <Box sx={{ mb: 1 }}>
+                    <Typography variant="body2" sx={{ opacity: 0.75 }}>Pagos del Mes</Typography>
+                    <Typography variant="h5" color="success.main" sx={{ fontWeight: 600 }}>{formatCurrency(pagos)}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" sx={{ opacity: 0.75 }} title="Pagos − Gastos (excluye desestimados)">Saldo neto del mes</Typography>
+                    <Typography variant="h5" color={saldoColor} sx={{ fontWeight: 600 }}>
+                      {formatCurrency(saldo)}{' '}
+                      {legend && (
+                        <Typography component="span" variant="subtitle1" color={saldoColor} sx={{ ml: 0.5, fontWeight: 500 }}>
+                          {legend}
+                        </Typography>
+                      )}
+                    </Typography>
+                  </Box>
+                  {!hasData && (
+                    <Typography variant="caption" sx={{ mt: 1, opacity: 0.7 }}>Sin movimientos este mes</Typography>
+                  )}
+                </Paper>
+              </Grid>
+            );
+          };
+
+          return cards.map(renderCard);
+        })()}
 
         {/* Segunda fila - Gráficos */}
         <Grid item xs={12} md={8} sx={{ display: 'flex' }}>

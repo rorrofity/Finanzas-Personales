@@ -7,11 +7,14 @@ Una aplicación web completa para el seguimiento y gestión de finanzas personal
 - Autenticación de usuarios
 - Gestión de transacciones financieras
 - Sistema de categorización avanzado
-- Importación de transacciones desde CSV
+- Importación de transacciones desde CSV/Excel
 - Visualización de datos financieros
 - Análisis de gastos e ingresos
 - Soporte para categorías globales y personalizadas
 - Interfaz intuitiva con edición inline
+ - Selector de período (Mes/Año) por extracto de tarjeta
+ - Selección de Banco y Tarjeta (Visa/Mastercard) al importar
+ - Filtro por período de importación en Dashboard y Transacciones
 
 ## Importación de Estados de Cuenta
 
@@ -39,6 +42,16 @@ El sistema soporta la importación automática de estados de cuenta bancarios en
 - Detección automática de pagos basada en montos negativos
 - Cálculo preciso de deuda total considerando gastos y pagos
 
+### Flujo de Importación con Período
+
+1. Abre la página `Transacciones` y presiona `Importar CSV`.
+2. Selecciona el archivo (CSV/XLS/XLSX).
+3. Selecciona el `Banco` y, si corresponde, la `Tarjeta` (Visa/Mastercard para Banco de Chile).
+4. Selecciona el `Mes` y `Año` del extracto. Por defecto se propone el mes siguiente al actual (ej.: si hoy es 5 de septiembre, propondrá octubre).
+5. Importa. Todas las transacciones de ese archivo quedarán etiquetadas con ese período de extracto, y el Dashboard/Transacciones mostrarán datos según el `Mes/Año` seleccionado en el `MonthPicker`.
+
+Nota: el filtrado se realiza por período de importación (no por la fecha individual de la transacción), lo que asegura que el período seleccionado en la UI coincida exactamente con el extracto subido.
+
 ### Dashboard Financiero
 
 - Resumen mensual de gastos, ingresos y pagos
@@ -46,6 +59,18 @@ El sistema soporta la importación automática de estados de cuenta bancarios en
 - Visualización de tendencias financieras
 - Gráficos interactivos de gastos por categoría
 - Actualización en tiempo real de totales
+
+#### Tarjetas de Crédito (Visa / Mastercard)
+
+- Bloque dedicado con métricas por tarjeta: Gastos del Mes, Pagos del Mes y Saldo neto del mes (Pagos − Gastos), excluyendo transacciones marcadas como `desestimar`.
+- Se muestran 2 tarjetas: `Visa` y `Mastercard`. Los totales generales (Gastos/Pagos/Saldo) se mantienen en la sección superior.
+- El cálculo responde al selector de período (Mes/Año) y a cambios inmediatos en la tabla de Transacciones.
+
+Branding opcional (logos):
+- Puedes colocar logos en `public/assets/cards/` con los nombres exactos:
+  - Visa: `public/assets/cards/visa.png`
+  - Mastercard: `public/assets/cards/mastercard.png`
+- Recomendaciones: PNG con fondo transparente, alto ~28–36 px. Si los archivos no existen, la UI usará solo el color de marca.
 
 ## Tecnologías Utilizadas
 
@@ -63,6 +88,7 @@ El sistema soporta la importación automática de estados de cuenta bancarios en
 - JWT para autenticación
 - bcryptjs para encriptación
 - csv-parse para procesamiento de CSV
+ - xlsx para procesamiento de Excel
 
 ## Estructura de la Base de Datos
 
@@ -98,6 +124,19 @@ El sistema soporta la importación automática de estados de cuenta bancarios en
 - cuotas (INTEGER)
 - created_at (TIMESTAMP)
 - updated_at (TIMESTAMP)
+```
+
+### Tabla `imports`
+```sql
+- id (UUID, PRIMARY KEY)
+- user_id (UUID, FOREIGN KEY)
+- provider (VARCHAR) – banco (p.ej., 'banco_chile', 'banco_cencosud')
+- network (VARCHAR) – tarjeta (p.ej., 'visa', 'mastercard')
+- product_type (VARCHAR)
+- original_filename (TEXT)
+- period_year (INTEGER)
+- period_month (INTEGER)
+- created_at (TIMESTAMP)
 ```
 
 ## Estructura del Proyecto
@@ -154,35 +193,30 @@ cd windsurf-project
 
 2. Instalar dependencias:
 ```bash
-# Instalar dependencias del backend
-cd backend
-npm install
-
-# Instalar dependencias del frontend
-cd ../
 npm install
 ```
 
 3. Configurar la base de datos:
 ```bash
-# Ejecutar las migraciones en pgAdmin o usando psql
-psql -U postgres -d finanzas_personales -f backend/migrations/categories.sql
+# Ejecutar las migraciones del proyecto
+npm run migrate
 ```
 
 4. Iniciar los servidores:
 ```bash
-# Backend (Puerto 3001)
-cd backend
+# Ambos (backend en 3001 y frontend en 3000)
 npm run dev
-
-# Frontend (Puerto 3000)
-cd ../
-npm start
 ```
 
 ## Documentación Adicional
 
 Para más detalles sobre el desarrollo, arquitectura y decisiones técnicas, consulta el archivo [DEVELOPMENT.md](./DEVELOPMENT.md).
+
+## Notas y Solución de Problemas
+
+- Si cambias el `Mes/Año` en el `MonthPicker` y ves los mismos datos, reinicia el backend y verifica que el frontend envíe `periodYear` y `periodMonth` en las peticiones a `/api/transactions` y `/api/dashboard/summary`.
+- Los extractos importados antes de esta versión no tienen `period_year/period_month`. Para que aparezcan al filtrar por período, vuelve a importar el extracto con el período correcto o aplica un backfill a la tabla `imports`.
+- La UI por defecto propone el mes siguiente al actual en el diálogo de importación; puedes ajustarlo manualmente si tu extracto corresponde a otro período.
 
 ## Licencia
 

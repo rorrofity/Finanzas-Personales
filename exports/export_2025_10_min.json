@@ -1,0 +1,1132 @@
+[
+  {
+    "fecha": "2025-08-22",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 4564,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-22",
+    "descripcion": "UBER RIDES COMPRAS",
+    "monto": 1956,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-22",
+    "descripcion": "UBER RIDES COMPRAS",
+    "monto": 3407,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-23",
+    "descripcion": "BAKERY SP LIMITADA COMPRAS",
+    "monto": 6670,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-23",
+    "descripcion": "PEDIDOSYA CL COMPRAS",
+    "monto": 43460,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "EL BAR DEL TIO COMPRAS",
+    "monto": 210980,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "FUDO *PATIO CENTRAL COMPRAS",
+    "monto": 4000,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "FUDO *PATIO CENTRAL COMPRAS",
+    "monto": 6500,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "FUDO *PATIO CENTRAL COMPRAS",
+    "monto": 21450,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 1275,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 1326,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 7107,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 10834,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-24",
+    "descripcion": "STA ISABEL 1 PON.VINA COMPRAS",
+    "monto": 29213,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-25",
+    "descripcion": "BAKERY LYNCH COMPRAS",
+    "monto": 16800,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-25",
+    "descripcion": "PAYU *FLIXBUS COMPRAS",
+    "monto": 2774,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-25",
+    "descripcion": "PAYU *UBER EATS COMPRAS",
+    "monto": 44959,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-25",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 2276,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-25",
+    "descripcion": "TUU*GREEN LAB COMPRAS",
+    "monto": 3690,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-25",
+    "descripcion": "TUU*GREEN LAB COMPRAS",
+    "monto": 8118,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "AHUM L145 LIBERTAD 335 COMPRAS",
+    "monto": 12023,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "APP COPEC BIP] COMPRAS",
+    "monto": 1740,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "CEGIN COMPRAS",
+    "monto": 30000,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "CEGIN COMPRAS",
+    "monto": 30410,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "CEGIN LTDA COMPRAS",
+    "monto": 6000,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "CEGIN LTDA COMPRAS",
+    "monto": 7680,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "CEGIN LTDA COMPRAS",
+    "monto": 40000,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "MERPAGO*COMERCIALCANAS COMPRAS",
+    "monto": 41965,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "PAYU *FLIXBUS COMPRAS",
+    "monto": 2774,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 1609,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 2024,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 2953,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "SABORES DE MANCORA COMPRAS",
+    "monto": 32380,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-26",
+    "descripcion": "VINA DEL MAR COMPRAS",
+    "monto": 17136,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-27",
+    "descripcion": "APP COPEC BIP] COMPRAS",
+    "monto": 2530,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-27",
+    "descripcion": "BAKERY SP LIMITADA COMPRAS",
+    "monto": 3990,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-27",
+    "descripcion": "CONSULTA COMPRAS",
+    "monto": 16770,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-27",
+    "descripcion": "FARM. AHUMADA SPA L703 N CUOTAS",
+    "monto": 58663,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-27",
+    "descripcion": "FONASA VINA NORTE N CUOTAS",
+    "monto": 104773,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-27",
+    "descripcion": "GOOGLE PLAY YOUTUBE COMPRAS",
+    "monto": 14190,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-27",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 1836,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-27",
+    "descripcion": "SOCIEDAD VICINAY HENRI COMPRAS",
+    "monto": 25000,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "CIRUMED COMPRAS",
+    "monto": 111260,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "ESPACIO GOURMET COMPRAS",
+    "monto": 30277,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "HELP.HBOMAX.COM H**MAX COMPRAS",
+    "monto": 13990,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "MERPAGO*GREEN MARKET S COMPRAS",
+    "monto": 9190,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "MERPAGO*GREEN MARKET S COMPRAS",
+    "monto": 34490,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 1930,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 1956,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 5022,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 5505,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-28",
+    "descripcion": "SUC LOUNGE S.A 105 COMPRAS",
+    "monto": 37980,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-29",
+    "descripcion": "JUSTO COMPRAS",
+    "monto": 33000,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-30",
+    "descripcion": "ACLIN 3 CPC",
+    "monto": 253420,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-30",
+    "descripcion": "ACLIN COMPRAS",
+    "monto": 17470,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-08-30",
+    "descripcion": "TUU*bomberosVinaDelMa COMPRAS",
+    "monto": 1204,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-01",
+    "descripcion": "MERCADOPAGO *CABIFY25 COMPRAS",
+    "monto": 2679,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-01",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 2202,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-02",
+    "descripcion": "APP COPEC BIP] COMPRAS",
+    "monto": 1740,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-02",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 2365,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-03",
+    "descripcion": "APP COPEC BIP] COMPRAS",
+    "monto": 1740,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-03",
+    "descripcion": "FARM. AHUMADA SPA L703 COMPRAS",
+    "monto": 39909,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-03",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 1838,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "CLARO RECAUDACION      SANTIAGO      CHL",
+    "monto": 20332,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "CLARO RECAUDACION COMPRAS",
+    "monto": 20332,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "CQ SPA                 VALPARAISO    CHL",
+    "monto": 39556,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "CQ SPA COMPRAS",
+    "monto": 39556,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
+    "monto": -2185,
+    "tipo": "pago",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
+    "monto": 2185,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
+    "monto": 2316,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
+    "monto": 2632,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 2316,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-04",
+    "descripcion": "PEDIDOSYA CL COMPRAS",
+    "monto": 11400,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "APP COPEC BIP!         SANTIAGO      CHL",
+    "monto": 1740,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "APP COPEC BIP] COMPRAS",
+    "monto": 1740,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "BAKERY SP LIMITADA     VALPARAISO    CHL",
+    "monto": 3990,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "BAKERY SP LIMITADA COMPRAS",
+    "monto": 3990,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "DLGOOGLE YOUTUBE      SANTIAGO      CHL",
+    "monto": 1790,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "KUNSTMANN CRAFT BAR COMPRAS",
+    "monto": 64470,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 2632,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "Pago Pesos TAR",
+    "monto": -3297843,
+    "tipo": "desestimar",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "Pago Pesos TEF PAGO NORMAL",
+    "monto": -3297843,
+    "tipo": "desestimar",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "UNIMARC 4 PONIENTE     VINA DEL MAR  CHL",
+    "monto": 51472,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-05",
+    "descripcion": "UNIMARC 4 PONIENTE COMPRAS",
+    "monto": 51472,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-06",
+    "descripcion": "COPEC APP COMPRAS",
+    "monto": 19701,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-06",
+    "descripcion": "DL*GOOGLE YOUTUBE** COMPRAS",
+    "monto": 1790,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-06",
+    "descripcion": "LIDER.CL TIENDA WEBPAY COMPRAS",
+    "monto": 69620,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-07",
+    "descripcion": "BAKERY LYNCH COMPRAS",
+    "monto": 6660,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-07",
+    "descripcion": "BAKERY SP LIMITADA COMPRAS",
+    "monto": 10970,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-07",
+    "descripcion": "GASTRONOMIA SD SPA COMPRAS",
+    "monto": 55660,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-07",
+    "descripcion": "UNIMARC 4 PONIENTE COMPRAS",
+    "monto": 11200,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "KIRA COMPRAS",
+    "monto": 41940,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "LIDER.CL TIENDA WEBPAY CRED.COMPRAS",
+    "monto": -1950,
+    "tipo": "pago",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "MAXIK COMPRAS",
+    "monto": 1190,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "MAXIK COMPRAS",
+    "monto": 1690,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
+    "monto": 2515,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "PAYU *FLIXBUS COMPRAS",
+    "monto": 3699,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": 2041,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "PEDIDOSYA CL RESTAURAN CL            CHL",
+    "monto": 13370,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "TIENDA MUNDO RURAL COMPRAS",
+    "monto": 1990,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-08",
+    "descripcion": "TRASPASO DEUDA INTERNA TRA.DOLAR/PESO",
+    "monto": 159521,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "AMAZON PRIME           LAS CONDES    CHL",
+    "monto": 6490,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "APP COPEC BIP!         SANTIAGO      CHL",
+    "monto": 1740,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "BAKERY LYNCH           VALPARAISO    CHL",
+    "monto": 1210,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "DLGOOGLE YOUTUBE      SANTIAGO      CHL",
+    "monto": 11000,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "FRANCISCA GUERRERO     VINA DEL MAR  CHL",
+    "monto": 9980,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "FRANCISCA GUERRERO     VINA DEL MAR  CHL",
+    "monto": 98020,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "MERCADOPAGO CABIFY25  Las Condes    CHL",
+    "monto": 2695,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
+    "monto": 2159,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "PELUQUERIA CANINA      VINA DEL MAR  CHL",
+    "monto": 30000,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "STA ISABEL 1 PON.VINA  VINA DEL MAR  CHL",
+    "monto": 14173,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-09",
+    "descripcion": "UNIMARC 4 PONIENTE     VINA DEL MAR  CHL",
+    "monto": 8700,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  },
+  {
+    "fecha": "2025-09-10",
+    "descripcion": "APP COPEC BIP!         SANTIAGO      CHL",
+    "monto": 1740,
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard"
+  }
+]

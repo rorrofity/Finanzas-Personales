@@ -433,7 +433,6 @@ async function processExcelFile(filePath, userId, originalFilename) {
       const exists = existingTransactionsInDB.has(transactionKey);
       if (exists) {
         console.log('\n=== DUPLICADO ENCONTRADO ===');
-        console.log('Fila:', i);
         console.log('Fecha:', t.fecha.toISOString().split('T')[0]);
         console.log('Descripción:', t.descripcion);
         console.log('Monto:', t.monto);
@@ -459,7 +458,19 @@ async function processExcelFile(filePath, userId, originalFilename) {
     });
     console.log('\n==============================\n');
 
-    return transactions;
+    return {
+      transactions,
+      stats: {
+        totalRowsInFile: rawData.length,
+        rowsProcessed: totalRowsProcessed,
+        invalidRows,
+        validInFile: fileTransactions.length,
+        duplicatesInFile: skippedDuplicates,
+        duplicatesInDB: dbDuplicates,
+        toInsert: transactions.length,
+        totalAmount
+      }
+    };
   } catch (error) {
     console.error('Error procesando archivo Excel:', error);
     throw error;
@@ -523,6 +534,7 @@ const importTransactions = async (req, res) => {
     }
 
     let transactions;
+    let excelStats = null;
 
     if (fileExtension === '.csv') {
       // Para archivos CSV, usar el buffer en memoria
@@ -536,9 +548,15 @@ const importTransactions = async (req, res) => {
       if (!req.file.path) {
         return res.status(400).json({ error: 'Error al leer el archivo Excel' });
       }
-      transactions = await processExcelFile(req.file.path, req.user.id, req.file.originalname);
+      const result = await processExcelFile(req.file.path, req.user.id, req.file.originalname);
       // Limpiar el archivo después de procesarlo
       fs.unlinkSync(req.file.path);
+      if (result && Array.isArray(result.transactions)) {
+        transactions = result.transactions;
+        excelStats = result.stats || null;
+      } else {
+        transactions = result;
+      }
     }
 
     if (!Array.isArray(transactions)) {
@@ -557,7 +575,17 @@ const importTransactions = async (req, res) => {
     }
 
     if (transactions.length === 0) {
-      return res.status(400).json({ error: 'No se encontraron transacciones válidas en el archivo' });
+      // Caso típico: re-subida del mismo archivo, todo duplicado en DB
+      return res.status(200).json({
+        success: true,
+        message: 'No se insertaron nuevas transacciones: todas ya existen en la base de datos',
+        stats: {
+          detected: excelStats?.validInFile ?? 0,
+          inserted: 0,
+          skippedDuplicatesInDB: excelStats?.duplicatesInDB ?? 0,
+          skippedDuplicatesInFile: excelStats?.duplicatesInFile ?? 0
+        }
+      });
     }
 
     console.log(`Se encontraron ${transactions.length} transacciones para procesar`);
