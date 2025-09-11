@@ -72,6 +72,21 @@ Branding opcional (logos):
   - Mastercard: `public/assets/cards/mastercard.png`
 - Recomendaciones: PNG con fondo transparente, alto ~28–36 px. Si los archivos no existen, la UI usará solo el color de marca.
 
+#### Transacciones Proyectadas
+
+- Permite crear y gestionar ingresos/gastos manuales (fuera de tarjeta) por Mes/Año.
+- Campos: Nombre (3–60), Tipo (Ingreso/Gasto), Monto (>0), Día del mes (1–31; si el día no existe se usa el último día), Categoría (opcional), Notas (<=140), Estado (Activo/Inactivo), Repetir todos los meses (solo en creación).
+- Listado por mes responde al selector `MonthPicker`. Las proyecciones inactivas no se consideran en los totales de la página.
+- Repetición: si está ON, se materializa on‑demand solo el mes consultado; al editar un mes específico, el cambio aplica solo a ese mes (override) y no altera meses futuros ni pasados.
+- Acciones disponibles en la lista:
+  - Editar: modifica solo la occurrence del mes (override).
+  - Eliminar (solo este mes): elimina la occurrence del mes.
+  - Eliminar plantilla (desde este mes en adelante): borra la plantilla y todas sus repeticiones futuras; meses anteriores quedan como histórico.
+
+Ubicación en la app
+- Menú lateral: `Transacciones Proyectadas` (ruta `/projected-transactions`).
+- La sección existente `Transacciones` fue renombrada visualmente a `Transacciones No Facturadas (TC)` y mantiene su ruta `/transactions`.
+
 ## Tecnologías Utilizadas
 
 ### Frontend
