@@ -115,6 +115,16 @@ const Dashboard = () => {
         console.warn('Error al cargar transacciones del período:', e?.response?.status || e?.message);
         transactions = [];
       }
+
+      // Load projected transactions for the selected month (materialized on-demand by backend)
+      let projected = [];
+      try {
+        const prjRes = await axios.get('/api/projected', { params: { year: periodYear, month: periodMonth } });
+        projected = prjRes.data || [];
+      } catch (e) {
+        console.warn('Error al cargar transacciones proyectadas:', e?.response?.status || e?.message);
+        projected = [];
+      }
       // Build categories treemap-like data
       const categoryMap = new Map();
       transactions
@@ -167,6 +177,19 @@ const Dashboard = () => {
         saldo: consolidatedTotals.pagos - consolidatedTotals.gastos
       };
 
+      // Projected totals (non-TC): ingresos, gastos, saldo; exclude inactive
+      const projectedTotals = projected.reduce((acc, p) => {
+        if (p.active === false) return acc;
+        const amount = Number(p.monto) || 0;
+        if (p.tipo === 'ingreso') acc.ingresos += amount;
+        if (p.tipo === 'gasto') acc.gastos += amount;
+        return acc;
+      }, { ingresos: 0, gastos: 0 });
+      projectedTotals.saldo = projectedTotals.ingresos - projectedTotals.gastos;
+
+      // Global net: (Pagos TC − Gastos TC) + (Ingresos Proyectados − Gastos Proyectados)
+      const globalNet = (consolidatedMetrics.saldo || 0) + (projectedTotals.saldo || 0);
+
       const latestTransactions = transactions
         .slice()
         .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
@@ -192,6 +215,8 @@ const Dashboard = () => {
           mastercard: mcMetrics,
           consolidated: consolidatedMetrics
         },
+        projected: projectedTotals,
+        globalNet,
         categories,
         trend: [],
         latestTransactions
@@ -438,7 +463,7 @@ const Dashboard = () => {
       </Typography>
 
       <Grid container spacing={4}>
-        {/* Primera fila - Métricas principales */}
+        {/* Primera fila - Métricas principales (Ingresos, Gastos, Saldo neto global) */}
         <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
           <Paper
             elevation={2}
@@ -467,65 +492,72 @@ const Dashboard = () => {
                 letterSpacing: '-0.5px'
               }}
             >
-              Gastos del Mes
-            </Typography>
-            <Typography 
-              component="p" 
-              variant="h3"
-              color="error"
-              sx={{ 
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 600,
-                letterSpacing: '-0.5px'
-              }}
-            >
-              {data?.currentMonth ? formatCurrency(data.currentMonth.total_gastos) : '$0'}
-            </Typography>
-          </Paper>
-        </Grid>
-
-        
-        <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
-          <Paper
-            elevation={2}
-            sx={{
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-              minHeight: 180,
-              width: '100%',
-              transition: 'all 0.3s ease-in-out',
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: theme.shadows[4]
-              }
-            }}
-          >
-            <Typography 
-              component="h2" 
-              variant="h5" 
-              sx={{ 
-                color: theme.palette.primary.main,
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 700,
-                mb: 2,
-                letterSpacing: '-0.5px'
-              }}
-            >
-              Pagos del Mes
+              Ingresos (mes)
             </Typography>
             <Typography 
               component="p" 
               variant="h3"
               color="success.main"
+              title="Incluye solo Ingresos Proyectados del mes."
               sx={{ 
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
                 letterSpacing: '-0.5px'
               }}
             >
-              {data?.currentMonth ? formatCurrency(data.currentMonth.total_pagos) : '$0'}
+              {formatCurrency(data?.projected?.ingresos || 0)}
+            </Typography>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              minHeight: 180,
+              width: '100%',
+              transition: 'all 0.3s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: theme.shadows[4]
+              }
+            }}
+          >
+            <Typography 
+              component="h2" 
+              variant="h5" 
+              sx={{ 
+                color: theme.palette.primary.main,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 700,
+                mb: 2,
+                letterSpacing: '-0.5px'
+              }}
+            >
+              Gastos (mes)
+            </Typography>
+            <Typography 
+              component="p" 
+              variant="h3"
+              color="error"
+              title="Gastos Proyectados + egreso neto TC del mes (max(Gastos TC − Pagos TC, 0))."
+              sx={{ 
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 600,
+                letterSpacing: '-0.5px'
+              }}
+            >
+              {(() => {
+                const projG = data?.projected?.gastos || 0;
+                const tcG = data?.creditCards?.consolidated?.gastos || 0;
+                const tcP = data?.creditCards?.consolidated?.pagos || 0;
+                const egresoTC = Math.max(tcG - tcP, 0);
+                return formatCurrency(projG + egresoTC);
+              })()}
             </Typography>
           </Paper>
         </Grid>
@@ -549,7 +581,7 @@ const Dashboard = () => {
             <Typography 
               component="h2" 
               variant="h5" 
-              title="Pagos − Gastos (excluye desestimados)"
+              title="(Pagos TC − Gastos TC) + (Ingresos Proyectados − Gastos Proyectados)"
               sx={{ 
                 color: theme.palette.primary.main,
                 fontFamily: 'Inter, sans-serif',
@@ -558,12 +590,12 @@ const Dashboard = () => {
                 letterSpacing: '-0.5px'
               }}
             >
-              Saldo neto del mes
+              Saldo neto global (mes)
             </Typography>
             {(() => {
-              const saldo = data?.currentMonth?.saldo_neto ?? 0;
+              const saldo = data?.globalNet ?? 0;
               const color = saldo > 0 ? 'success.main' : (saldo < 0 ? 'error.main' : 'text.primary');
-              const legend = saldo > 0 ? '(A favor)' : (saldo < 0 ? '(Debes)' : '');
+              const legend = saldo > 0 ? '(A favor)' : (saldo < 0 ? '(Déficit)' : '');
               return (
                 <Typography 
                   component="p" 
@@ -616,7 +648,8 @@ const Dashboard = () => {
         {(() => {
           const cards = [
             { key: 'visa', title: 'Visa', metrics: data?.creditCards?.visa },
-            { key: 'mastercard', title: 'Mastercard', metrics: data?.creditCards?.mastercard }
+            { key: 'mastercard', title: 'Mastercard', metrics: data?.creditCards?.mastercard },
+            { key: 'consolidated', title: 'Consolidado TC', metrics: data?.creditCards?.consolidated }
           ];
 
           const renderCard = ({ key, title, metrics }) => {
@@ -626,10 +659,10 @@ const Dashboard = () => {
             const legend = saldo > 0 ? '(A favor)' : (saldo < 0 ? '(Debes)' : '');
             const saldoColor = saldo > 0 ? 'success.main' : (saldo < 0 ? 'error.main' : 'text.primary');
             const hasData = (gastos !== 0 || pagos !== 0 || saldo !== 0);
-            const brand = CARD_BRANDS[key] || { color: theme.palette.divider };
+            const brand = CARD_BRANDS[key] || { color: theme.palette.divider, logo: '' };
             const bgTint = alpha(brand.color, 0.04);
             return (
-              <Grid item xs={12} md={6} key={key} sx={{ display: 'flex' }}>
+              <Grid item xs={12} md={4} key={key} sx={{ display: 'flex' }}>
                 <Paper
                   elevation={2}
                   sx={{ 
@@ -645,12 +678,14 @@ const Dashboard = () => {
                   }}
                 >
                   {/* Optional brand logo (hidden if not found) */}
-                  <img 
-                    src={brand.logo}
-                    alt={`${title} logo`} 
-                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                    style={{ position: 'absolute', right: 12, top: 12, height: 28, opacity: 0.9 }}
-                  />
+                  {brand.logo && (
+                    <img 
+                      src={brand.logo}
+                      alt={`${title} logo`} 
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      style={{ position: 'absolute', right: 12, top: 12, height: 28, opacity: 0.9 }}
+                    />
+                  )}
 
                   <Typography component="h3" variant="h6" sx={{ fontWeight: 700, mb: 2, color: theme.palette.text.primary }}>
                     {title}
@@ -683,6 +718,52 @@ const Dashboard = () => {
           };
 
           return cards.map(renderCard);
+        })()}
+
+        {/* Bloque Transacciones Proyectadas (no TC) */}
+        <Grid item xs={12}>
+          <Typography 
+            component="h2" 
+            variant="h5" 
+            sx={{ 
+              mt: 1,
+              color: theme.palette.primary.main,
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 700,
+              letterSpacing: '-0.5px'
+            }}
+          >
+            Transacciones Proyectadas (no TC)
+          </Typography>
+        </Grid>
+
+        {(() => {
+          const cards = [
+            { key: 'ing', title: 'Ingresos Proyectados (mes)', value: data?.projected?.ingresos || 0, color: 'success.main' },
+            { key: 'gas', title: 'Gastos Proyectados (mes)', value: data?.projected?.gastos || 0, color: 'error.main' },
+            { key: 'sal', title: 'Saldo Proyectado (mes)', value: data?.projected?.saldo || 0, color: (data?.projected?.saldo || 0) > 0 ? 'success.main' : ((data?.projected?.saldo || 0) < 0 ? 'error.main' : 'text.primary') }
+          ];
+          const hasAny = (data?.projected?.ingresos || 0) !== 0 || (data?.projected?.gastos || 0) !== 0 || (data?.projected?.saldo || 0) !== 0;
+          return cards.map((c) => (
+            <Grid item xs={12} md={4} key={c.key} sx={{ display: 'flex' }}>
+              <Paper elevation={2} sx={{ p: 3, display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <Typography component="h3" variant="h6" title="Incluye solo proyecciones manuales (no tarjeta) del mes." sx={{ mb: 1, fontWeight: 700 }}>
+                  {c.title}
+                </Typography>
+                <Typography variant="h4" color={c.color} sx={{ fontWeight: 700 }}>
+                  {formatCurrency(c.value)}{' '}
+                  {c.key === 'sal' && (c.value > 0 || c.value < 0) && (
+                    <Typography component="span" variant="h6" color={c.color} sx={{ ml: 1, fontWeight: 500 }}>
+                      {c.value > 0 ? '(A favor)' : '(Déficit)'}
+                    </Typography>
+                  )}
+                </Typography>
+                {!hasAny && (
+                  <Typography variant="caption" sx={{ mt: 0.5, opacity: 0.7 }}>Sin proyecciones este mes</Typography>
+                )}
+              </Paper>
+            </Grid>
+          ));
         })()}
 
         {/* Segunda fila - Gráficos */}
