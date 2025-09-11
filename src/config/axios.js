@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // Configurar la URL base para todas las peticiones
-axios.defaults.baseURL = 'http://localhost:3001';
+// Por defecto dejamos relativo para que en desarrollo use el proxy de CRA
+// y en producción se pueda inyectar via REACT_APP_API_BASE_URL
+const apiBase = process.env.REACT_APP_API_BASE_URL || '';
+axios.defaults.baseURL = apiBase;
 
 // Configurar interceptores para manejar tokens
 axios.interceptors.request.use(
