@@ -11,6 +11,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const authRoutes = require('./routes/authRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const projectedRoutes = require('./routes/projectedRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 
 // Initialize Express app
@@ -42,6 +43,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/projected', projectedRoutes);
 app.use('/api/categories', categoryRoutes);
 
 // Error handling middleware

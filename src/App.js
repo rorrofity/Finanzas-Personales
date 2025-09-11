@@ -16,6 +16,7 @@ import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
 import Profile from './pages/Profile';
+import ProjectedTransactions from './pages/ProjectedTransactions';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -45,6 +46,7 @@ function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="transactions" element={<Transactions />} />
+            <Route path="projected-transactions" element={<ProjectedTransactions />} />
             <Route path="categories" element={<Categories />} />
             <Route path="profile" element={<Profile />} />
           </Route>
