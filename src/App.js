@@ -17,6 +17,7 @@ import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
 import Profile from './pages/Profile';
 import ProjectedTransactions from './pages/ProjectedTransactions';
+import TransactionsIntl from './pages/TransactionsIntl';
 import Installments from './pages/Installments';
 
 // Protected Route Component
@@ -47,6 +48,7 @@ function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="transactions" element={<Transactions />} />
+            <Route path="transactions-intl" element={<TransactionsIntl />} />
             <Route path="installments" element={<Installments />} />
             <Route path="projected-transactions" element={<ProjectedTransactions />} />
             <Route path="categories" element={<Categories />} />

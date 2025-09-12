@@ -14,6 +14,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const projectedRoutes = require('./routes/projectedRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const installmentsRoutes = require('./routes/installmentsRoutes');
+const intlUnbilledRoutes = require('./routes/intlUnbilledRoutes');
 
 // Initialize Express app
 const app = express();
@@ -47,6 +48,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/projected', projectedRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/installments', installmentsRoutes);
+app.use('/api/intl-unbilled', intlUnbilledRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

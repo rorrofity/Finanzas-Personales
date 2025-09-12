@@ -15,70 +15,24 @@ Una aplicación web completa para el seguimiento y gestión de finanzas personal
  - Selector de período (Mes/Año) por extracto de tarjeta
  - Selección de Banco y Tarjeta (Visa/Mastercard) al importar
  - Filtro por período de importación en Dashboard y Transacciones
-
-## Importación de Estados de Cuenta
-
-El sistema soporta la importación automática de estados de cuenta bancarios en diferentes formatos:
-
-### Formatos Soportados
-
-1. **Movimientos Facturados**
-   - Formato: Excel (.xls, .xlsx)
-   - Detecta automáticamente fechas, descripciones y montos
-   - Clasificación automática de pagos y gastos
-
-2. **Movimientos No Facturados**
-   - Formato: Excel (.xls, .xlsx)
-   - Procesamiento especial para la estructura específica del archivo
-   - Soporte para múltiples hojas de cálculo
-
-### Características de Importación
-
-- Detección automática del tipo de archivo
-- Validación de datos y formato
-- Prevención de duplicados
-- Procesamiento inteligente de fechas y montos
-- Feedback detallado del proceso de importación
-- Detección automática de pagos basada en montos negativos
-- Cálculo preciso de deuda total considerando gastos y pagos
-
-### Flujo de Importación con Período
-
-1. Abre la página `Transacciones` y presiona `Importar CSV`.
-2. Selecciona el archivo (CSV/XLS/XLSX).
-3. Selecciona el `Banco` y, si corresponde, la `Tarjeta` (Visa/Mastercard para Banco de Chile).
-4. Selecciona el `Mes` y `Año` del extracto. Por defecto se propone el mes siguiente al actual (ej.: si hoy es 5 de septiembre, propondrá octubre).
-5. Importa. Todas las transacciones de ese archivo quedarán etiquetadas con ese período de extracto, y el Dashboard/Transacciones mostrarán datos según el `Mes/Año` seleccionado en el `MonthPicker`.
-
-Nota: el filtrado se realiza por período de importación (no por la fecha individual de la transacción), lo que asegura que el período seleccionado en la UI coincida exactamente con el extracto subido.
-
-### Dashboard Financiero
-
-- Resumen mensual de gastos, ingresos y pagos
-- Cálculo automático de deuda total
-- Visualización de tendencias financieras
-- Gráficos interactivos de gastos por categoría
-- Actualización en tiempo real de totales
-
-#### Tarjetas de Crédito (Visa / Mastercard)
-
-- Bloque dedicado con métricas por tarjeta: Gastos del Mes, Pagos del Mes y Saldo neto del mes (Pagos − Gastos), excluyendo transacciones marcadas como `desestimar`.
-- Se muestran 2 tarjetas: `Visa` y `Mastercard`. Los totales generales (Gastos/Pagos/Saldo) se mantienen en la sección superior.
-- El cálculo responde al selector de período (Mes/Año) y a cambios inmediatos en la tabla de Transacciones.
-
-Branding opcional (logos):
 - Puedes colocar logos en `public/assets/cards/` con los nombres exactos:
   - Visa: `public/assets/cards/visa.png`
   - Mastercard: `public/assets/cards/mastercard.png`
 - Recomendaciones: PNG con fondo transparente, alto ~28–36 px. Si los archivos no existen, la UI usará solo el color de marca.
 
-#### Transacciones Proyectadas
+#### Novedades recientes
 
-- Permite crear y gestionar ingresos/gastos manuales (fuera de tarjeta) por Mes/Año.
-- Campos: Nombre (3–60), Tipo (Ingreso/Gasto), Monto (>0), Día del mes (1–31; si el día no existe se usa el último día), Categoría (opcional), Notas (<=140), Estado (Activo/Inactivo), Repetir todos los meses (solo en creación).
-- Listado por mes responde al selector `MonthPicker`. Las proyecciones inactivas no se consideran en los totales de la página.
-- Repetición: si está ON, se materializa on‑demand solo el mes consultado; al editar un mes específico, el cambio aplica solo a ese mes (override) y no altera meses futuros ni pasados.
-- Acciones disponibles en la lista:
+### Compras en Cuotas (TC)
+- Backend: Tablas `installment_plans` y `installment_occurrences` (migración `14_create_installment_plans.sql`).
+- API:
+  - `GET /api/installments/plans` — Listar planes.
+  - `GET /api/installments/occurrences?year=YYYY&month=M` — Listar cuotas del mes.
+  - `POST /api/installments/plans` — Crear compra en cuotas (materializa cuotas futuras).
+  - `PUT /api/installments/plans/:planId` — Actualizar plan.
+  - `PUT /api/installments/occurrences/:occurrenceId` — Actualizar una cuota.
+  - `DELETE /api/installments/occurrences/:occurrenceId` — Eliminar una cuota puntual.
+  - `DELETE /api/installments/plans/:planId?fromYear=YYYY&fromMonth=M` — Eliminar desde un mes en adelante.
+- Frontend: Página `Compras en Cuotas (TC)` (`/installments`) y suma de cuotas del mes en Dashboard (Visa/MC + Consolidado).
   - Editar: modifica solo la occurrence del mes (override).
   - Eliminar (solo este mes): elimina la occurrence del mes.
   - Eliminar plantilla (desde este mes en adelante): borra la plantilla y todas sus repeticiones futuras; meses anteriores quedan como histórico.

@@ -56,6 +56,7 @@ const DashboardLayout = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Transacciones No Facturadas (TC)', icon: <ReceiptIcon />, path: '/transactions' },
+    { text: 'Transacciones No Facturadas Internacionales (TC)', icon: <ReceiptIcon />, path: '/transactions-intl' },
     { text: 'Compras en Cuotas (TC)', icon: <ReceiptIcon />, path: '/installments' },
     { text: 'Transacciones Proyectadas', icon: <ReceiptIcon />, path: '/projected-transactions' },
     { text: 'Categorías', icon: <CategoryIcon />, path: '/categories' },

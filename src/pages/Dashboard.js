@@ -136,6 +136,16 @@ const Dashboard = () => {
         console.warn('Error al cargar cuotas del mes:', e?.response?.status || e?.message);
         installments = [];
       }
+
+      // Load international unbilled summary (per brand) for selected month
+      let intlSummary = [];
+      try {
+        const intlRes = await axios.get('/api/intl-unbilled/summary', { params: { year: periodYear, month: periodMonth } });
+        intlSummary = intlRes.data || [];
+      } catch (e) {
+        console.warn('Error al cargar resumen internacional:', e?.response?.status || e?.message);
+        intlSummary = [];
+      }
       // Build categories treemap-like data
       const categoryMap = new Map();
       transactions
@@ -184,16 +194,37 @@ const Dashboard = () => {
         acc[b] += amt;
         return acc;
       }, {});
-      const visaGastosNonFact = visaMetrics.gastos;
-      const visaPagosNonFact = visaMetrics.pagos;
-      const mcGastosNonFact = mcMetrics.gastos;
-      const mcPagosNonFact = mcMetrics.pagos;
+      const visaGastosNational = visaMetrics.gastos;
+      const visaPagosNational = visaMetrics.pagos;
+      const mcGastosNational = mcMetrics.gastos;
+      const mcPagosNational = mcMetrics.pagos;
+
+      // International summary mapping
+      const intlMap = new Map(intlSummary.map(s => [String(s.brand).toLowerCase(), s]));
+      const visaIntl = intlMap.get('visa') || { gastos_clp: 0, pagos_clp: 0, latest_exchange_rate: null };
+      const mcIntl = intlMap.get('mastercard') || { gastos_clp: 0, pagos_clp: 0, latest_exchange_rate: null };
       const visaCuotas = installmentsByBrand['visa'] || 0;
       const mcCuotas = installmentsByBrand['mastercard'] || 0;
-      visaMetrics.gastos += visaCuotas;
-      mcMetrics.gastos += mcCuotas;
-      visaMetrics.breakdown = { gastosNonFact: visaGastosNonFact, pagosNonFact: visaPagosNonFact, cuotas: visaCuotas };
-      mcMetrics.breakdown = { gastosNonFact: mcGastosNonFact, pagosNonFact: mcPagosNonFact, cuotas: mcCuotas };
+      // Add installments to gastos and add international components to breakdown and totals used in Total del Mes
+      visaMetrics.gastos = visaGastosNational + (visaIntl.gastos_clp || 0) + visaCuotas;
+      mcMetrics.gastos = mcGastosNational + (mcIntl.gastos_clp || 0) + mcCuotas;
+      // Pagos se mantienen como nacionales + internacionales
+      visaMetrics.pagos = visaPagosNational + (visaIntl.pagos_clp || 0);
+      mcMetrics.pagos = mcPagosNational + (mcIntl.pagos_clp || 0);
+      visaMetrics.breakdown = {
+        gastosNational: visaGastosNational,
+        gastosInternational: Number(visaIntl.gastos_clp || 0),
+        pagosNonFact: visaMetrics.pagos, // total pagos (nacional+internacional)
+        cuotas: visaCuotas,
+        exchangeRate: visaIntl.latest_exchange_rate || null
+      };
+      mcMetrics.breakdown = {
+        gastosNational: mcGastosNational,
+        gastosInternational: Number(mcIntl.gastos_clp || 0),
+        pagosNonFact: mcMetrics.pagos,
+        cuotas: mcCuotas,
+        exchangeRate: mcIntl.latest_exchange_rate || null
+      };
       visaMetrics.saldo = (visaMetrics.pagos || 0) - (visaMetrics.gastos || 0);
       mcMetrics.saldo = (mcMetrics.pagos || 0) - (mcMetrics.gastos || 0);
       const consolidatedList = ccTx; // both networks
@@ -204,15 +235,18 @@ const Dashboard = () => {
         return acc;
       }, { gastos: 0, pagos: 0 });
       // add installments to consolidated gastos
-      const consGastosNonFact = consolidatedTotals.gastos;
-      const consPagosNonFact = consolidatedTotals.pagos;
+      const consGastosNational = consolidatedTotals.gastos;
+      const consPagosNational = consolidatedTotals.pagos;
+      const consIntlGastos = Number(visaIntl.gastos_clp || 0) + Number(mcIntl.gastos_clp || 0);
+      const consIntlPagos = Number(visaIntl.pagos_clp || 0) + Number(mcIntl.pagos_clp || 0);
       const consCuotas = (installmentsByBrand['visa'] || 0) + (installmentsByBrand['mastercard'] || 0);
-      consolidatedTotals.gastos += consCuotas;
+      consolidatedTotals.gastos = consGastosNational + consIntlGastos + consCuotas;
+      consolidatedTotals.pagos = consPagosNational + consIntlPagos;
       const consolidatedMetrics = {
         gastos: consolidatedTotals.gastos,
         pagos: consolidatedTotals.pagos,
         saldo: consolidatedTotals.pagos - consolidatedTotals.gastos,
-        breakdown: { gastosNonFact: consGastosNonFact, pagosNonFact: consPagosNonFact, cuotas: consCuotas }
+        breakdown: { gastosNational: consGastosNational, gastosInternational: consIntlGastos, pagosNonFact: consolidatedTotals.pagos, cuotas: consCuotas }
       };
 
       // Projected totals (non-TC): ingresos, gastos, saldo; exclude inactive
@@ -721,10 +755,12 @@ const Dashboard = () => {
                   </Typography>
                   {(() => {
                     const breakdown = metrics?.breakdown || {};
-                    const gastosNF = breakdown.gastosNonFact || 0;
+                    const isConsolidated = title === 'Consolidado TC';
+                    const gastosNat = breakdown.gastosNational ?? breakdown.gastosNonFact ?? 0;
+                    const gastosInt = breakdown.gastosInternational ?? 0;
                     const pagosNF = breakdown.pagosNonFact || 0;
                     const cuotasMes = breakdown.cuotas || 0;
-                    const totalPagar = (gastosNF - pagosNF) + cuotasMes;
+                    const totalPagar = (gastosNat + gastosInt - pagosNF) + cuotasMes;
                     const totalColor = totalPagar > 0 ? 'error.main' : 'success.main';
                     const totalLabel = totalPagar > 0 ? 'Total a pagar este mes' : 'Saldo a favor este mes';
 
@@ -732,7 +768,7 @@ const Dashboard = () => {
                       <>
                         <Box sx={{ mb: 1.5 }}>
                           <Typography variant="subtitle2" sx={{ opacity: 0.9, fontWeight: 700 }}>Movimientos no facturados</Typography>
-                          {/* Row: Gastos */}
+                          {/* Row: Nacionales */}
                           <Box sx={{
                             mt: 0.75,
                             display: 'grid',
@@ -740,10 +776,21 @@ const Dashboard = () => {
                             alignItems: 'baseline',
                             columnGap: 1
                           }}>
-                            <Tooltip title="Compras realizadas con la tarjeta en el mes y aún no facturadas.">
-                              <Typography variant="body2" sx={{ opacity: 0.8 }}>Gastos</Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.8 }}>Nacionales</Typography>
+                            <Typography variant="body1" color="error.main" sx={{ fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(gastosNat)}</Typography>
+                          </Box>
+                          {/* Row: Internacionales */}
+                          <Box sx={{
+                            mt: 0.5,
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 160px',
+                            alignItems: 'baseline',
+                            columnGap: 1
+                          }}>
+                            <Tooltip title="Monto internacional convertido a CLP con el valor del dólar ingresado al importar el archivo.">
+                              <Typography variant="body2" sx={{ opacity: 0.8 }}>Internacionales</Typography>
                             </Tooltip>
-                            <Typography variant="body1" color="error.main" sx={{ fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(gastosNF)}</Typography>
+                            <Typography variant="body1" color="error.main" sx={{ fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(gastosInt)}</Typography>
                           </Box>
                           {/* Row: Pagos */}
                           <Box sx={{
@@ -758,6 +805,11 @@ const Dashboard = () => {
                             </Tooltip>
                             <Typography variant="body1" color="success.main" sx={{ fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(pagosNF)}</Typography>
                           </Box>
+                          {(!isConsolidated && breakdown.exchangeRate) && (
+                            <Typography variant="caption" sx={{ mt: 0.5, display: 'block', textAlign: 'right', color: theme.palette.text.secondary }}>
+                              Tipo de cambio aplicado: {formatCurrency(breakdown.exchangeRate)} / USD
+                            </Typography>
+                          )}
                         </Box>
 
                         <Box sx={{ mb: 1.5 }}>
