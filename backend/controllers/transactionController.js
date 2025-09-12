@@ -626,6 +626,85 @@ const importTransactions = async (req, res) => {
     console.log(`Se encontraron ${processedTransactions.length} transacciones para procesar`);
     console.log('Primeras 3 transacciones:', processedTransactions.slice(0, 3));
 
+    // =============================
+    // Dedupe por (brand, fecha_local, monto signed) con control de multiplicidad
+    // =============================
+
+    // Helper para formatear fecha local America/Santiago a YYYY-MM-DD
+    const formatLocalDate = (date) => {
+      const parts = new Intl.DateTimeFormat('es-CL', {
+        timeZone: 'America/Santiago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(date);
+      const dd = parts.find(p => p.type === 'day')?.value;
+      const mm = parts.find(p => p.type === 'month')?.value;
+      const yyyy = parts.find(p => p.type === 'year')?.value;
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    // brand/network viene validado más arriba cuando provider === 'banco_chile'
+    const brand = network; // 'visa' | 'mastercard' (para otras fuentes podría ser null)
+
+    // Armar buckets por signature dentro del archivo
+    const fileBuckets = new Map(); // signature -> array de tx
+    const fileCounts = new Map();  // signature -> N en archivo
+    for (const tx of processedTransactions) {
+      const fechaLocal = formatLocalDate(tx.fecha);
+      const montoSigned = Number(tx.monto);
+      const signature = `${brand || 'unknown'}|${fechaLocal}|${montoSigned}`;
+      if (!fileBuckets.has(signature)) fileBuckets.set(signature, []);
+      fileBuckets.get(signature).push({ ...tx, _signature: signature });
+      fileCounts.set(signature, (fileCounts.get(signature) || 0) + 1);
+    }
+
+    // Leer multiplicidad actual en DB por signature (brand, fecha, monto) para el usuario
+    const dbCounts = new Map();
+    try {
+      if (brand) {
+        const dbCountQuery = `
+          SELECT i.network as brand, t.fecha::date as fecha_local, t.monto as monto_signed, COUNT(*) as cnt
+          FROM transactions t
+          LEFT JOIN imports i ON t.import_id = i.id
+          WHERE t.user_id = $1
+            AND i.product_type = 'credit_card'
+            AND i.network = $2
+          GROUP BY i.network, t.fecha::date, t.monto
+        `;
+        const dbCountRes = await db.query(dbCountQuery, [req.user.id, brand]);
+        for (const row of dbCountRes.rows) {
+          const signature = `${row.brand}|${row.fecha_local.toISOString().slice(0,10)}|${Number(row.monto_signed)}`;
+          dbCounts.set(signature, Number(row.cnt));
+        }
+      }
+    } catch (e) {
+      console.warn('No se pudo obtener conteos de DB para dedupe por signature. Continuando sin dedupe específico.', e.message);
+    }
+
+    // Seleccionar exactamente (FILE_count - DB_count) por signature
+    const toInsertBySignature = [];
+    let rejectedByMultiplicity = 0;
+    for (const [signature, items] of fileBuckets.entries()) {
+      const fileN = fileCounts.get(signature) || 0;
+      const dbN = dbCounts.get(signature) || 0;
+      const need = Math.max(fileN - dbN, 0);
+      if (need > 0) {
+        toInsertBySignature.push(...items.slice(0, need));
+      } else {
+        rejectedByMultiplicity += items.length;
+      }
+    }
+
+    console.log('[dedupe] firmas en archivo:', fileCounts.size);
+    console.log('[dedupe] a insertar tras multiplicidad:', toInsertBySignature.length);
+    if (rejectedByMultiplicity > 0) {
+      console.log('[dedupe] rechazadas por multiplicidad (ya existen en DB):', rejectedByMultiplicity);
+    }
+
+    // Reemplazar el conjunto a insertar por el dedupe calculado
+    const transactionsForInsert = toInsertBySignature;
+
     // Crear registro de importación
     let importId = null;
     try {
@@ -642,7 +721,7 @@ const importTransactions = async (req, res) => {
     }
 
     const transactionModel = new Transaction(db);
-    const importResult = await transactionModel.importFromCSV(req.user.id, processedTransactions, importId);
+    const importResult = await transactionModel.importFromCSV(req.user.id, transactionsForInsert, importId);
 
     // Actualizar métricas de importación si se creó el registro
     if (importId) {
@@ -663,7 +742,14 @@ const importTransactions = async (req, res) => {
     res.status(201).json({
       success: true,
       message: importResult.message,
-      stats: importResult.stats,
+      stats: {
+        ...importResult.stats,
+        dedupe: {
+          signaturesInFile: fileCounts.size,
+          insertedAfterMultiplicity: transactionsForInsert.length,
+          rejectedByMultiplicity
+        }
+      },
       transactions: importResult.insertedTransactions,
       import: {
         id: importId,

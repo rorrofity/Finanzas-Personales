@@ -1,6 +1,6 @@
 [
   {
-    "id": "3912ff3d-2ff5-4654-bde3-17fea8cfbae6",
+    "id": "37972f5c-923f-4fbc-aadb-6677a8cd140e",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-22T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -14,7 +14,21 @@
     "period_month": 10
   },
   {
-    "id": "4029c4a2-7959-4587-aedf-447daebe09a8",
+    "id": "42f51eda-d917-4072-a4ef-a68209332d43",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-22T04:00:00.000Z",
+    "descripcion": "SANIDENT COMPRAS",
+    "monto": "35000.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "837fbe24-7850-449e-8a4e-1bf45049b098",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-22T04:00:00.000Z",
     "descripcion": "UBER RIDES COMPRAS",
@@ -28,7 +42,7 @@
     "period_month": 10
   },
   {
-    "id": "d298425a-61a7-4b6e-a9bb-4e424d3e1ee3",
+    "id": "e165e5c8-aaf7-40a0-a4a8-3afc01469ea1",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-22T04:00:00.000Z",
     "descripcion": "UBER RIDES COMPRAS",
@@ -42,7 +56,7 @@
     "period_month": 10
   },
   {
-    "id": "a58b0f39-5a8a-4ec2-a4ff-016ea53eccae",
+    "id": "9a0e8d67-d263-475c-bade-ac4d54258cc4",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-23T04:00:00.000Z",
     "descripcion": "BAKERY SP LIMITADA COMPRAS",
@@ -56,7 +70,7 @@
     "period_month": 10
   },
   {
-    "id": "b80d2e1e-135e-4a0f-a160-2a12306b2ea7",
+    "id": "0819a951-0399-4a2b-b8f6-8006e9c9017b",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-23T04:00:00.000Z",
     "descripcion": "PEDIDOSYA CL COMPRAS",
@@ -70,7 +84,7 @@
     "period_month": 10
   },
   {
-    "id": "0d4794ef-e3e8-4dee-b2c8-ac12c88adf2d",
+    "id": "c217ff39-5a73-4789-be40-f45209a801de",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "EL BAR DEL TIO COMPRAS",
@@ -84,7 +98,7 @@
     "period_month": 10
   },
   {
-    "id": "e52ac161-fe8a-486c-85aa-12e934428314",
+    "id": "414bb76e-326a-46d8-8537-dc2cd8051f3e",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "FUDO *PATIO CENTRAL COMPRAS",
@@ -98,7 +112,7 @@
     "period_month": 10
   },
   {
-    "id": "3cce775d-c53b-4cf7-b134-c2a5cbdbeede",
+    "id": "bf017e74-2a91-4eac-a0ab-6087a5cb4385",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "FUDO *PATIO CENTRAL COMPRAS",
@@ -112,7 +126,7 @@
     "period_month": 10
   },
   {
-    "id": "34ca1fc6-da1f-4cb5-8ab7-4ca38bd0d6af",
+    "id": "c9a4f1f5-4041-40e1-a475-728065c8ed58",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "FUDO *PATIO CENTRAL COMPRAS",
@@ -126,7 +140,21 @@
     "period_month": 10
   },
   {
-    "id": "ccaa7861-923c-42fe-93fa-a782c1edc96c",
+    "id": "b4f4451c-d22f-49a5-8cad-23a6fe3dde42",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-24T04:00:00.000Z",
+    "descripcion": "MERCADOPAGO*KOMBIST COMPRAS",
+    "monto": "2700.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "97f44c11-3b9d-4de0-bc2e-9ae9c3323749",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -140,7 +168,7 @@
     "period_month": 10
   },
   {
-    "id": "72912d09-dcdf-4f74-9921-c48a1d4ec547",
+    "id": "464c5c35-c0d3-49dc-b9ef-14f62a0f36a6",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -154,7 +182,7 @@
     "period_month": 10
   },
   {
-    "id": "8f25139c-05ec-4549-ae4b-3cfb74f12431",
+    "id": "56375856-cc8e-4465-85b4-4fb07daa5ab9",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -168,7 +196,7 @@
     "period_month": 10
   },
   {
-    "id": "40e4ef7d-51ff-4b5d-8529-6e8e27fb9ecb",
+    "id": "7520a3a0-1f6a-4bf9-8e36-bb330d28b536",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -182,7 +210,7 @@
     "period_month": 10
   },
   {
-    "id": "7bb566ea-7cb4-4100-8b91-07bd70a108c0",
+    "id": "5bff65ab-6349-4d55-a8f8-62a6d2543d0c",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-24T04:00:00.000Z",
     "descripcion": "STA ISABEL 1 PON.VINA COMPRAS",
@@ -196,7 +224,21 @@
     "period_month": 10
   },
   {
-    "id": "65b054cd-7e59-47c8-bbf5-3376fed03893",
+    "id": "135f86c2-1981-4655-94c5-df39453f7c73",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-24T04:00:00.000Z",
+    "descripcion": "VINA DEL MAR COMPRAS",
+    "monto": "7370.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "fdc62337-a38c-4fe9-88ed-ac12d03f5267",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-25T04:00:00.000Z",
     "descripcion": "BAKERY LYNCH COMPRAS",
@@ -210,7 +252,35 @@
     "period_month": 10
   },
   {
-    "id": "62eec896-0fd6-4b2f-bb12-c480ab4b2629",
+    "id": "4fea4286-5498-4abe-8325-d0e30cdf1f0c",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-25T04:00:00.000Z",
+    "descripcion": "LO PRADO 4 COMPRAS",
+    "monto": "5000.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "d48ad7bb-7a85-4474-9914-eae116842087",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-25T04:00:00.000Z",
+    "descripcion": "OFFIMANIA COMPRAS",
+    "monto": "6570.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "5d0014f4-1397-44b6-9c1a-5988b6e2dd24",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-25T04:00:00.000Z",
     "descripcion": "PAYU *FLIXBUS COMPRAS",
@@ -224,7 +294,7 @@
     "period_month": 10
   },
   {
-    "id": "c67b219d-0a77-4799-823b-7fee16c18aa1",
+    "id": "92c929ac-cab0-4337-a404-619859bd1784",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-25T04:00:00.000Z",
     "descripcion": "PAYU *UBER EATS COMPRAS",
@@ -238,7 +308,7 @@
     "period_month": 10
   },
   {
-    "id": "edf44352-63b3-4929-a34f-c6c0b6d028a5",
+    "id": "31adb63f-d7aa-4ab5-82e9-227212672b90",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-25T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -252,7 +322,7 @@
     "period_month": 10
   },
   {
-    "id": "0926d971-1a28-44b4-a78f-fff9d5b60568",
+    "id": "c0a89463-67ff-4120-af9e-3404c4a621c2",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-25T04:00:00.000Z",
     "descripcion": "TUU*GREEN LAB COMPRAS",
@@ -266,7 +336,7 @@
     "period_month": 10
   },
   {
-    "id": "da541910-32b9-4311-b74d-b6ee71dfa123",
+    "id": "d529f8cb-eb85-483b-8b73-1cad649c4774",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-25T04:00:00.000Z",
     "descripcion": "TUU*GREEN LAB COMPRAS",
@@ -280,7 +350,7 @@
     "period_month": 10
   },
   {
-    "id": "4c2e2e8c-15a2-41ba-84cb-3fd8e3127706",
+    "id": "652097d5-262b-4fa1-b54f-e42f8999d805",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "AHUM L145 LIBERTAD 335 COMPRAS",
@@ -294,7 +364,7 @@
     "period_month": 10
   },
   {
-    "id": "e233665f-39cf-4978-a3ec-ded9c127c314",
+    "id": "84bf211a-5c83-4c84-adad-ccd4c4be1a5c",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "APP COPEC BIP] COMPRAS",
@@ -308,7 +378,7 @@
     "period_month": 10
   },
   {
-    "id": "98cf8e99-ccb2-4ba5-9ead-dfd2e6ef23db",
+    "id": "ef2d81ca-a2af-4a60-85fc-d9c61a30d6f7",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "CEGIN COMPRAS",
@@ -322,7 +392,7 @@
     "period_month": 10
   },
   {
-    "id": "b726b143-1d8f-46da-a22e-cb90a26bce46",
+    "id": "7dc834cd-fe44-4103-8127-821a7a83cf46",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "CEGIN COMPRAS",
@@ -336,7 +406,7 @@
     "period_month": 10
   },
   {
-    "id": "51019e74-ffb8-4fa0-9474-71c71330cf00",
+    "id": "d0c324ac-d162-49e3-8ea1-1f017d60ec35",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "CEGIN LTDA COMPRAS",
@@ -350,7 +420,7 @@
     "period_month": 10
   },
   {
-    "id": "0083fe10-099a-4ae2-a154-ee051eefaef4",
+    "id": "d1915f74-e058-4bd8-ba42-a3f9b3edd45c",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "CEGIN LTDA COMPRAS",
@@ -364,7 +434,7 @@
     "period_month": 10
   },
   {
-    "id": "641a4a1a-2070-4e4b-b128-57b3a088ba50",
+    "id": "cdf391c4-a67e-486a-8256-aa64ef48af5e",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "CEGIN LTDA COMPRAS",
@@ -378,7 +448,7 @@
     "period_month": 10
   },
   {
-    "id": "ebe36d97-caeb-4d7d-83bd-78da37c6a8e3",
+    "id": "d2d6aaa6-7bc5-4e3b-9421-7849df3c090f",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "MERPAGO*COMERCIALCANAS COMPRAS",
@@ -392,7 +462,7 @@
     "period_month": 10
   },
   {
-    "id": "58282941-b4f0-4104-8920-39cecd143dec",
+    "id": "14d1cbad-9415-4c70-9bf7-e197632ca470",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "PAYU *FLIXBUS COMPRAS",
@@ -406,7 +476,7 @@
     "period_month": 10
   },
   {
-    "id": "36508752-0e93-4e88-9bf0-d5744c542d20",
+    "id": "21dc2120-527c-43ef-96f6-992dcdacb574",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -420,7 +490,7 @@
     "period_month": 10
   },
   {
-    "id": "645b1808-8495-4fdc-b104-4823ea85bcc9",
+    "id": "ae0d0a4a-a2d0-4d0b-9d0f-bc22e21309d1",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -434,7 +504,7 @@
     "period_month": 10
   },
   {
-    "id": "6a138dbc-96b3-4676-b2e8-b506a7aba95b",
+    "id": "8f7ebc4e-5ab9-435d-9318-715d58a01ba7",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -448,7 +518,7 @@
     "period_month": 10
   },
   {
-    "id": "77d4fcc8-404b-4cb6-9db2-6b4177dd91ad",
+    "id": "0b250994-c2b0-45c1-b384-828e5cacb66a",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "SABORES DE MANCORA COMPRAS",
@@ -462,7 +532,7 @@
     "period_month": 10
   },
   {
-    "id": "1b3fe3ce-dc4d-41bf-95b6-0bc40f085766",
+    "id": "eda5891d-b40d-49f0-8b06-6e5e6961bcc0",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-26T04:00:00.000Z",
     "descripcion": "VINA DEL MAR COMPRAS",
@@ -476,7 +546,7 @@
     "period_month": 10
   },
   {
-    "id": "7aa50601-d4db-4d41-8835-2da3a8ff02fe",
+    "id": "399be32d-4fb7-40f8-8bc6-5bfebda03b2f",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-27T04:00:00.000Z",
     "descripcion": "APP COPEC BIP] COMPRAS",
@@ -490,7 +560,7 @@
     "period_month": 10
   },
   {
-    "id": "067df709-19e7-42ec-93c1-d3229d0d5133",
+    "id": "01d190e3-1557-4b35-8c8d-f7db9a4d8051",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-27T04:00:00.000Z",
     "descripcion": "BAKERY SP LIMITADA COMPRAS",
@@ -504,7 +574,7 @@
     "period_month": 10
   },
   {
-    "id": "2b87965f-e666-4394-8352-d0127fcb5e9c",
+    "id": "ba855faa-2269-4d61-b639-4e6eb15acbe1",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-27T04:00:00.000Z",
     "descripcion": "CONSULTA COMPRAS",
@@ -518,7 +588,7 @@
     "period_month": 10
   },
   {
-    "id": "df0b525c-319f-4dac-9fab-b2ef8af36f5d",
+    "id": "94f40c72-d666-4a5e-ac9b-5424e617b7ea",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-27T04:00:00.000Z",
     "descripcion": "FARM. AHUMADA SPA L703 N CUOTAS",
@@ -532,7 +602,7 @@
     "period_month": 10
   },
   {
-    "id": "8e1acfc1-e035-4a6e-b8c7-43e3422df153",
+    "id": "1bc00552-cf52-45d8-aef9-3ab1f4f0b8c8",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-27T04:00:00.000Z",
     "descripcion": "FONASA VINA NORTE N CUOTAS",
@@ -546,7 +616,7 @@
     "period_month": 10
   },
   {
-    "id": "bb78b148-0251-43a8-b242-0712ada1b475",
+    "id": "653fe70e-9d13-4282-a7a9-0a008335aba9",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-27T04:00:00.000Z",
     "descripcion": "GOOGLE PLAY YOUTUBE COMPRAS",
@@ -560,7 +630,7 @@
     "period_month": 10
   },
   {
-    "id": "236a8274-630b-4d63-9a27-9ce111f217e0",
+    "id": "b413756f-cfae-45ce-9955-32cfe81c7372",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-27T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -574,7 +644,7 @@
     "period_month": 10
   },
   {
-    "id": "fbb8f542-23e9-4428-b84e-39506547ead9",
+    "id": "74251a19-9507-4003-a5ce-786caa443d6e",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-27T04:00:00.000Z",
     "descripcion": "SOCIEDAD VICINAY HENRI COMPRAS",
@@ -588,7 +658,21 @@
     "period_month": 10
   },
   {
-    "id": "63e3e4c3-dc44-4551-92b2-8a48fc3d485c",
+    "id": "cbeba959-70c1-4407-8d88-6469ed530330",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-27T04:00:00.000Z",
+    "descripcion": "VINA DEL MAR COMPRAS",
+    "monto": "3780.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "58d2249e-bde0-41c3-9a04-b0127b0b6709",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "CIRUMED COMPRAS",
@@ -602,7 +686,7 @@
     "period_month": 10
   },
   {
-    "id": "81a1306f-6493-4cc3-b902-cbb30f175e23",
+    "id": "ff8341b5-484e-4dc0-b285-b6d1863dd889",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "ESPACIO GOURMET COMPRAS",
@@ -616,7 +700,7 @@
     "period_month": 10
   },
   {
-    "id": "5a967b97-b26b-4a49-afea-cf07eaf5496f",
+    "id": "4e84ab93-0cdb-4575-9f8c-5c359a1cf3ac",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "HELP.HBOMAX.COM H**MAX COMPRAS",
@@ -630,7 +714,21 @@
     "period_month": 10
   },
   {
-    "id": "bea15557-f1ca-4476-9da0-b4eeb28fc41e",
+    "id": "c82f89a3-5756-4d84-a80f-29fb258afb32",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-28T04:00:00.000Z",
+    "descripcion": "MARINA VINA MMA COMPRAS",
+    "monto": "3600.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "9c38c9ad-1101-46a6-ab4a-a518febebc80",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "MERPAGO*GREEN MARKET S COMPRAS",
@@ -644,7 +742,7 @@
     "period_month": 10
   },
   {
-    "id": "5e3a0ca3-a056-423e-9e7d-386afa358821",
+    "id": "f5d8b003-7622-4e0b-9913-aed96f4e6e8c",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "MERPAGO*GREEN MARKET S COMPRAS",
@@ -658,7 +756,7 @@
     "period_month": 10
   },
   {
-    "id": "40be2bda-50c3-44d2-80bd-8ced3dbe4620",
+    "id": "ab302425-54c9-4f70-ab98-ecfa01a129c5",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -672,7 +770,7 @@
     "period_month": 10
   },
   {
-    "id": "f172b174-148a-47dd-8008-3962a8d39359",
+    "id": "d3f6da77-618b-4cbf-b3a5-511491327f43",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -686,7 +784,7 @@
     "period_month": 10
   },
   {
-    "id": "e8a1f749-dd63-452c-9e38-eeb1cdef9d90",
+    "id": "d7cc3cf5-3471-4e03-a9b2-7baa5a074373",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -700,7 +798,7 @@
     "period_month": 10
   },
   {
-    "id": "135dec2c-0066-4f87-878a-ddb67c0dd26f",
+    "id": "cb92c4da-a121-44bb-ba1c-ba6ad3b2d2de",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -714,7 +812,7 @@
     "period_month": 10
   },
   {
-    "id": "1046c135-ee54-4812-a414-97f94c841033",
+    "id": "0a8036b2-0563-4bc6-aaf8-994c618ad30a",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-28T04:00:00.000Z",
     "descripcion": "SUC LOUNGE S.A 105 COMPRAS",
@@ -728,7 +826,21 @@
     "period_month": 10
   },
   {
-    "id": "a8796304-9de1-440c-a43c-2e8b7d3b2151",
+    "id": "3a61546a-4a8e-451a-a756-5d78160918e1",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-28T04:00:00.000Z",
+    "descripcion": "UNIMARC 4 PONIENTE COMPRAS",
+    "monto": "14960.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "977de012-b78d-4df8-b887-60ba2b40e16d",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-29T04:00:00.000Z",
     "descripcion": "JUSTO COMPRAS",
@@ -742,12 +854,12 @@
     "period_month": 10
   },
   {
-    "id": "7d39958b-a70b-416b-81e5-fe6de31c3f24",
+    "id": "d884f881-4154-454f-9ee1-974be18a5859",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-30T04:00:00.000Z",
     "descripcion": "ACLIN 3 CPC",
     "monto": "253420.00",
-    "tipo": "gasto",
+    "tipo": "desestimar",
     "cuotas": 1,
     "categoria": null,
     "banco": "banco_chile",
@@ -756,7 +868,7 @@
     "period_month": 10
   },
   {
-    "id": "c3c1bf5d-60a2-40aa-8b1c-8c75bbeee296",
+    "id": "96f625f3-a3ef-44de-98e8-b0434ff52d26",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-30T04:00:00.000Z",
     "descripcion": "ACLIN COMPRAS",
@@ -770,7 +882,35 @@
     "period_month": 10
   },
   {
-    "id": "efcaf243-a380-4b14-b0d1-a4c0c2f65698",
+    "id": "d3f784d9-2bb4-432d-89e2-e04b4159c2b2",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-30T04:00:00.000Z",
+    "descripcion": "BOTILLERIA IMPACTO COMPRAS",
+    "monto": "2390.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "744b0097-f91c-47ce-9e57-f61baff4a768",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-30T04:00:00.000Z",
+    "descripcion": "MIO NONO DIABUNO E. COMPRAS",
+    "monto": "13000.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "267e4d77-cf98-4cc4-b8b3-f12846095dd9",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-08-30T04:00:00.000Z",
     "descripcion": "TUU*bomberosVinaDelMa COMPRAS",
@@ -784,7 +924,49 @@
     "period_month": 10
   },
   {
-    "id": "01dcab87-a2a7-4b5b-8f32-87be0afda839",
+    "id": "43a29808-19aa-4f98-ba03-ab645985fad4",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-08-31T04:00:00.000Z",
+    "descripcion": "TUU*coccolino COMPRAS",
+    "monto": "11480.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "ee16c3cb-4711-4f62-9f43-c2162a1b3f4d",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-01T04:00:00.000Z",
+    "descripcion": "CAFETERIA LA VINOTE COMPRAS",
+    "monto": "7992.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "d70ff3fa-af68-4520-b340-11a00369f81c",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-01T04:00:00.000Z",
+    "descripcion": "MAXIK COMPRAS",
+    "monto": "1190.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "809f785f-fe29-4b14-ae70-ffde1a04ffea",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-01T04:00:00.000Z",
     "descripcion": "MERCADOPAGO *CABIFY25 COMPRAS",
@@ -798,7 +980,7 @@
     "period_month": 10
   },
   {
-    "id": "c25c28d4-991e-4ae8-bf85-29e2fe1b70ec",
+    "id": "1f4ed421-ada0-4ab8-be9a-3718a28fce78",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-01T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -812,7 +994,7 @@
     "period_month": 10
   },
   {
-    "id": "aaae6d16-171b-4094-9ab7-a8fdef489eda",
+    "id": "8140f1a2-8307-49f4-b376-57d2296bde6b",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-02T04:00:00.000Z",
     "descripcion": "APP COPEC BIP] COMPRAS",
@@ -826,7 +1008,7 @@
     "period_month": 10
   },
   {
-    "id": "bc2e0ddd-835a-460b-bfdb-53bda85415a6",
+    "id": "73bc0c94-403d-4525-a3c0-ba49a16959de",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-02T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -840,7 +1022,7 @@
     "period_month": 10
   },
   {
-    "id": "e74d2ea4-0182-45b6-a301-3b8ee787b36f",
+    "id": "7f014df6-a483-4dd2-a056-fd45b3886447",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-03T04:00:00.000Z",
     "descripcion": "APP COPEC BIP] COMPRAS",
@@ -854,7 +1036,7 @@
     "period_month": 10
   },
   {
-    "id": "2da8b9e6-cf7a-43ac-82f6-793cc02f3777",
+    "id": "a1357d69-f6df-4f4c-aac5-d6ecef84d4c5",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-03T04:00:00.000Z",
     "descripcion": "FARM. AHUMADA SPA L703 COMPRAS",
@@ -868,7 +1050,7 @@
     "period_month": 10
   },
   {
-    "id": "91069115-e363-41aa-a68b-bd375dab5d0e",
+    "id": "c4e0444b-59da-493b-855e-ffa228aa43be",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-03T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -882,21 +1064,21 @@
     "period_month": 10
   },
   {
-    "id": "2215dc60-4458-438c-8973-4f1efc9b7392",
+    "id": "716b985e-8d1f-4f82-b056-86df7e5738ae",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-04T04:00:00.000Z",
-    "descripcion": "CLARO RECAUDACION      SANTIAGO      CHL",
-    "monto": "20332.00",
+    "fecha": "2025-09-03T04:00:00.000Z",
+    "descripcion": "VINA DEL MAR COMPRAS",
+    "monto": "2190.00",
     "tipo": "gasto",
     "cuotas": 1,
     "categoria": null,
     "banco": "banco_chile",
-    "tarjeta": "mastercard",
+    "tarjeta": "visa",
     "period_year": 2025,
     "period_month": 10
   },
   {
-    "id": "fb49092b-5419-4077-9e98-5a77fcef30e2",
+    "id": "49c884db-ac27-48be-b3ce-0c45d3a2807c",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-04T04:00:00.000Z",
     "descripcion": "CLARO RECAUDACION COMPRAS",
@@ -910,21 +1092,7 @@
     "period_month": 10
   },
   {
-    "id": "8a25071e-0c6c-48ab-ad44-11f8a2381118",
-    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-04T04:00:00.000Z",
-    "descripcion": "CQ SPA                 VALPARAISO    CHL",
-    "monto": "39556.00",
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "mastercard",
-    "period_year": 2025,
-    "period_month": 10
-  },
-  {
-    "id": "57277e22-dd1c-464e-9824-90d3de57637b",
+    "id": "88137c64-1488-4908-9e5c-21ac4f437528",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-04T04:00:00.000Z",
     "descripcion": "CQ SPA COMPRAS",
@@ -938,63 +1106,7 @@
     "period_month": 10
   },
   {
-    "id": "dac1b2fc-5f51-43f3-8f8b-9444c10487d9",
-    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-04T04:00:00.000Z",
-    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
-    "monto": "-2185.00",
-    "tipo": "pago",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "mastercard",
-    "period_year": 2025,
-    "period_month": 10
-  },
-  {
-    "id": "068b73c5-7732-45ad-9878-4bfb8ba066c0",
-    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-04T04:00:00.000Z",
-    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
-    "monto": "2185.00",
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "mastercard",
-    "period_year": 2025,
-    "period_month": 10
-  },
-  {
-    "id": "7247bc4e-48fb-46d8-b47f-b2fb1d12762b",
-    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-04T04:00:00.000Z",
-    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
-    "monto": "2316.00",
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "mastercard",
-    "period_year": 2025,
-    "period_month": 10
-  },
-  {
-    "id": "870042c1-aa3a-4947-86ff-dcc1fc378d44",
-    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-04T04:00:00.000Z",
-    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
-    "monto": "2632.00",
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "mastercard",
-    "period_year": 2025,
-    "period_month": 10
-  },
-  {
-    "id": "4090e02b-7fa7-484c-abf3-50136dcb7b7b",
+    "id": "91ffb6f2-6248-4369-9007-b1606531524f",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-04T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -1008,7 +1120,7 @@
     "period_month": 10
   },
   {
-    "id": "3b3fb28b-1131-41de-8e9d-9d098b68583d",
+    "id": "928f36cd-ba16-4ee7-8108-4ce365302985",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-04T04:00:00.000Z",
     "descripcion": "PEDIDOSYA CL COMPRAS",
@@ -1022,21 +1134,21 @@
     "period_month": 10
   },
   {
-    "id": "7eeab069-da28-420d-b1ac-edf05bc46a41",
+    "id": "31965c48-7586-4716-9ba1-a74e4b364ab6",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-05T04:00:00.000Z",
-    "descripcion": "APP COPEC BIP!         SANTIAGO      CHL",
-    "monto": "1740.00",
+    "fecha": "2025-09-04T04:00:00.000Z",
+    "descripcion": "SAN CAMILO COMPRAS",
+    "monto": "2990.00",
     "tipo": "gasto",
     "cuotas": 1,
     "categoria": null,
     "banco": "banco_chile",
-    "tarjeta": "mastercard",
+    "tarjeta": "visa",
     "period_year": 2025,
     "period_month": 10
   },
   {
-    "id": "375c3386-e7ba-44e2-8b3d-ccf222ea2a31",
+    "id": "fa9ad81b-c150-4d97-b81f-5008ae21146a",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-05T04:00:00.000Z",
     "descripcion": "APP COPEC BIP] COMPRAS",
@@ -1050,21 +1162,7 @@
     "period_month": 10
   },
   {
-    "id": "245e4eac-8a94-44e6-885e-0e9ae0a8c6ee",
-    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-05T04:00:00.000Z",
-    "descripcion": "BAKERY SP LIMITADA     VALPARAISO    CHL",
-    "monto": "3990.00",
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "mastercard",
-    "period_year": 2025,
-    "period_month": 10
-  },
-  {
-    "id": "4d44c4d1-ba31-4dd0-b4f7-ca7420e315a4",
+    "id": "f7aecb87-03a0-44d2-93ab-5ed2150f58db",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-05T04:00:00.000Z",
     "descripcion": "BAKERY SP LIMITADA COMPRAS",
@@ -1078,21 +1176,7 @@
     "period_month": 10
   },
   {
-    "id": "32b3cd34-5cad-40fe-ac43-135f73767470",
-    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-05T04:00:00.000Z",
-    "descripcion": "DLGOOGLE YOUTUBE      SANTIAGO      CHL",
-    "monto": "1790.00",
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "mastercard",
-    "period_year": 2025,
-    "period_month": 10
-  },
-  {
-    "id": "8ab019a8-1645-442f-a9d3-004bed9a7d18",
+    "id": "8ed8a3c6-5d78-46ac-abbe-f267ebb8dc9a",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-05T04:00:00.000Z",
     "descripcion": "KUNSTMANN CRAFT BAR COMPRAS",
@@ -1106,7 +1190,7 @@
     "period_month": 10
   },
   {
-    "id": "da056eb6-bb3e-4c24-98ea-7e4ac4d99c8a",
+    "id": "ceaafe63-0c42-488e-a4e5-83b112812bf0",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-05T04:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -1120,21 +1204,7 @@
     "period_month": 10
   },
   {
-    "id": "707e39d3-bc3c-4c17-8b73-c097d5c2bd69",
-    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
-    "fecha": "2025-09-05T04:00:00.000Z",
-    "descripcion": "Pago Pesos TAR",
-    "monto": "-3297843.00",
-    "tipo": "desestimar",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "mastercard",
-    "period_year": 2025,
-    "period_month": 10
-  },
-  {
-    "id": "651fd02e-ae8b-4328-b70f-a8bae762c8c9",
+    "id": "146af472-fe4c-43f6-8658-c087ed68d562",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-05T04:00:00.000Z",
     "descripcion": "Pago Pesos TEF PAGO NORMAL",
@@ -1148,21 +1218,21 @@
     "period_month": 10
   },
   {
-    "id": "808e7031-fb07-4ea2-a79a-dc1024465882",
+    "id": "6b96d9f6-d957-4354-bbeb-b9a289e1ef33",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-05T04:00:00.000Z",
-    "descripcion": "UNIMARC 4 PONIENTE     VINA DEL MAR  CHL",
-    "monto": "51472.00",
-    "tipo": "gasto",
+    "descripcion": "Pago Pesos TEF PAGO NORMAL",
+    "monto": "-564092.00",
+    "tipo": "desestimar",
     "cuotas": 1,
     "categoria": null,
     "banco": "banco_chile",
-    "tarjeta": "mastercard",
+    "tarjeta": "visa",
     "period_year": 2025,
     "period_month": 10
   },
   {
-    "id": "bd1a0383-d723-49b6-8a4b-467a30f727e5",
+    "id": "4a2c07da-9ee0-486d-8907-bc20d0602ce2",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-05T04:00:00.000Z",
     "descripcion": "UNIMARC 4 PONIENTE COMPRAS",
@@ -1176,7 +1246,7 @@
     "period_month": 10
   },
   {
-    "id": "fcb0d660-6db4-4a97-b31e-ddecc0c3bfa0",
+    "id": "ef3beea1-38f8-4290-92ca-7e2fe499f505",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-06T04:00:00.000Z",
     "descripcion": "COPEC APP COMPRAS",
@@ -1190,7 +1260,7 @@
     "period_month": 10
   },
   {
-    "id": "b6af9578-cde7-4579-ba2f-8a73df206607",
+    "id": "a47bd82a-124e-4658-9744-4918fb922d0d",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-06T04:00:00.000Z",
     "descripcion": "DL*GOOGLE YOUTUBE** COMPRAS",
@@ -1204,7 +1274,7 @@
     "period_month": 10
   },
   {
-    "id": "7b220bf4-cf64-4856-b2f9-e1d536c5516f",
+    "id": "d3db9382-f460-40e9-89b2-47d3fb9d11f2",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-06T04:00:00.000Z",
     "descripcion": "LIDER.CL TIENDA WEBPAY COMPRAS",
@@ -1218,7 +1288,7 @@
     "period_month": 10
   },
   {
-    "id": "bb5aab37-4dc6-4748-886e-94efa1e2884a",
+    "id": "9023975d-9b3b-4f9c-92a6-08dd367e3503",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-07T04:00:00.000Z",
     "descripcion": "BAKERY LYNCH COMPRAS",
@@ -1232,7 +1302,7 @@
     "period_month": 10
   },
   {
-    "id": "bb82401f-cea7-442d-8733-3f9c86ee238e",
+    "id": "04d0c3e9-2fd0-4784-9ab2-4d77b2f64229",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-07T04:00:00.000Z",
     "descripcion": "BAKERY SP LIMITADA COMPRAS",
@@ -1246,7 +1316,7 @@
     "period_month": 10
   },
   {
-    "id": "7da75cd6-36d7-4978-a5cd-727e9d3a2405",
+    "id": "ca73ef68-1e84-4780-82cf-fbbc576f5e7b",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-07T04:00:00.000Z",
     "descripcion": "GASTRONOMIA SD SPA COMPRAS",
@@ -1260,7 +1330,7 @@
     "period_month": 10
   },
   {
-    "id": "02df57df-84b1-4c6e-8d78-75a4a19aac7e",
+    "id": "fb7fad38-7468-4fa6-9fab-eb741f04be4d",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-07T04:00:00.000Z",
     "descripcion": "UNIMARC 4 PONIENTE COMPRAS",
@@ -1274,7 +1344,21 @@
     "period_month": 10
   },
   {
-    "id": "3621a00e-1db8-47f4-bd95-1c9303e3597b",
+    "id": "f375cee6-0453-4383-994e-b494176a4d82",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-08T03:00:00.000Z",
+    "descripcion": "Avance en cuotas TE AVANCE EN CTAS",
+    "monto": "528800.00",
+    "tipo": "desestimar",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "visa",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "ba03fb77-fd7f-4353-9be0-ea568f39e4d8",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "KIRA COMPRAS",
@@ -1288,7 +1372,7 @@
     "period_month": 10
   },
   {
-    "id": "4b8d309c-948f-4737-80eb-42c9044e389c",
+    "id": "12076bf1-ebef-4a01-88d9-ab2044e4e2c7",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "LIDER.CL TIENDA WEBPAY CRED.COMPRAS",
@@ -1302,7 +1386,7 @@
     "period_month": 10
   },
   {
-    "id": "9556ae18-e131-44c4-96c6-5740821337f4",
+    "id": "23129110-e74b-4b47-8794-80df3357b3f9",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "MAXIK COMPRAS",
@@ -1316,7 +1400,7 @@
     "period_month": 10
   },
   {
-    "id": "51540730-9131-4b44-922d-96f998e5c9d8",
+    "id": "2854c659-db73-4b4d-8f37-b85cb1857bcd",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "MAXIK COMPRAS",
@@ -1330,7 +1414,7 @@
     "period_month": 10
   },
   {
-    "id": "94e4f30a-aefd-45fc-9f02-28d086b2dc46",
+    "id": "6ef8de28-5a34-4114-94f2-65448f6cfe1f",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
@@ -1344,7 +1428,7 @@
     "period_month": 10
   },
   {
-    "id": "a39fcce2-2b16-43fd-a7bc-456073e94f88",
+    "id": "0e78f766-1d24-4fad-94a0-daea19e6a8c5",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "PAYU *FLIXBUS COMPRAS",
@@ -1358,7 +1442,7 @@
     "period_month": 10
   },
   {
-    "id": "0eaaa90b-4bf3-4830-9909-e6e79345fa78",
+    "id": "adfc16b3-c094-44e7-8a8c-65194c3ce6df",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
@@ -1372,7 +1456,7 @@
     "period_month": 10
   },
   {
-    "id": "08b2c724-4882-4e05-b718-74cc34375ce1",
+    "id": "722d7c31-aca9-4e09-b4a7-6f152712291e",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "PEDIDOSYA CL RESTAURAN CL            CHL",
@@ -1386,7 +1470,7 @@
     "period_month": 10
   },
   {
-    "id": "a9b3afd2-29db-4b87-8a41-d74ebd24e9ef",
+    "id": "bbf6e5d9-c7b7-4d76-9d1c-841de350a969",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "TIENDA MUNDO RURAL COMPRAS",
@@ -1400,7 +1484,7 @@
     "period_month": 10
   },
   {
-    "id": "fe791880-b26f-4a9c-90eb-e332eb8d2bdb",
+    "id": "093c9fbb-619c-46d4-ab77-454265aed0e8",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-08T03:00:00.000Z",
     "descripcion": "TRASPASO DEUDA INTERNA TRA.DOLAR/PESO",
@@ -1414,7 +1498,7 @@
     "period_month": 10
   },
   {
-    "id": "7d12ea99-aa05-429b-b7cd-805592c3504f",
+    "id": "416ece26-b209-430c-97d3-f87b037030ee",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "AMAZON PRIME           LAS CONDES    CHL",
@@ -1428,7 +1512,21 @@
     "period_month": 10
   },
   {
-    "id": "82b7f49d-376d-4904-aaef-fc004a37d630",
+    "id": "36b610d2-8b86-4ba6-b64b-f87f2c66538f",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "AMAZON PRIME COMPRAS",
+    "monto": "6490.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "a1029c25-cb9c-4e96-8692-91cadef9d94a",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "APP COPEC BIP!         SANTIAGO      CHL",
@@ -1442,7 +1540,21 @@
     "period_month": 10
   },
   {
-    "id": "d6a14735-9642-4441-82bf-d68ec66820db",
+    "id": "e48ac6b8-c39f-4405-8056-d3d2da99bb4a",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "APP COPEC BIP] COMPRAS",
+    "monto": "1740.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "d32b98c6-b5d0-447a-8325-f2eb7776c97b",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "BAKERY LYNCH           VALPARAISO    CHL",
@@ -1456,7 +1568,35 @@
     "period_month": 10
   },
   {
-    "id": "7e38429b-af4a-4b24-a1ca-6695cdd6a2e6",
+    "id": "fa6d65c8-1a99-4c7b-86be-c575f62093a9",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "BAKERY LYNCH COMPRAS",
+    "monto": "1210.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "49e42979-aea8-478a-9949-a6f477302a9e",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "DL*GOOGLE YOUTUBE** COMPRAS",
+    "monto": "11000.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "854d279d-00af-4ca3-a2da-c543cedd70ed",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "DLGOOGLE YOUTUBE      SANTIAGO      CHL",
@@ -1470,7 +1610,7 @@
     "period_month": 10
   },
   {
-    "id": "ad33096e-7fc2-4a7a-b199-0b8c2650eb2e",
+    "id": "5c89152d-ed4f-4a85-b2c3-15ce74ac3ec7",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "FRANCISCA GUERRERO     VINA DEL MAR  CHL",
@@ -1484,7 +1624,7 @@
     "period_month": 10
   },
   {
-    "id": "3d51a376-4e4c-4afe-8671-51cc9f077f92",
+    "id": "72e7dc52-2b6e-482d-900c-71079f73bfae",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "FRANCISCA GUERRERO     VINA DEL MAR  CHL",
@@ -1498,7 +1638,49 @@
     "period_month": 10
   },
   {
-    "id": "ad9e6a07-5bc4-488c-99e0-e726a8cae7bb",
+    "id": "814b2145-eb4a-4d48-a3be-f76388793cf6",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "FRANCISCA GUERRERO 3 CPC",
+    "monto": "98020.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "249b9b4d-c86b-4ec2-850b-b8cecf61cd81",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "FRANCISCA GUERRERO COMPRAS",
+    "monto": "9980.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "11d7917b-aee2-4043-a970-e06821b7247c",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "MERCADOPAGO *CABIFY25 COMPRAS",
+    "monto": "2695.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "d0409bdd-7c78-470d-ab00-236cf57bb0b6",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "MERCADOPAGO CABIFY25  Las Condes    CHL",
@@ -1512,7 +1694,7 @@
     "period_month": 10
   },
   {
-    "id": "66f17483-22db-44cc-833d-7ae8b187ea23",
+    "id": "779de1b5-474c-4cf6-a031-338d5de4b50c",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
@@ -1526,7 +1708,49 @@
     "period_month": 10
   },
   {
-    "id": "0c949d90-efa3-4510-8155-eab229565902",
+    "id": "d0458591-030e-4e94-99e5-ef5b801bdbd1",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": "2159.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "c723f409-9f6f-44c7-a5f1-6b3daf10bd3d",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "PAYU *UBER TRIP COMPRAS",
+    "monto": "2515.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "f428b275-00ca-4454-8d25-8df66bd6dc34",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "PEDIDOSYA CL RESTAURAN COMPRAS",
+    "monto": "13370.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "f9b09bb8-87a1-4b3e-abb1-98a64b787158",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "PELUQUERIA CANINA      VINA DEL MAR  CHL",
@@ -1540,7 +1764,21 @@
     "period_month": 10
   },
   {
-    "id": "84f52d1b-29ef-4255-a71f-10bd39dc3131",
+    "id": "2e3756ef-1cac-4df6-838a-d7096d920f25",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "PELUQUERIA CANINA COMPRAS",
+    "monto": "30000.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "109312d0-3964-48f9-8177-3c64c6865c09",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "STA ISABEL 1 PON.VINA  VINA DEL MAR  CHL",
@@ -1554,7 +1792,21 @@
     "period_month": 10
   },
   {
-    "id": "a5dd3cc2-02a5-46d3-99cd-67b156c1516c",
+    "id": "60d9dc20-fb1f-4c09-b045-90865fed9465",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "STA ISABEL 1 PON.VINA COMPRAS",
+    "monto": "14173.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "2b4eb17b-d7a6-4ccf-b92e-279d5e8aad8a",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-09T03:00:00.000Z",
     "descripcion": "UNIMARC 4 PONIENTE     VINA DEL MAR  CHL",
@@ -1568,11 +1820,67 @@
     "period_month": 10
   },
   {
-    "id": "414d43f0-0edd-46b1-b47c-89728a0afdf2",
+    "id": "d6ac7f99-b2e6-4da9-b5e0-c45616b1e1fa",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-09T03:00:00.000Z",
+    "descripcion": "UNIMARC 4 PONIENTE COMPRAS",
+    "monto": "8700.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "a3e73b28-ff94-41c6-a406-a31c9cf98f94",
     "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
     "fecha": "2025-09-10T03:00:00.000Z",
     "descripcion": "APP COPEC BIP!         SANTIAGO      CHL",
     "monto": "1740.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "01084774-0547-42ef-96f4-6d483827c305",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-11T03:00:00.000Z",
+    "descripcion": "FLANNERY S             SANTIAGO      CHL",
+    "monto": "14289.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "dc1bf233-2025-495a-8864-8d1fb497f0e3",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-11T03:00:00.000Z",
+    "descripcion": "PAYU   UBER TRIP      SANTIAGO      CHL",
+    "monto": "2138.00",
+    "tipo": "gasto",
+    "cuotas": 1,
+    "categoria": null,
+    "banco": "banco_chile",
+    "tarjeta": "mastercard",
+    "period_year": 2025,
+    "period_month": 10
+  },
+  {
+    "id": "d03a286d-97cb-4bad-95d1-01d7a9139662",
+    "user_id": "35b6d8e3-ad20-4d31-8395-34ba92f2c5ac",
+    "fecha": "2025-09-11T03:00:00.000Z",
+    "descripcion": "PETROBRAS METRO PAJARI SANTIAGO      CHL",
+    "monto": "1180.00",
     "tipo": "gasto",
     "cuotas": 1,
     "categoria": null,

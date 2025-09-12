@@ -13,6 +13,7 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const projectedRoutes = require('./routes/projectedRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const installmentsRoutes = require('./routes/installmentsRoutes');
 
 // Initialize Express app
 const app = express();
@@ -45,6 +46,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/projected', projectedRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/installments', installmentsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -11,16 +11,6 @@
   },
   {
     "fecha": "2025-08-22",
-    "descripcion": "SANIDENT COMPRAS",
-    "monto": 35000,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
-    "fecha": "2025-08-22",
     "descripcion": "UBER RIDES COMPRAS",
     "monto": 1956,
     "tipo": "gasto",
@@ -101,16 +91,6 @@
   },
   {
     "fecha": "2025-08-24",
-    "descripcion": "MERCADOPAGO*KOMBIST COMPRAS",
-    "monto": 2700,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
-    "fecha": "2025-08-24",
     "descripcion": "PAYU *UBER TRIP COMPRAS",
     "monto": 1275,
     "tipo": "gasto",
@@ -160,16 +140,6 @@
     "tarjeta": "mastercard"
   },
   {
-    "fecha": "2025-08-24",
-    "descripcion": "VINA DEL MAR COMPRAS",
-    "monto": 7370,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
     "fecha": "2025-08-25",
     "descripcion": "BAKERY LYNCH COMPRAS",
     "monto": 16800,
@@ -178,26 +148,6 @@
     "categoria": null,
     "banco": "banco_chile",
     "tarjeta": "mastercard"
-  },
-  {
-    "fecha": "2025-08-25",
-    "descripcion": "LO PRADO 4 COMPRAS",
-    "monto": 5000,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
-    "fecha": "2025-08-25",
-    "descripcion": "OFFIMANIA COMPRAS",
-    "monto": 6570,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
   },
   {
     "fecha": "2025-08-25",
@@ -470,16 +420,6 @@
     "tarjeta": "mastercard"
   },
   {
-    "fecha": "2025-08-27",
-    "descripcion": "VINA DEL MAR COMPRAS",
-    "monto": 3780,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
     "fecha": "2025-08-28",
     "descripcion": "CIRUMED COMPRAS",
     "monto": 111260,
@@ -508,16 +448,6 @@
     "categoria": null,
     "banco": "banco_chile",
     "tarjeta": "mastercard"
-  },
-  {
-    "fecha": "2025-08-28",
-    "descripcion": "MARINA VINA MMA COMPRAS",
-    "monto": 3600,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
   },
   {
     "fecha": "2025-08-28",
@@ -590,16 +520,6 @@
     "tarjeta": "mastercard"
   },
   {
-    "fecha": "2025-08-28",
-    "descripcion": "UNIMARC 4 PONIENTE COMPRAS",
-    "monto": 14960,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
     "fecha": "2025-08-29",
     "descripcion": "JUSTO COMPRAS",
     "monto": 33000,
@@ -631,26 +551,6 @@
   },
   {
     "fecha": "2025-08-30",
-    "descripcion": "BOTILLERIA IMPACTO COMPRAS",
-    "monto": 2390,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
-    "fecha": "2025-08-30",
-    "descripcion": "MIO NONO DIABUNO E. COMPRAS",
-    "monto": 13000,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
-    "fecha": "2025-08-30",
     "descripcion": "TUU*bomberosVinaDelMa COMPRAS",
     "monto": 1204,
     "tipo": "gasto",
@@ -658,36 +558,6 @@
     "categoria": null,
     "banco": "banco_chile",
     "tarjeta": "mastercard"
-  },
-  {
-    "fecha": "2025-08-31",
-    "descripcion": "TUU*coccolino COMPRAS",
-    "monto": 11480,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
-    "fecha": "2025-09-01",
-    "descripcion": "CAFETERIA LA VINOTE COMPRAS",
-    "monto": 7992,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
-    "fecha": "2025-09-01",
-    "descripcion": "MAXIK COMPRAS",
-    "monto": 1190,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
   },
   {
     "fecha": "2025-09-01",
@@ -760,16 +630,6 @@
     "tarjeta": "mastercard"
   },
   {
-    "fecha": "2025-09-03",
-    "descripcion": "VINA DEL MAR COMPRAS",
-    "monto": 2190,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
-  },
-  {
     "fecha": "2025-09-04",
     "descripcion": "CLARO RECAUDACION COMPRAS",
     "monto": 20332,
@@ -808,16 +668,6 @@
     "categoria": null,
     "banco": "banco_chile",
     "tarjeta": "mastercard"
-  },
-  {
-    "fecha": "2025-09-04",
-    "descripcion": "SAN CAMILO COMPRAS",
-    "monto": 2990,
-    "tipo": "gasto",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
   },
   {
     "fecha": "2025-09-05",
@@ -868,16 +718,6 @@
     "categoria": null,
     "banco": "banco_chile",
     "tarjeta": "mastercard"
-  },
-  {
-    "fecha": "2025-09-05",
-    "descripcion": "Pago Pesos TEF PAGO NORMAL",
-    "monto": -564092,
-    "tipo": "desestimar",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
   },
   {
     "fecha": "2025-09-05",
@@ -958,16 +798,6 @@
     "categoria": null,
     "banco": "banco_chile",
     "tarjeta": "mastercard"
-  },
-  {
-    "fecha": "2025-09-08",
-    "descripcion": "Avance en cuotas TE AVANCE EN CTAS",
-    "monto": 528800,
-    "tipo": "desestimar",
-    "cuotas": 1,
-    "categoria": null,
-    "banco": "banco_chile",
-    "tarjeta": "visa"
   },
   {
     "fecha": "2025-09-08",

@@ -14,7 +14,8 @@ import {
   Card,
   CardContent,
   useTheme,
-  Container
+  Container,
+  Tooltip
 } from '@mui/material';
 import {
   BarChart,
@@ -22,7 +23,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
   Treemap,
@@ -125,6 +126,16 @@ const Dashboard = () => {
         console.warn('Error al cargar transacciones proyectadas:', e?.response?.status || e?.message);
         projected = [];
       }
+
+      // Load credit card installments occurrences for the selected month (to add into TC gastos)
+      let installments = [];
+      try {
+        const instRes = await axios.get('/api/installments/occurrences', { params: { year: periodYear, month: periodMonth } });
+        installments = instRes.data || [];
+      } catch (e) {
+        console.warn('Error al cargar cuotas del mes:', e?.response?.status || e?.message);
+        installments = [];
+      }
       // Build categories treemap-like data
       const categoryMap = new Map();
       transactions
@@ -164,6 +175,27 @@ const Dashboard = () => {
       };
       const visaMetrics = calcByNetwork('visa');
       const mcMetrics = calcByNetwork('mastercard');
+
+      // Sum installments amounts into gastos per brand (they behave as gastos TC)
+      const installmentsByBrand = installments.reduce((acc, o) => {
+        const b = (o.brand || '').toLowerCase();
+        const amt = Number(o.amount) || 0;
+        if (!acc[b]) acc[b] = 0;
+        acc[b] += amt;
+        return acc;
+      }, {});
+      const visaGastosNonFact = visaMetrics.gastos;
+      const visaPagosNonFact = visaMetrics.pagos;
+      const mcGastosNonFact = mcMetrics.gastos;
+      const mcPagosNonFact = mcMetrics.pagos;
+      const visaCuotas = installmentsByBrand['visa'] || 0;
+      const mcCuotas = installmentsByBrand['mastercard'] || 0;
+      visaMetrics.gastos += visaCuotas;
+      mcMetrics.gastos += mcCuotas;
+      visaMetrics.breakdown = { gastosNonFact: visaGastosNonFact, pagosNonFact: visaPagosNonFact, cuotas: visaCuotas };
+      mcMetrics.breakdown = { gastosNonFact: mcGastosNonFact, pagosNonFact: mcPagosNonFact, cuotas: mcCuotas };
+      visaMetrics.saldo = (visaMetrics.pagos || 0) - (visaMetrics.gastos || 0);
+      mcMetrics.saldo = (mcMetrics.pagos || 0) - (mcMetrics.gastos || 0);
       const consolidatedList = ccTx; // both networks
       const consolidatedTotals = consolidatedList.reduce((acc, t) => {
         const amount = Number(t.monto) || 0;
@@ -171,10 +203,16 @@ const Dashboard = () => {
         if (t.tipo === 'pago') acc.pagos += Math.abs(amount);
         return acc;
       }, { gastos: 0, pagos: 0 });
+      // add installments to consolidated gastos
+      const consGastosNonFact = consolidatedTotals.gastos;
+      const consPagosNonFact = consolidatedTotals.pagos;
+      const consCuotas = (installmentsByBrand['visa'] || 0) + (installmentsByBrand['mastercard'] || 0);
+      consolidatedTotals.gastos += consCuotas;
       const consolidatedMetrics = {
         gastos: consolidatedTotals.gastos,
         pagos: consolidatedTotals.pagos,
-        saldo: consolidatedTotals.pagos - consolidatedTotals.gastos
+        saldo: consolidatedTotals.pagos - consolidatedTotals.gastos,
+        breakdown: { gastosNonFact: consGastosNonFact, pagosNonFact: consPagosNonFact, cuotas: consCuotas }
       };
 
       // Projected totals (non-TC): ingresos, gastos, saldo; exclude inactive
@@ -381,7 +419,7 @@ const Dashboard = () => {
               }
             }}
           >
-            <Tooltip content={<CustomTooltip />} />
+            <RechartsTooltip content={<CustomTooltip />} />
           </Treemap>
         </ResponsiveContainer>
       </Box>
@@ -656,59 +694,99 @@ const Dashboard = () => {
             const gastos = metrics?.gastos || 0;
             const pagos = metrics?.pagos || 0;
             const saldo = metrics?.saldo || 0;
-            const legend = saldo > 0 ? '(A favor)' : (saldo < 0 ? '(Debes)' : '');
-            const saldoColor = saldo > 0 ? 'success.main' : (saldo < 0 ? 'error.main' : 'text.primary');
             const hasData = (gastos !== 0 || pagos !== 0 || saldo !== 0);
-            const brand = CARD_BRANDS[key] || { color: theme.palette.divider, logo: '' };
-            const bgTint = alpha(brand.color, 0.04);
+
+            const borderColor = title === 'Visa'
+              ? theme.palette.primary.main
+              : (title === 'Mastercard' ? theme.palette.secondary.main : theme.palette.grey[400]);
+
             return (
               <Grid item xs={12} md={4} key={key} sx={{ display: 'flex' }}>
                 <Paper
-                  elevation={2}
-                  sx={{ 
-                    p: 3, 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    height: '100%', 
-                    minHeight: 220, 
-                    width: '100%',
+                  elevation={3}
+                  sx={{
                     position: 'relative',
-                    borderTop: `4px solid ${brand.color}`,
-                    backgroundColor: bgTint
+                    p: 2.5,
+                    borderRadius: 2,
+                    borderTop: `4px solid ${borderColor}`,
+                    backgroundColor: theme.palette.grey[50],
+                    minHeight: 230,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    width: '100%'
                   }}
                 >
-                  {/* Optional brand logo (hidden if not found) */}
-                  {brand.logo && (
-                    <img 
-                      src={brand.logo}
-                      alt={`${title} logo`} 
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      style={{ position: 'absolute', right: 12, top: 12, height: 28, opacity: 0.9 }}
-                    />
-                  )}
-
                   <Typography component="h3" variant="h6" sx={{ fontWeight: 700, mb: 2, color: theme.palette.text.primary }}>
                     {title}
                   </Typography>
-                  <Box sx={{ mb: 1 }}>
-                    <Typography variant="body2" sx={{ opacity: 0.75 }}>Gastos del Mes</Typography>
-                    <Typography variant="h5" color="error" sx={{ fontWeight: 600 }}>{formatCurrency(gastos)}</Typography>
-                  </Box>
-                  <Box sx={{ mb: 1 }}>
-                    <Typography variant="body2" sx={{ opacity: 0.75 }}>Pagos del Mes</Typography>
-                    <Typography variant="h5" color="success.main" sx={{ fontWeight: 600 }}>{formatCurrency(pagos)}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="body2" sx={{ opacity: 0.75 }} title="Pagos − Gastos (excluye desestimados)">Saldo neto del mes</Typography>
-                    <Typography variant="h5" color={saldoColor} sx={{ fontWeight: 600 }}>
-                      {formatCurrency(saldo)}{' '}
-                      {legend && (
-                        <Typography component="span" variant="subtitle1" color={saldoColor} sx={{ ml: 0.5, fontWeight: 500 }}>
-                          {legend}
-                        </Typography>
-                      )}
-                    </Typography>
-                  </Box>
+                  {(() => {
+                    const breakdown = metrics?.breakdown || {};
+                    const gastosNF = breakdown.gastosNonFact || 0;
+                    const pagosNF = breakdown.pagosNonFact || 0;
+                    const cuotasMes = breakdown.cuotas || 0;
+                    const totalPagar = (gastosNF - pagosNF) + cuotasMes;
+                    const totalColor = totalPagar > 0 ? 'error.main' : 'success.main';
+                    const totalLabel = totalPagar > 0 ? 'Total a pagar este mes' : 'Saldo a favor este mes';
+
+                    return (
+                      <>
+                        <Box sx={{ mb: 1.5 }}>
+                          <Typography variant="subtitle2" sx={{ opacity: 0.9, fontWeight: 700 }}>Movimientos no facturados</Typography>
+                          {/* Row: Gastos */}
+                          <Box sx={{
+                            mt: 0.75,
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 160px',
+                            alignItems: 'baseline',
+                            columnGap: 1
+                          }}>
+                            <Tooltip title="Compras realizadas con la tarjeta en el mes y aún no facturadas.">
+                              <Typography variant="body2" sx={{ opacity: 0.8 }}>Gastos</Typography>
+                            </Tooltip>
+                            <Typography variant="body1" color="error.main" sx={{ fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(gastosNF)}</Typography>
+                          </Box>
+                          {/* Row: Pagos */}
+                          <Box sx={{
+                            mt: 0.5,
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 160px',
+                            alignItems: 'baseline',
+                            columnGap: 1
+                          }}>
+                            <Tooltip title="Abonos realizados en el mes que descuentan del saldo no facturado.">
+                              <Typography variant="body2" sx={{ opacity: 0.8 }}>Pagos</Typography>
+                            </Tooltip>
+                            <Typography variant="body1" color="success.main" sx={{ fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(pagosNF)}</Typography>
+                          </Box>
+                        </Box>
+
+                        <Box sx={{ mb: 1.5 }}>
+                          <Tooltip title="Monto correspondiente a cuotas programadas que vencen este mes.">
+                            <Typography variant="subtitle2" sx={{ opacity: 0.9, fontWeight: 700 }}>Compras en cuotas (mes)</Typography>
+                          </Tooltip>
+                          <Box sx={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 160px',
+                            alignItems: 'baseline',
+                            mt: 0.5,
+                            columnGap: 1
+                          }}>
+                            <Typography variant="body2" sx={{ opacity: 0.8 }}>Cuotas del mes</Typography>
+                            <Typography variant="body1" color="error.main" sx={{ fontWeight: 700, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(cuotasMes)}</Typography>
+                          </Box>
+                        </Box>
+
+                        <Box sx={{ mt: 'auto', pt: 1.5, borderTop: `2px dashed ${theme.palette.grey[200]}` }}>
+                          <Tooltip title="Suma de movimientos no facturados (gastos − pagos) más cuotas del mes.">
+                            <Typography variant="body2" sx={{ opacity: 0.8 }}>{totalLabel}</Typography>
+                          </Tooltip>
+                          <Typography variant="h5" color={totalColor} sx={{ fontWeight: 800, letterSpacing: '-0.2px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', width: 160, ml: 'auto' }}>
+                            {formatCurrency(totalPagar)}
+                          </Typography>
+                        </Box>
+                      </>
+                    );
+                  })()}
                   {!hasData && (
                     <Typography variant="caption" sx={{ mt: 1, opacity: 0.7 }}>Sin movimientos este mes</Typography>
                   )}
