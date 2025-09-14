@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -20,8 +20,13 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tooltip
+  Tooltip,
+  Snackbar,
+  Alert,
+  IconButton,
+  Chip
 } from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import MonthPicker from '../components/MonthPicker';
 import { usePeriod } from '../contexts/PeriodContext';
 import axios from 'axios';
@@ -32,7 +37,14 @@ const TransactionsIntl = () => {
   const [openImport, setOpenImport] = useState(false);
   const [brand, setBrand] = useState('visa');
   const [rate, setRate] = useState('');
-  const [fileText, setFileText] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [formData, setFormData] = useState({ fecha: '', descripcion: '', amount_usd: '', exchange_rate: '', tipo: 'gasto', category_id: '' });
 
   const fetchRows = async () => {
     try {
@@ -44,45 +56,142 @@ const TransactionsIntl = () => {
     }
   };
 
-  useEffect(() => { fetchRows(); }, [year, month]);
-
-  const parseCSV = (text) => {
-    // Very simple CSV parser: Fecha,Descripcion,MontoUSD,Tipo,CategoryId
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const out = [];
-    for (const line of lines.slice(1)) { // skip header
-      const parts = line.split(',');
-      if (parts.length < 4) continue;
-      const [fecha, descripcion, amount_usd, tipo, category_id] = parts;
-      out.push({ fecha, descripcion, amount_usd: Number(amount_usd), tipo: (tipo||'').toLowerCase(), category_id: category_id ? Number(category_id) : null });
-    }
-    return out;
+  const fetchCategories = async () => {
+    try { const r = await axios.get('/api/categories'); setCategoriesList(r.data || []); } catch {}
   };
 
-  const onFileChange = async (e) => {
+  useEffect(() => { fetchRows(); }, [year, month]);
+  useEffect(() => { fetchCategories(); }, []);
+
+  const onFileChange = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const txt = await f.text();
-    setFileText(txt);
+    const allowed = ['.csv', '.xls', '.xlsx'];
+    const ok = allowed.some(ext => f.name.toLowerCase().endsWith(ext));
+    if (!ok) return alert('Formato no soportado. Usa .csv, .xls o .xlsx');
+    setSelectedFile(f);
   };
 
   const onImport = async () => {
     const r = Number(rate);
     if (!r || r <= 0) return alert('Ingresa un tipo de cambio válido (> 0)');
-    const rowsParsed = parseCSV(fileText);
-    if (!rowsParsed.length) return alert('Archivo sin filas válidas');
+    if (!selectedFile) return alert('Selecciona un archivo CSV/Excel');
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+    fd.append('brand', brand);
+    fd.append('exchange_rate', String(r));
+    fd.append('periodYear', String(year));
+    fd.append('periodMonth', String(month));
     try {
-      await axios.post('/api/intl-unbilled/import', { brand, exchange_rate: r, rows: rowsParsed });
+      setUploadProgress(0);
+      await axios.post('/api/intl-unbilled/import-file', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (ev) => {
+          if (ev.total) setUploadProgress(Math.round((ev.loaded * 100) / ev.total));
+        }
+      });
       setOpenImport(false);
-      setFileText('');
+      setSelectedFile(null);
       setRate('');
+      setUploadProgress(0);
       await fetchRows();
     } catch (e) {
-      alert(e?.response?.data?.error || 'Error al importar');
+      alert(e?.response?.data?.error || e?.response?.data?.message || 'Error al importar');
     }
   };
 
   const formatCurrency = (n) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(n||0));
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleSelectAll = (checked) => {
+    if (checked) setSelectedIds(rows.map(r => r.id)); else setSelectedIds([]);
+  };
+
+  const handleOpenEdit = (row) => {
+    setEditing(row);
+    setFormData({
+      fecha: row.fecha?.split('T')[0] || row.fecha,
+      descripcion: row.descripcion,
+      amount_usd: String(row.amount_usd),
+      exchange_rate: String(row.exchange_rate),
+      tipo: row.tipo,
+      category_id: row.category_id || ''
+    });
+    setOpenEdit(true);
+  };
+  const handleCloseEdit = () => { setOpenEdit(false); setEditing(null); };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const submitEdit = async (e) => {
+    e?.preventDefault?.();
+    try {
+      await axios.put(`/api/intl-unbilled/${editing.id}`, {
+        fecha: formData.fecha,
+        descripcion: formData.descripcion,
+        amount_usd: Number(formData.amount_usd),
+        exchange_rate: Number(formData.exchange_rate),
+        tipo: formData.tipo,
+        category_id: formData.category_id || null
+      });
+      setSnackbar({ open: true, message: 'Transacción actualizada', severity: 'success' });
+      handleCloseEdit();
+      await fetchRows();
+      if (typeof window.refreshDashboardData === 'function') window.refreshDashboardData();
+    } catch (err) {
+      setSnackbar({ open: true, message: err?.response?.data?.error || 'Error al actualizar', severity: 'error' });
+    }
+  };
+
+  const changeCategoryInline = async (rowId, newCat) => {
+    try {
+      await axios.put(`/api/intl-unbilled/${rowId}`, { category_id: newCat || null });
+      setRows(prev => prev.map(r => r.id === rowId ? { ...r, category_id: newCat || null } : r));
+      if (typeof window.refreshDashboardData === 'function') window.refreshDashboardData();
+    } catch {}
+  };
+
+  const changeTypeInline = async (rowId, newType) => {
+    try {
+      await axios.put(`/api/intl-unbilled/${rowId}`, { tipo: newType });
+      setRows(prev => prev.map(r => r.id === rowId ? { ...r, tipo: newType } : r));
+      if (typeof window.refreshDashboardData === 'function') window.refreshDashboardData();
+    } catch {}
+  };
+
+  const handleDelete = async (rowId) => {
+    if (!window.confirm('¿Eliminar esta transacción internacional?')) return;
+    try {
+      await axios.delete(`/api/intl-unbilled/${rowId}`);
+      setSnackbar({ open: true, message: 'Transacción eliminada', severity: 'success' });
+      await fetchRows();
+      if (typeof window.refreshDashboardData === 'function') window.refreshDashboardData();
+    } catch (err) {
+      setSnackbar({ open: true, message: err?.response?.data?.error || 'Error al eliminar', severity: 'error' });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!window.confirm(`¿Eliminar ${selectedIds.length} transacción(es) seleccionadas?`)) return;
+    try {
+      // No hay endpoint bulk; iterar
+      for (const id of selectedIds) {
+        await axios.delete(`/api/intl-unbilled/${id}`);
+      }
+      setSelectedIds([]);
+      setSnackbar({ open: true, message: 'Transacciones eliminadas', severity: 'success' });
+      await fetchRows();
+      if (typeof window.refreshDashboardData === 'function') window.refreshDashboardData();
+    } catch (err) {
+      setSnackbar({ open: true, message: err?.response?.data?.error || 'Error al eliminar selección', severity: 'error' });
+    }
+  };
 
   return (
     <Box>
@@ -90,11 +199,11 @@ const TransactionsIntl = () => {
       <Typography variant="h5" sx={{ mt: 2, mb: 2, fontWeight: 700 }}>Transacciones No Facturadas Internacionales (TC)</Typography>
       <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
         <Button variant="contained" onClick={() => setOpenImport(true)}>Importar archivo</Button>
-        <Tooltip title="Próximamente">
-          <span>
-            <Button variant="outlined" disabled>Nueva transacción manual</Button>
-          </span>
-        </Tooltip>
+        {selectedIds.length > 0 && (
+          <Button color="error" variant="contained" onClick={handleBulkDelete}>
+            Eliminar seleccionadas ({selectedIds.length})
+          </Button>
+        )}
       </Stack>
 
       <Dialog open={openImport} onClose={() => setOpenImport(false)} fullWidth maxWidth="sm">
@@ -119,14 +228,19 @@ const TransactionsIntl = () => {
             />
             <Stack direction="row" alignItems="center" spacing={2}>
               <Button variant="outlined" component="label">
-                Seleccionar CSV
-                <input type="file" accept=".csv" hidden onChange={onFileChange} />
+                Seleccionar archivo
+                <input type="file" accept=".csv,.xls,.xlsx" hidden onChange={onFileChange} />
               </Button>
-              <Typography variant="body2" sx={{ opacity: 0.7 }}>{fileText ? 'Archivo cargado' : 'Sin archivo seleccionado'}</Typography>
+              <Typography variant="body2" sx={{ opacity: 0.7 }}>{selectedFile ? selectedFile.name : 'Sin archivo seleccionado'}</Typography>
             </Stack>
             <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              Formato CSV esperado (encabezados): Fecha,Descripcion,MontoUSD,Tipo,CategoryId
+              Se usará el período seleccionado arriba (Mes/Año) para registrar estas transacciones.
             </Typography>
+            {uploadProgress > 0 && (
+              <Box mt={2}>
+                <Typography variant="caption">Subiendo: {uploadProgress}%</Typography>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -140,6 +254,9 @@ const TransactionsIntl = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
+                <TableCell>
+                  <input type="checkbox" checked={selectedIds.length === rows.length && rows.length>0} onChange={(e)=>toggleSelectAll(e.target.checked)} />
+                </TableCell>
                 <TableCell>Fecha</TableCell>
                 <TableCell>Descripción</TableCell>
                 <TableCell align="right">Monto USD</TableCell>
@@ -147,28 +264,94 @@ const TransactionsIntl = () => {
                 <TableCell>Tipo</TableCell>
                 <TableCell>Categoría</TableCell>
                 <TableCell>Tarjeta</TableCell>
+                <TableCell>Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.length ? rows.map(r => (
                 <TableRow key={r.id}>
+                  <TableCell>
+                    <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
+                  </TableCell>
                   <TableCell>{new Date(r.fecha).toLocaleDateString('es-CL')}</TableCell>
-                  <TableCell>{r.descripcion}</TableCell>
+                  <TableCell>
+                    {r.descripcion}
+                    {r.tipo === 'desestimar' && (<Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />)}
+                  </TableCell>
                   <TableCell align="right">{Number(r.amount_usd).toFixed(2)}</TableCell>
                   <TableCell align="right">{formatCurrency(r.amount_clp)}</TableCell>
-                  <TableCell>{r.tipo}</TableCell>
-                  <TableCell>{r.category_id || '-'}</TableCell>
+                  <TableCell>
+                    <Select size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
+                      <MenuItem value="gasto">Gasto</MenuItem>
+                      <MenuItem value="pago">Pago</MenuItem>
+                      <MenuItem value="desestimar">Desestimar</MenuItem>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select size="small" value={r.category_id || ''} displayEmpty onChange={(e)=>changeCategoryInline(r.id, e.target.value)} sx={{ minWidth: 140 }}>
+                      <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                      {categoriesList.map(c => (
+                        <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </TableCell>
                   <TableCell>{String(r.brand).toUpperCase()}</TableCell>
+                  <TableCell>
+                    <Tooltip title="Editar"><IconButton size="small" onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
+                    <Tooltip title="Eliminar"><IconButton size="small" onClick={()=>handleDelete(r.id)}><DeleteIcon/></IconButton></Tooltip>
+                  </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">No tienes transacciones internacionales no facturadas en este mes. Importa un archivo para comenzar.</TableCell>
+                  <TableCell colSpan={9} align="center">No tienes transacciones internacionales no facturadas en este mes. Importa un archivo para comenzar.</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </TableContainer>
       </Paper>
+
+      {/* Edit dialog */}
+      <Dialog open={openEdit} onClose={handleCloseEdit} fullWidth maxWidth="sm">
+        <DialogTitle>Editar transacción internacional</DialogTitle>
+        <DialogContent>
+          <Box component="form" onSubmit={submitEdit} sx={{ mt: 1 }}>
+            <TextField margin="normal" fullWidth required type="date" name="fecha" label="Fecha" InputLabelProps={{ shrink: true }} value={formData.fecha} onChange={handleEditChange} />
+            <TextField margin="normal" fullWidth required name="descripcion" label="Descripción" value={formData.descripcion} onChange={handleEditChange} />
+            <Stack direction={{ xs:'column', sm:'row' }} spacing={2} sx={{ mt: 1 }}>
+              <TextField fullWidth type="number" name="amount_usd" label="Monto USD" value={formData.amount_usd} onChange={handleEditChange} />
+              <TextField fullWidth type="number" name="exchange_rate" label="Tipo de cambio" value={formData.exchange_rate} onChange={handleEditChange} />
+            </Stack>
+            <Stack direction={{ xs:'column', sm:'row' }} spacing={2} sx={{ mt: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Tipo</InputLabel>
+                <Select name="tipo" label="Tipo" value={formData.tipo} onChange={handleEditChange}>
+                  <MenuItem value="gasto">Gasto</MenuItem>
+                  <MenuItem value="pago">Pago</MenuItem>
+                  <MenuItem value="desestimar">Desestimar</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth>
+                <InputLabel>Categoría</InputLabel>
+                <Select name="category_id" label="Categoría" value={formData.category_id} onChange={handleEditChange} displayEmpty>
+                  <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                  {categoriesList.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+                </Select>
+              </FormControl>
+            </Stack>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEdit}>Cancelar</Button>
+          <Button variant="contained" onClick={submitEdit}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={()=>setSnackbar(prev=>({ ...prev, open:false }))}>
+        <Alert onClose={()=>setSnackbar(prev=>({ ...prev, open:false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

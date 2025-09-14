@@ -87,16 +87,28 @@ class Installments {
   }
 
   async updateOccurrence(userId, occurrenceId, data) {
-    const { amount, category_id, active } = data;
+    const { amount, category_id, active, year, month, installment_number } = data;
     const res = await this.query(
       `UPDATE installment_occurrences SET
          amount = COALESCE($1, amount),
          category_id = COALESCE($2, category_id),
          active = COALESCE($3, active),
+         year = COALESCE($4, year),
+         month = COALESCE($5, month),
+         installment_number = COALESCE($6, installment_number),
          updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4 AND user_id = $5
+       WHERE id = $7 AND user_id = $8
        RETURNING *`,
-      [amount || null, category_id || null, (active === undefined ? null : !!active), occurrenceId, userId]
+      [
+        amount === undefined ? null : amount,
+        category_id === undefined ? null : category_id,
+        active === undefined ? null : !!active,
+        year === undefined ? null : parseInt(year, 10),
+        month === undefined ? null : parseInt(month, 10),
+        installment_number === undefined ? null : parseInt(installment_number, 10),
+        occurrenceId,
+        userId
+      ]
     );
     return res.rows[0];
   }

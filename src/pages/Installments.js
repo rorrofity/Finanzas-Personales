@@ -21,6 +21,11 @@ import {
   Tooltip,
   Typography,
   Divider,
+  Select,
+  FormControl,
+  InputLabel,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import axios from 'axios';
@@ -49,6 +54,10 @@ export default function Installments() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyPlan(year, month));
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [editOccOpen, setEditOccOpen] = useState(false);
+  const [occForm, setOccForm] = useState({ id: null, year, month, installment_number: 1, amount: '', category_id: '' });
 
   const load = async () => {
     try {
@@ -70,6 +79,15 @@ export default function Installments() {
     setForm(emptyPlan(year, month));
     load();
   }, [year, month]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await axios.get('/api/categories');
+        setCategories(r.data || []);
+      } catch {}
+    })();
+  }, []);
 
   const totals = useMemo(() => {
     const byBrand = occurrences.reduce((acc, o) => {
@@ -126,6 +144,46 @@ export default function Installments() {
     if (!window.confirm('¿Eliminar esta cuota del mes?')) return;
     await axios.delete(`/api/installments/occurrences/${occ.id}`);
     await load();
+  };
+
+  const openEditOccurrence = (occ) => {
+    setOccForm({
+      id: occ.id,
+      year: occ.year,
+      month: occ.month,
+      installment_number: occ.installment_number,
+      amount: String(occ.amount),
+      category_id: occ.category_id || ''
+    });
+    setEditOccOpen(true);
+  };
+
+  const saveOccurrence = async () => {
+    try {
+      await axios.put(`/api/installments/occurrences/${occForm.id}`, {
+        year: Number(occForm.year),
+        month: Number(occForm.month),
+        installment_number: Number(occForm.installment_number),
+        amount: Number(occForm.amount),
+        category_id: occForm.category_id || null,
+      });
+      setEditOccOpen(false);
+      setSnackbar({ open: true, message: 'Cuota actualizada', severity: 'success' });
+      await load();
+      if (typeof window.refreshDashboardData === 'function') window.refreshDashboardData();
+    } catch (e) {
+      setSnackbar({ open: true, message: e?.response?.data?.error || 'Error al actualizar la cuota', severity: 'error' });
+    }
+  };
+
+  const changeOccurrenceCategoryInline = async (occ, newCatId) => {
+    try {
+      await axios.put(`/api/installments/occurrences/${occ.id}`, { category_id: newCatId || null });
+      setOccurrences(prev => prev.map(o => o.id === occ.id ? { ...o, category_id: newCatId || null } : o));
+      if (typeof window.refreshDashboardData === 'function') window.refreshDashboardData();
+    } catch (e) {
+      setSnackbar({ open: true, message: 'Error al actualizar la categoría', severity: 'error' });
+    }
   };
 
   const handleDeletePlanForward = async (plan) => {
@@ -213,13 +271,14 @@ export default function Installments() {
                 <TableCell>Descripción</TableCell>
                 <TableCell>Cuota</TableCell>
                 <TableCell align="right">Monto</TableCell>
+                <TableCell>Categoría</TableCell>
                 <TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {occurrences.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">No hay cuotas para este mes</TableCell>
+                  <TableCell colSpan={7} align="center">No hay cuotas para este mes</TableCell>
                 </TableRow>
               )}
               {occurrences.map((o) => (
@@ -229,7 +288,24 @@ export default function Installments() {
                   <TableCell>{o.descripcion}</TableCell>
                   <TableCell>{`${o.installment_number}`}</TableCell>
                   <TableCell align="right">{currency(o.amount)}</TableCell>
+                  <TableCell>
+                    <Select
+                      size="small"
+                      value={o.category_id || ''}
+                      onChange={(e) => changeOccurrenceCategoryInline(o, e.target.value)}
+                      displayEmpty
+                      sx={{ minWidth: 160 }}
+                    >
+                      <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                      {categories.map(c => (
+                        <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                      ))}
+                    </Select>
+                  </TableCell>
                   <TableCell align="right">
+                    <Tooltip title="Editar cuota">
+                      <IconButton size="small" onClick={() => openEditOccurrence(o)}><Edit fontSize="small" /></IconButton>
+                    </Tooltip>
                     <Tooltip title="Eliminar cuota">
                       <IconButton size="small" onClick={() => handleDeleteOccurrence(o)}><Delete fontSize="small" /></IconButton>
                     </Tooltip>
@@ -280,6 +356,46 @@ export default function Installments() {
           <Button onClick={onSubmit} variant="contained" disabled={loading}>Crear</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Edit occurrence dialog */}
+      <Dialog open={editOccOpen} onClose={() => setEditOccOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Editar cuota</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <Grid item xs={6}>
+              <TextField fullWidth label="Año" type="number" inputProps={{ min: 2000, max: 2100 }} value={occForm.year} onChange={(e)=>setOccForm({ ...occForm, year: e.target.value })} />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField fullWidth label="Mes" type="number" inputProps={{ min: 1, max: 12 }} value={occForm.month} onChange={(e)=>setOccForm({ ...occForm, month: e.target.value })} />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField fullWidth label="N° cuota" type="number" inputProps={{ min: 1 }} value={occForm.installment_number} onChange={(e)=>setOccForm({ ...occForm, installment_number: e.target.value })} />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField fullWidth label="Monto" type="number" inputProps={{ min: 0 }} value={occForm.amount} onChange={(e)=>setOccForm({ ...occForm, amount: e.target.value })} />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Categoría</InputLabel>
+                <Select label="Categoría" value={occForm.category_id} onChange={(e)=>setOccForm({ ...occForm, category_id: e.target.value })} displayEmpty>
+                  <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                  {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditOccOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={saveOccurrence}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={()=>setSnackbar(prev=>({ ...prev, open:false }))}>
+        <Alert onClose={()=>setSnackbar(prev=>({ ...prev, open:false }))} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

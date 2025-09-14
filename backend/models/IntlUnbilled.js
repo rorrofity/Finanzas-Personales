@@ -6,7 +6,7 @@ class IntlUnbilled {
   async listByMonth(userId, year, month) {
     const res = await this.query(
       `SELECT * FROM intl_unbilled
-       WHERE user_id=$1 AND EXTRACT(YEAR FROM fecha)=$2 AND EXTRACT(MONTH FROM fecha)=$3
+       WHERE user_id=$1 AND period_year=$2 AND period_month=$3
        ORDER BY fecha DESC, created_at DESC`,
       [userId, year, month]
     );
@@ -19,14 +19,14 @@ class IntlUnbilled {
               SUM(CASE WHEN tipo='gasto' THEN amount_clp ELSE 0 END) AS gastos_clp,
               SUM(CASE WHEN tipo='pago' THEN amount_clp ELSE 0 END) AS pagos_clp
        FROM intl_unbilled
-       WHERE user_id=$1 AND EXTRACT(YEAR FROM fecha)=$2 AND EXTRACT(MONTH FROM fecha)=$3 AND tipo <> 'desestimar'
+       WHERE user_id=$1 AND period_year=$2 AND period_month=$3 AND tipo <> 'desestimar'
        GROUP BY brand`,
       [userId, year, month]
     );
     const latestRes = await this.query(
       `SELECT DISTINCT ON (brand) brand, exchange_rate
        FROM intl_unbilled
-       WHERE user_id=$1 AND EXTRACT(YEAR FROM fecha)=$2 AND EXTRACT(MONTH FROM fecha)=$3
+       WHERE user_id=$1 AND period_year=$2 AND period_month=$3
        ORDER BY brand, created_at DESC`,
       [userId, year, month]
     );
@@ -39,30 +39,34 @@ class IntlUnbilled {
     }));
   }
 
-  async bulkImport(userId, { brand, exchange_rate, rows }) {
+  async bulkImport(userId, { brand, exchange_rate, rows, periodYear, periodMonth }) {
     const b = String(brand || '').toLowerCase();
     const rate = Number(exchange_rate);
     if (!['visa','mastercard'].includes(b)) throw new Error('Marca inválida');
     if (!rate || rate <= 0) throw new Error('Tipo de cambio inválido');
+    const py = parseInt(periodYear, 10);
+    const pm = parseInt(periodMonth, 10);
+    if (!py || py < 2000 || py > 2100) throw new Error('periodYear inválido');
+    if (!pm || pm < 1 || pm > 12) throw new Error('periodMonth inválido');
 
     const values = [];
     const params = [];
     let p = 1;
     for (const r of rows) {
-      const fecha = r.fecha;
+      const fecha = r.fecha; // fecha original del movimiento
       const descripcion = (r.descripcion || '').slice(0, 255);
       const amount_usd = Number(r.amount_usd);
       const tipo = String(r.tipo || '').toLowerCase();
       const category_id = r.category_id || null;
-      if (!fecha || !descripcion || !amount_usd || !['gasto','pago','desestimar'].includes(tipo)) continue;
+      if (!fecha || !descripcion || Number.isNaN(amount_usd) || !['gasto','pago','desestimar'].includes(tipo)) continue;
       const amount_clp = Math.round(amount_usd * rate);
-      params.push(userId, b, fecha, descripcion, amount_usd, rate, amount_clp, tipo, category_id);
-      values.push(`($${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++})`);
+      params.push(userId, b, fecha, descripcion, amount_usd, rate, amount_clp, tipo, category_id, fecha, py, pm);
+      values.push(`($${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++})`);
     }
     if (!values.length) return { inserted: 0 };
 
     const sql = `INSERT INTO intl_unbilled (
-        user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, category_id
+        user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, category_id, original_fecha, period_year, period_month
       ) VALUES ${values.join(',')}`;
     await this.query(sql, params);
     return { inserted: values.length };
