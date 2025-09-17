@@ -15,7 +15,11 @@ import {
   CardContent,
   useTheme,
   Container,
-  Tooltip
+  Tooltip,
+  Switch,
+  FormControlLabel,
+  Chip,
+  Button
 } from '@mui/material';
 import {
   BarChart,
@@ -69,6 +73,8 @@ const Dashboard = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { startISO, endISO, label, year, month } = usePeriod();
+  const periodKey = `${year}-${String(month).padStart(2,'0')}`;
+  const [ccInclude, setCcInclude] = useState({ on: false, amount: 0, capturedAt: null });
 
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) {
@@ -83,6 +89,18 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    // Load snapshot preference from session per-period
+    try {
+      const raw = sessionStorage.getItem(`ccInclude::${periodKey}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setCcInclude({ on: !!parsed.on, amount: Number(parsed.amount||0), capturedAt: parsed.capturedAt || null });
+      } else {
+        setCcInclude({ on: false, amount: 0, capturedAt: null });
+      }
+    } catch {
+      setCcInclude({ on: false, amount: 0, capturedAt: null });
+    }
   }, [year, month]);
 
   const fetchDashboardData = async () => {
@@ -145,6 +163,20 @@ const Dashboard = () => {
       } catch (e) {
         console.warn('Error al cargar resumen internacional:', e?.response?.status || e?.message);
         intlSummary = [];
+      }
+
+      // Checking summary: always for CURRENT month in America/Santiago (independiente del selector)
+      let checkingSummary = { initial_balance: 0, abonos: 0, cargos: 0, neto: 0, saldo_actual: 0 };
+      try {
+        const now = new Date();
+        const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit' });
+        const parts = fmt.formatToParts(now).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+        const chkYear = Number(parts.year);
+        const chkMonth = Number(parts.month);
+        const chkRes = await axios.get('/api/checking/summary', { params: { year: chkYear, month: chkMonth } });
+        checkingSummary = chkRes.data || checkingSummary;
+      } catch (e) {
+        console.warn('Error al cargar resumen de cuenta corriente:', e?.response?.status || e?.message);
       }
       // Build categories treemap-like data
       const categoryMap = new Map();
@@ -282,6 +314,7 @@ const Dashboard = () => {
           total_pagos: useComputed ? computed.pagos : (summaryData.pagos || 0),
           saldo_neto: useComputed ? saldoNetoComputed : ((summaryData.pagos || 0) - (summaryData.gastos || 0))
         },
+        checking: checkingSummary,
         creditCards: {
           visa: visaMetrics,
           mastercard: mcMetrics,
@@ -294,6 +327,9 @@ const Dashboard = () => {
         latestTransactions
       });
     } catch (err) {
+      // Log detalle para depurar rápidamente qué request falló
+      const details = err?.response?.data || err?.message || err;
+      console.error('Dashboard fetch error:', details);
       setError('Error al cargar los datos del dashboard');
     } finally {
       setLoading(false);
@@ -534,6 +570,79 @@ const Dashboard = () => {
         Dashboard Financiero
       </Typography>
 
+      {/* Card principal: Saldo actual Cuenta Corriente + Toggle */}
+      <Grid container spacing={4} sx={{ mb: 1 }}>
+        <Grid item xs={12} sx={{ display: 'flex' }}>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              width: '100%',
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+              borderRadius: 2
+            }}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Saldo cuenta corriente (actual)</Typography>
+            <Typography variant="h3" sx={{ fontWeight: 800 }}>
+              {formatCurrency(data?.checking?.saldo_actual || 0)}
+            </Typography>
+            <Typography variant="caption" sx={{ mt: 0.5, opacity: 0.8 }}>Saldo inicial + (Abonos − Cargos) del mes actual</Typography>
+
+            <Box mt={2} display="flex" alignItems="center" gap={2}>
+              <Tooltip title={data?.checking?.initial_balance === undefined ? 'Define tu saldo en Cuenta Corriente' : 'Suma el saldo actual a los Ingresos (mes) del período seleccionado. No afecta otros meses.'}>
+                <span>
+                  <FormControlLabel
+                    control={<Switch checked={ccInclude.on} onChange={async (e) => {
+                      const next = e.target.checked;
+                      if (next) {
+                        // Captura inmediata del snapshot y persistencia sin confirmación
+                        const snapAmount = Number(data?.checking?.saldo_actual || 0);
+                        const newState = { on: true, amount: snapAmount, capturedAt: new Date().toISOString() };
+                        setCcInclude(newState);
+                        sessionStorage.setItem(`ccInclude::${periodKey}`, JSON.stringify(newState));
+                      } else {
+                        const newState = { on: false, amount: 0, capturedAt: null };
+                        setCcInclude(newState);
+                        sessionStorage.setItem(`ccInclude::${periodKey}`, JSON.stringify(newState));
+                      }
+                    }} />}
+                    label="Incluir este saldo en la proyección de este mes"
+                    disabled={data?.checking?.initial_balance === undefined || data?.checking?.initial_balance === null}
+                  />
+                </span>
+              </Tooltip>
+              {ccInclude.on && (
+                <Button variant="outlined" size="small" onClick={async () => {
+                  // Recapturar desde el backend el saldo actual
+                  try {
+                    const now = new Date();
+                    const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit' });
+                    const parts = fmt.formatToParts(now).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+                    const chkYear = Number(parts.year);
+                    const chkMonth = Number(parts.month);
+                    const chkRes = await axios.get('/api/checking/summary', { params: { year: chkYear, month: chkMonth } });
+                    const snapAmount = Number(chkRes.data?.saldo_actual || 0);
+                    const newState = { on: true, amount: snapAmount, capturedAt: new Date().toISOString() };
+                    setCcInclude(newState);
+                    sessionStorage.setItem(`ccInclude::${periodKey}`, JSON.stringify(newState));
+                    // También refrescamos data.checking por coherencia visual
+                    await fetchDashboardData();
+                  } catch (e) {
+                    console.warn('No se pudo actualizar snapshot CC', e);
+                  }
+                }}>Actualizar snapshot</Button>
+              )}
+              {ccInclude.on && ccInclude.capturedAt && (
+                <Chip size="small" label={`Incluye ${formatCurrency(ccInclude.amount)} • ${new Date(ccInclude.capturedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`} />
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
       <Grid container spacing={4}>
         {/* Primera fila - Métricas principales (Ingresos, Gastos, Saldo neto global) */}
         <Grid item xs={12} md={4} sx={{ display: 'flex' }}>
@@ -564,20 +673,28 @@ const Dashboard = () => {
                 letterSpacing: '-0.5px'
               }}
             >
-              Ingresos (mes)
+              Ingresos (mes) {ccInclude.on && (
+                <Tooltip title={`Incluye ${formatCurrency(ccInclude.amount)} del saldo de cuenta corriente (snapshot ${ccInclude.capturedAt ? new Date(ccInclude.capturedAt).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : ''})`}>
+                  <Chip size="small" color="success" variant="outlined" label="+ saldo CC" sx={{ ml: 1 }} />
+                </Tooltip>
+              )}
             </Typography>
             <Typography 
               component="p" 
               variant="h3"
               color="success.main"
-              title="Incluye solo Ingresos Proyectados del mes."
+              title={ccInclude.on ? 'Ingresos Proyectados del mes + Saldo actual de Cuenta Corriente (snapshot).' : 'Ingresos Proyectados del mes.'}
               sx={{ 
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
                 letterSpacing: '-0.5px'
               }}
             >
-              {formatCurrency(data?.projected?.ingresos || 0)}
+              {(() => {
+                const proj = data?.projected?.ingresos || 0;
+                const add = ccInclude.on ? (ccInclude.amount || 0) : 0;
+                return formatCurrency(proj + add);
+              })()}
             </Typography>
           </Paper>
         </Grid>
@@ -665,7 +782,9 @@ const Dashboard = () => {
               Saldo neto global (mes)
             </Typography>
             {(() => {
-              const saldo = data?.globalNet ?? 0;
+              const base = data?.globalNet ?? 0;
+              // Ajuste: (PagosTC−GastosTC) + (IngresosProy+snapshot − GastosProy) = base + snapshot
+              const saldo = base + (ccInclude.on ? (ccInclude.amount || 0) : 0);
               const color = saldo > 0 ? 'success.main' : (saldo < 0 ? 'error.main' : 'text.primary');
               const legend = saldo > 0 ? '(A favor)' : (saldo < 0 ? '(Déficit)' : '');
               return (

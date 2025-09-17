@@ -4,11 +4,13 @@ const db = require('../config/database');
 const getCategories = async (req, res) => {
     try {
         const userId = req.user.id;
+        // Prefer user-specific category over global when there is a name collision
+        // DISTINCT ON(name) keeps the first row per name according to ORDER BY
         const query = `
-            SELECT id, name, description, created_at
+            SELECT DISTINCT ON (name) id, name, description, created_at
             FROM categories
             WHERE user_id = $1 OR user_id IS NULL
-            ORDER BY name
+            ORDER BY name, CASE WHEN user_id IS NULL THEN 1 ELSE 0 END, created_at DESC
         `;
         const result = await db.query(query, [userId]);
         res.json(result.rows);

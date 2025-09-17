@@ -58,6 +58,7 @@ const DashboardLayout = () => {
     { text: 'Transacciones No Facturadas (TC)', icon: <ReceiptIcon />, path: '/transactions' },
     { text: 'Transacciones No Facturadas Internacionales (TC)', icon: <ReceiptIcon />, path: '/transactions-intl' },
     { text: 'Compras en Cuotas (TC)', icon: <ReceiptIcon />, path: '/installments' },
+    { text: 'Cuenta Corriente', icon: <ReceiptIcon />, path: '/checking' },
     { text: 'Transacciones Proyectadas', icon: <ReceiptIcon />, path: '/projected-transactions' },
     { text: 'Categorías', icon: <CategoryIcon />, path: '/categories' },
     { text: 'Perfil', icon: <PersonIcon />, path: '/profile' },
