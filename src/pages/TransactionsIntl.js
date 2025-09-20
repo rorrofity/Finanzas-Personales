@@ -24,7 +24,10 @@ import {
   Snackbar,
   Alert,
   IconButton,
-  Chip
+  Chip,
+  TablePagination,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import MonthPicker from '../components/MonthPicker';
@@ -33,7 +36,14 @@ import axios from 'axios';
 
 const TransactionsIntl = () => {
   const { year, month } = usePeriod();
+  const periodKey = `${year}-${String(month).padStart(2,'0')}`;
+  const [cardFilter, setCardFilter] = useState(()=>{
+    try { return sessionStorage.getItem(`tcFilterCard::transactionsIntl::${periodKey}`) || 'ALL'; } catch { return 'ALL'; }
+  });
   const [rows, setRows] = useState([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [hideDismissed, setHideDismissed] = useState(false);
   const [openImport, setOpenImport] = useState(false);
   const [brand, setBrand] = useState('visa');
   const [rate, setRate] = useState('');
@@ -60,7 +70,14 @@ const TransactionsIntl = () => {
     try { const r = await axios.get('/api/categories'); setCategoriesList(r.data || []); } catch {}
   };
 
-  useEffect(() => { fetchRows(); }, [year, month]);
+  useEffect(() => { 
+    fetchRows();
+    try {
+      const saved = sessionStorage.getItem(`tcFilterCard::transactionsIntl::${periodKey}`);
+      if (saved) setCardFilter(saved);
+    } catch {}
+    setPage(0);
+  }, [year, month]);
   useEffect(() => { fetchCategories(); }, []);
 
   const onFileChange = (e) => {
@@ -193,12 +210,46 @@ const TransactionsIntl = () => {
     }
   };
 
+  // Filtrado por tarjeta + toggle desestimados
+  const filteredRows = (hideDismissed ? rows.filter(r => r.tipo !== 'desestimar') : rows).filter(r => {
+    if (cardFilter === 'ALL') return true;
+    const b = String(r.brand || '').toLowerCase();
+    if (cardFilter === 'VISA') return b === 'visa';
+    if (cardFilter === 'MASTERCARD') return b === 'mastercard';
+    return true;
+  });
+  const titleBrandLabel = cardFilter === 'ALL' ? 'Todas' : (cardFilter === 'VISA' ? 'Visa' : 'Mastercard');
+
+  const handleChangePage = (event, newPage) => setPage(newPage);
+  const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
+
   return (
     <Box>
       <MonthPicker />
-      <Typography variant="h5" sx={{ mt: 2, mb: 2, fontWeight: 700 }}>Transacciones No Facturadas Internacionales (TC)</Typography>
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+      <Typography variant="h5" sx={{ mt: 2, mb: 2, fontWeight: 700 }}>Transacciones No Facturadas Internacionales (TC) • {titleBrandLabel} ({filteredRows.length})</Typography>
+      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
         <Button variant="contained" onClick={() => setOpenImport(true)}>Importar archivo</Button>
+        <FormControlLabel
+          control={<Switch checked={hideDismissed} onChange={(e)=>{ setHideDismissed(e.target.checked); setPage(0); }} />}
+          label="Ocultar desestimados en tabla"
+        />
+        <TextField
+          select
+          size="small"
+          label="Tarjeta"
+          value={cardFilter}
+          onChange={(e)=>{
+            const v = e.target.value;
+            setCardFilter(v);
+            setPage(0);
+            try { sessionStorage.setItem(`tcFilterCard::transactionsIntl::${periodKey}`, v); } catch {}
+          }}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="ALL">Todas</MenuItem>
+          <MenuItem value="VISA">Visa</MenuItem>
+          <MenuItem value="MASTERCARD">Mastercard</MenuItem>
+        </TextField>
         {selectedIds.length > 0 && (
           <Button color="error" variant="contained" onClick={handleBulkDelete}>
             Eliminar seleccionadas ({selectedIds.length})
@@ -268,40 +319,42 @@ const TransactionsIntl = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.length ? rows.map(r => (
-                <TableRow key={r.id}>
-                  <TableCell>
-                    <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
-                  </TableCell>
-                  <TableCell>{new Date(r.fecha).toLocaleDateString('es-CL')}</TableCell>
-                  <TableCell>
-                    {r.descripcion}
-                    {r.tipo === 'desestimar' && (<Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />)}
-                  </TableCell>
-                  <TableCell align="right">{Number(r.amount_usd).toFixed(2)}</TableCell>
-                  <TableCell align="right">{formatCurrency(r.amount_clp)}</TableCell>
-                  <TableCell>
-                    <Select size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
-                      <MenuItem value="gasto">Gasto</MenuItem>
-                      <MenuItem value="pago">Pago</MenuItem>
-                      <MenuItem value="desestimar">Desestimar</MenuItem>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select size="small" value={r.category_id || ''} displayEmpty onChange={(e)=>changeCategoryInline(r.id, e.target.value)} sx={{ minWidth: 140 }}>
-                      <MenuItem value=""><em>Sin categoría</em></MenuItem>
-                      {categoriesList.map(c => (
-                        <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-                      ))}
-                    </Select>
-                  </TableCell>
-                  <TableCell>{String(r.brand).toUpperCase()}</TableCell>
-                  <TableCell>
-                    <Tooltip title="Editar"><IconButton size="small" onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
-                    <Tooltip title="Eliminar"><IconButton size="small" onClick={()=>handleDelete(r.id)}><DeleteIcon/></IconButton></Tooltip>
-                  </TableCell>
-                </TableRow>
-              )) : (
+              {filteredRows.length ? filteredRows
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell>
+                      <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
+                    </TableCell>
+                    <TableCell>{new Date(r.fecha).toLocaleDateString('es-CL')}</TableCell>
+                    <TableCell>
+                      {r.descripcion}
+                      {r.tipo === 'desestimar' && (<Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />)}
+                    </TableCell>
+                    <TableCell align="right">{Number(r.amount_usd).toFixed(2)}</TableCell>
+                    <TableCell align="right">{formatCurrency(r.amount_clp)}</TableCell>
+                    <TableCell>
+                      <Select size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
+                        <MenuItem value="gasto">Gasto</MenuItem>
+                        <MenuItem value="pago">Pago</MenuItem>
+                        <MenuItem value="desestimar">Desestimar</MenuItem>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select size="small" value={r.category_id || ''} displayEmpty onChange={(e)=>changeCategoryInline(r.id, e.target.value)} sx={{ minWidth: 140 }}>
+                        <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                        {categoriesList.map(c => (
+                          <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </TableCell>
+                    <TableCell>{String(r.brand).toUpperCase()}</TableCell>
+                    <TableCell>
+                      <Tooltip title="Editar"><IconButton size="small" onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
+                      <Tooltip title="Eliminar"><IconButton size="small" onClick={()=>handleDelete(r.id)}><DeleteIcon/></IconButton></Tooltip>
+                    </TableCell>
+                  </TableRow>
+                )) : (
                 <TableRow>
                   <TableCell colSpan={9} align="center">No tienes transacciones internacionales no facturadas en este mes. Importa un archivo para comenzar.</TableCell>
                 </TableRow>
@@ -310,6 +363,20 @@ const TransactionsIntl = () => {
           </Table>
         </TableContainer>
       </Paper>
+
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={filteredRows.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+      />
+
+      <Box mt={1} textAlign="right">
+        <Typography variant="caption">Mostrando {Math.min(filteredRows.length, page*rowsPerPage + (filteredRows.slice(page*rowsPerPage, page*rowsPerPage+rowsPerPage).length))} de {filteredRows.length} transacciones ({titleBrandLabel})</Typography>
+      </Box>
 
       {/* Edit dialog */}
       <Dialog open={openEdit} onClose={handleCloseEdit} fullWidth maxWidth="sm">

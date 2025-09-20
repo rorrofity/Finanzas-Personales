@@ -87,6 +87,10 @@ const Transactions = () => {
   });
 
   const { startISO, endISO, year, month } = usePeriod();
+  const periodKey = `${year}-${String(month).padStart(2,'0')}`;
+  const [cardFilter, setCardFilter] = useState(() => {
+    try { return sessionStorage.getItem(`tcFilterCard::transactions::${periodKey}`) || 'ALL'; } catch { return 'ALL'; }
+  });
 
   useEffect(() => {
     fetchTransactions();
@@ -474,7 +478,24 @@ const Transactions = () => {
   useEffect(() => {
     setPage(0);
     fetchTransactions();
+    // restaurar filtro por período
+    try {
+      const saved = sessionStorage.getItem(`tcFilterCard::transactions::${periodKey}`);
+      setCardFilter(saved || 'ALL');
+    } catch {}
   }, [orderBy, orderDirection, year, month]);
+
+  // Colección filtrada por tarjeta + toggle desestimados
+  const filteredTransactions = (hideDismissed ? transactions.filter(t => t.tipo !== 'desestimar') : transactions)
+    .filter(t => {
+      if (cardFilter === 'ALL') return true;
+      const net = (t.network || '').toLowerCase();
+      if (cardFilter === 'VISA') return net === 'visa';
+      if (cardFilter === 'MASTERCARD') return net === 'mastercard';
+      return true;
+    });
+
+  const titleBrandLabel = cardFilter === 'ALL' ? 'Todas' : (cardFilter === 'VISA' ? 'Visa' : 'Mastercard');
 
   if (loading) {
     return (
@@ -508,8 +529,8 @@ const Transactions = () => {
         </Alert>
       )}
       <Paper>
-        <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6">Transacciones</Typography>
+        <Box p={2} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+          <Typography variant="h6">Transacciones • {titleBrandLabel} ({filteredTransactions.length})</Typography>
           <Button
             variant="contained"
             color="primary"
@@ -533,6 +554,23 @@ const Transactions = () => {
             }
             label="Ocultar desestimados en tabla"
           />
+          <TextField
+            select
+            size="small"
+            label="Tarjeta"
+            value={cardFilter}
+            onChange={(e)=>{
+              const v = e.target.value;
+              setCardFilter(v);
+              setPage(0);
+              try { sessionStorage.setItem(`tcFilterCard::transactions::${periodKey}`, v); } catch {}
+            }}
+            sx={{ minWidth: 180 }}
+          >
+            <MenuItem value="ALL">Todas</MenuItem>
+            <MenuItem value="VISA">Visa</MenuItem>
+            <MenuItem value="MASTERCARD">Mastercard</MenuItem>
+          </TextField>
           {selectedTransactions.length > 0 && (
             <Button
               variant="contained"
@@ -566,14 +604,14 @@ const Transactions = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {(hideDismissed ? transactions.filter(t => t.tipo !== 'desestimar') : transactions).length === 0 ? (
+              {filteredTransactions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} align="center">
                     No hay transacciones este mes
                   </TableCell>
                 </TableRow>
               ) : (
-                (hideDismissed ? transactions.filter(t => t.tipo !== 'desestimar') : transactions)
+                filteredTransactions
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((transaction) => (
                     <TableRow key={transaction.id}>
@@ -674,7 +712,7 @@ const Transactions = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={transactions.length}
+          count={filteredTransactions.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
