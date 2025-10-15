@@ -4,11 +4,9 @@ const getMonthlySummary = async (req, res) => {
     try {
         const userId = req.user.id;
         const { startDate, endDate, periodYear, periodMonth } = req.query;
-        console.log('[getMonthlySummary] user:', userId, 'periodYear:', periodYear, 'periodMonth:', periodMonth, 'startDate:', startDate, 'endDate:', endDate);
 
         let rows = [{ gastos: 0, ingresos: 0, pagos: 0 }];
         if (periodYear && periodMonth) {
-            console.log('[getMonthlySummary] Using IMPORT PERIOD filter');
             // Filtrar por período del import si se especifica
             const summaryByPeriodQuery = `
                 SELECT 
@@ -24,7 +22,6 @@ const getMonthlySummary = async (req, res) => {
             const resp = await db.query(summaryByPeriodQuery, [userId, parseInt(periodYear, 10), parseInt(periodMonth, 10)]);
             rows = resp.rows;
         } else if (startDate && endDate) {
-            console.log('[getMonthlySummary] Using DATE RANGE filter');
             // Nota: t.fecha es de tipo DATE, por lo que comparar con YYYY-MM-DD es suficiente
             const summaryQuery = `
                 SELECT 
@@ -57,12 +54,7 @@ const getMonthlySummary = async (req, res) => {
 };
 
 const getDashboardData = async (req, res) => {
-    console.log('=== Dashboard Request ===');
-    console.log('User:', req.user);
-    console.log('Current Date:', new Date());
-    
     const userId = req.user.id;
-    console.log('User ID:', userId);
 
     // Obtener resumen de transacciones del mes actual
     const currentMonthQuery = `
@@ -194,58 +186,6 @@ const getDashboardData = async (req, res) => {
             db.query(latestTransactionsQuery, [userId])
         ]);
 
-        console.log('=== Raw Query Results ===');
-        console.log('Current Month Query Result:', {
-            rows: currentMonth.rows,
-            rowCount: currentMonth.rowCount,
-            fields: currentMonth.fields?.map(f => ({ name: f.name, dataTypeID: f.dataTypeID }))
-        });
-        console.log('Categories Query Result:', {
-            rows: categories.rows,
-            rowCount: categories.rowCount
-        });
-        console.log('Trend Query Result:', {
-            rows: trend.rows,
-            rowCount: trend.rowCount
-        });
-
-        // Verificar las fechas de las transacciones
-        if (currentMonth.rows[0]?.debug_transactions) {
-            console.log('=== Transaction Analysis ===');
-            currentMonth.rows[0].debug_transactions.forEach(t => {
-                console.log(`Transaction ${t.id}:`, {
-                    fecha: t.fecha,
-                    descripcion: t.descripcion,
-                    monto: t.monto,
-                    tipo: t.tipo
-                });
-            });
-
-            // Calcular totales manualmente para verificar
-            const manualTotals = currentMonth.rows[0].debug_transactions.reduce((acc, t) => {
-                if (t.tipo === 'gasto') {
-                    acc.total_gastos += parseFloat(t.monto);
-                } else if (t.tipo === 'ingreso') {
-                    acc.total_ingresos += parseFloat(t.monto);
-                } else if (t.tipo === 'pago') {
-                    acc.total_pagos += Math.abs(parseFloat(t.monto));
-                }
-                return acc;
-            }, { total_gastos: 0, total_ingresos: 0, total_pagos: 0 });
-
-            console.log('Manual calculation of totals:', manualTotals);
-            console.log('Query calculation of totals:', {
-                total_gastos: currentMonth.rows[0].total_gastos,
-                total_ingresos: currentMonth.rows[0].total_ingresos,
-                total_pagos: currentMonth.rows[0].total_pagos
-            });
-        } else {
-            console.log('No transactions found for the current month');
-            console.log('Current Date:', new Date());
-            console.log('Month Start:', new Date().setDate(1));
-            console.log('Month End:', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0));
-        }
-
         // Preparar la respuesta
         const response = {
             currentMonth: currentMonth.rows[0] || {
@@ -261,12 +201,6 @@ const getDashboardData = async (req, res) => {
             trend: trend.rows || [],
             latestTransactions: latestTransactions.rows || []
         };
-
-        console.log('=== Final Response ===');
-        console.log('Current Month:', response.currentMonth);
-        console.log('Categories:', response.categories);
-        console.log('Trend:', response.trend);
-        console.log('Latest Transactions:', response.latestTransactions);
 
         res.json(response);
     } catch (error) {

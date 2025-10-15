@@ -29,10 +29,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Logging
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
+// Logging - Deshabilitado para reducir ruido en consola
+// Solo se mostrarán errores críticos
+// if (process.env.NODE_ENV === 'development') {
+//   app.use(morgan('dev'));
+// }
 
 // Basic route
 app.get('/', (req, res) => {

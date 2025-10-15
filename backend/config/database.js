@@ -24,30 +24,12 @@ pool.on('error', (err) => {
 
 // Function to execute queries
 async function query(text, params) {
-  const start = Date.now();
   try {
     const res = await pool.query(text, params);
-    
-    // Solo mostrar logs en modo desarrollo
-    if (process.env.NODE_ENV === 'development') {
-      const duration = Date.now() - start;
-      // Mostrar versión resumida de la consulta (primera línea solamente)
-      const queryPreview = text.split('\n')[0].trim();
-      console.log(`Query: ${queryPreview}... (${duration}ms, ${res.rowCount} rows)`);
-    }
-    
     return res;
   } catch (error) {
-    // Siempre mostrar errores, pero con diferentes niveles de detalle
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Query error:', {
-        text,
-        error: error.message,
-        stack: error.stack
-      });
-    } else {
-      console.error('Database error:', error.message);
-    }
+    // Solo mostrar errores críticos
+    console.error('Database error:', error.message);
     throw error;
   }
 }

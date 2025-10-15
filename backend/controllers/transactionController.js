@@ -823,7 +823,6 @@ const getAllTransactions = async (req, res) => {
   try {
     const userId = req.user.id;
     const { orderBy, orderDirection, startDate, endDate, periodYear, periodMonth } = req.query;
-    console.log('[getAllTransactions] user:', userId, 'orderBy:', orderBy, 'orderDirection:', orderDirection, 'periodYear:', periodYear, 'periodMonth:', periodMonth, 'startDate:', startDate, 'endDate:', endDate);
     
     const transactions = await transactionModel.getAllTransactions(
       userId,
@@ -834,7 +833,6 @@ const getAllTransactions = async (req, res) => {
       periodYear ? parseInt(periodYear, 10) : null,
       periodMonth ? parseInt(periodMonth, 10) : null
     );
-    console.log('[getAllTransactions] returned count:', Array.isArray(transactions) ? transactions.length : 'n/a');
     res.json(transactions);
   } catch (error) {
     console.error('Error en getAllTransactions:', error);
