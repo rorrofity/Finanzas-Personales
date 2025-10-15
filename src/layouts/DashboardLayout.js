@@ -91,7 +91,7 @@ const DashboardLayout = () => {
           <IconButton onClick={handleProfileMenu} sx={{ padding: 0 }}>
             <Avatar
               alt={user?.nombre}
-              src="/static/images/avatar/2.jpg"
+              src={user?.profile_picture || undefined}
               sx={{ bgcolor: theme.palette.primary.main }}
             >
               {user?.nombre?.[0]}

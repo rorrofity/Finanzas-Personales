@@ -4,7 +4,10 @@ Una aplicación web completa para el seguimiento y gestión de finanzas personal
 
 ## Características
 
-- Autenticación de usuarios
+- **Autenticación de usuarios**
+  - Login tradicional con email/password
+  - **Google Sign-On** (OAuth 2.0)
+  - Soporte para autenticación híbrida
 - Gestión de transacciones financieras
 - Sistema de categorización avanzado
 - Importación de transacciones desde CSV/Excel
@@ -59,6 +62,7 @@ Ubicación en la app
 - Axios
 - Recharts (para gráficos)
 - React Router
+- @react-oauth/google (Google Sign-In)
 
 ### Backend
 - Node.js
@@ -66,8 +70,9 @@ Ubicación en la app
 - PostgreSQL
 - JWT para autenticación
 - bcryptjs para encriptación
+- Google OAuth 2.0
 - csv-parse para procesamiento de CSV
- - xlsx para procesamiento de Excel
+- xlsx para procesamiento de Excel
 
 ## Estructura de la Base de Datos
 
@@ -76,7 +81,10 @@ Ubicación en la app
 - id (UUID, PRIMARY KEY)
 - nombre (VARCHAR)
 - email (VARCHAR, UNIQUE)
-- password (VARCHAR)
+- password (VARCHAR, nullable para usuarios de Google)
+- auth_provider (VARCHAR) - 'local' | 'google'
+- google_id (VARCHAR, UNIQUE)
+- profile_picture (TEXT)
 - created_at (TIMESTAMP)
 - updated_at (TIMESTAMP)
 - ultimo_inicio_sesion (TIMESTAMP)
@@ -150,7 +158,8 @@ Finanzas-Personales/
 - npm o yarn
 
 ### Variables de Entorno
-Crear un archivo `.env` en la raíz del proyecto:
+
+Crear un archivo `.env` en la raíz del proyecto (backend):
 ```env
 PORT=3001
 NODE_ENV=development
@@ -160,7 +169,16 @@ DB_PASSWORD=admin123
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=finanzas_personales
+GOOGLE_CLIENT_ID=tu_google_client_id.apps.googleusercontent.com
 ```
+
+Crear/actualizar archivo `.env.development` en la raíz (frontend):
+```env
+PORT=3000
+REACT_APP_GOOGLE_CLIENT_ID=tu_google_client_id.apps.googleusercontent.com
+```
+
+**Nota**: Para obtener el `GOOGLE_CLIENT_ID`, consulta la guía [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md).
 
 ### Instalación
 
@@ -189,7 +207,8 @@ npm run dev
 
 ## Documentación Adicional
 
-Para más detalles sobre el desarrollo, arquitectura y decisiones técnicas, consulta el archivo [DEVELOPMENT.md](./DEVELOPMENT.md).
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)**: Guía de desarrollo, arquitectura y decisiones técnicas
+- **[GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)**: Configuración paso a paso de Google Sign-On
 
 ## Notas y Solución de Problemas
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PeriodProvider } from './contexts/PeriodContext';
 import theme from './theme';
@@ -29,37 +30,39 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
-        <PeriodProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <PeriodProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* Protected Routes */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="transactions" element={<Transactions />} />
-            <Route path="transactions-intl" element={<TransactionsIntl />} />
-            <Route path="installments" element={<Installments />} />
-            <Route path="checking" element={<Checking />} />
-            <Route path="projected-transactions" element={<ProjectedTransactions />} />
-            <Route path="categories" element={<Categories />} />
-            <Route path="profile" element={<Profile />} />
-          </Route>
-        </Routes>
-        </PeriodProvider>
-      </AuthProvider>
-    </ThemeProvider>
+            {/* Protected Routes */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="transactions" element={<Transactions />} />
+              <Route path="transactions-intl" element={<TransactionsIntl />} />
+              <Route path="installments" element={<Installments />} />
+              <Route path="checking" element={<Checking />} />
+              <Route path="projected-transactions" element={<ProjectedTransactions />} />
+              <Route path="categories" element={<Categories />} />
+              <Route path="profile" element={<Profile />} />
+            </Route>
+          </Routes>
+          </PeriodProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }
 

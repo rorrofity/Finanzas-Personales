@@ -8,7 +8,9 @@ import {
   Grid,
   Avatar,
   Alert,
+  Chip,
 } from '@mui/material';
+import { Google as GoogleIcon, Email as EmailIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
@@ -91,6 +93,8 @@ const Profile = () => {
           }}
         >
           <Avatar
+            alt={user?.nombre}
+            src={user?.profile_picture || undefined}
             sx={{
               width: 100,
               height: 100,
@@ -104,6 +108,12 @@ const Profile = () => {
           <Typography variant="h4" gutterBottom>
             Mi Perfil
           </Typography>
+          <Chip
+            icon={user?.auth_provider === 'google' ? <GoogleIcon /> : <EmailIcon />}
+            label={user?.auth_provider === 'google' ? 'Cuenta de Google' : 'Cuenta Local'}
+            color={user?.auth_provider === 'google' ? 'primary' : 'default'}
+            size="small"
+          />
         </Box>
 
         {error && (
@@ -141,41 +151,52 @@ const Profile = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-                Cambiar Contraseña
-              </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Contraseña Actual"
-                name="currentPassword"
-                type="password"
-                value={formData.currentPassword}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Nueva Contraseña"
-                name="newPassword"
-                type="password"
-                value={formData.newPassword}
-                onChange={handleChange}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Confirmar Nueva Contraseña"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
-            </Grid>
+            {user?.auth_provider !== 'google' && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                    Cambiar Contraseña
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Contraseña Actual"
+                    name="currentPassword"
+                    type="password"
+                    value={formData.currentPassword}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Nueva Contraseña"
+                    name="newPassword"
+                    type="password"
+                    value={formData.newPassword}
+                    onChange={handleChange}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Confirmar Nueva Contraseña"
+                    name="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                  />
+                </Grid>
+              </>
+            )}
+            {user?.auth_provider === 'google' && (
+              <Grid item xs={12}>
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  Tu cuenta está vinculada con Google. La contraseña se gestiona a través de tu cuenta de Google.
+                </Alert>
+              </Grid>
+            )}
           </Grid>
 
           <Button

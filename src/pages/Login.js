@@ -11,13 +11,15 @@ import {
   Paper,
   InputAdornment,
   IconButton,
+  Divider,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, error, clearError } = useAuth();
+  const { login, loginWithGoogle, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -43,6 +45,17 @@ const Login = () => {
     if (success) {
       navigate('/');
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    const success = await loginWithGoogle(credentialResponse.credential);
+    if (success) {
+      navigate('/');
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error('Google Login Error');
   };
 
   return (
@@ -119,6 +132,22 @@ const Login = () => {
             >
               Iniciar Sesión
             </Button>
+            
+            <Divider sx={{ my: 2 }}>O</Divider>
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                useOneTap
+                text="signin_with"
+                shape="rectangular"
+                theme="outline"
+                size="large"
+                width="100%"
+              />
+            </Box>
+            
             <Box sx={{ textAlign: 'center' }}>
               <Link component={RouterLink} to="/register" variant="body2">
                 ¿No tienes una cuenta? Regístrate

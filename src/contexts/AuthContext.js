@@ -53,6 +53,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (credential) => {
+    try {
+      const response = await axios.post('/api/auth/google', { credential });
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      setUser(user);
+      setError(null);
+      return true;
+    } catch (error) {
+      setError(error.response?.data?.message || 'Error al iniciar sesión con Google');
+      return false;
+    }
+  };
+
   const register = async (userData) => {
     try {
       const response = await axios.post('/api/auth/register', userData);
@@ -83,6 +97,7 @@ export const AuthProvider = ({ children }) => {
     error,
     isAuthenticated: !!user,
     login,
+    loginWithGoogle,
     register,
     logout,
     clearError

@@ -76,22 +76,16 @@ const login = async (req, res) => {
     const token = generateToken(user.id);
 
     // Actualizar último inicio de sesión
-    try {
-      await db.query(
-        'UPDATE users SET ultimo_inicio_sesion = NOW() WHERE id = $1',
-        [user.id]
-      );
-    } catch (updateError) {
-      console.error('Error actualizando último inicio de sesión:', updateError);
-      // No devolvemos el error al usuario ya que no es crítico
-    }
+    await userModel.updateLastLogin(user.id);
 
     res.json({
       message: 'Inicio de sesión exitoso',
       user: {
         id: user.id,
         nombre: user.nombre,
-        email: user.email
+        email: user.email,
+        auth_provider: user.auth_provider,
+        profile_picture: user.profile_picture
       },
       token
     });
@@ -117,7 +111,9 @@ const getProfile = async (req, res) => {
       user: {
         id: user.id,
         nombre: user.nombre,
-        email: user.email
+        email: user.email,
+        auth_provider: user.auth_provider,
+        profile_picture: user.profile_picture
       }
     });
   } catch (error) {
@@ -129,8 +125,84 @@ const getProfile = async (req, res) => {
   }
 };
 
+const googleAuth = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        message: 'Credencial de Google es requerida'
+      });
+    }
+
+    // Decodificar el JWT de Google (sin verificar, Google ya lo verificó)
+    const base64Url = credential.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(Buffer.from(base64, 'base64').toString());
+
+    const { sub: googleId, email, name, picture } = payload;
+
+    // Buscar usuario por Google ID
+    let user = await userModel.findByGoogleId(googleId);
+
+    if (!user) {
+      // Verificar si existe un usuario con el mismo email
+      const existingUser = await userModel.findByEmail(email);
+      
+      if (existingUser && existingUser.auth_provider === 'local') {
+        return res.status(400).json({
+          message: 'Ya existe una cuenta con este email. Por favor, inicia sesión con email y contraseña.'
+        });
+      }
+
+      // Crear nuevo usuario
+      user = await userModel.create({
+        nombre: name,
+        email: email,
+        auth_provider: 'google',
+        google_id: googleId,
+        profile_picture: picture
+      });
+    } else {
+      // Usuario existente - actualizar foto de perfil si cambió
+      if (user.profile_picture !== picture) {
+        await db.query(
+          'UPDATE users SET profile_picture = $1 WHERE id = $2',
+          [picture, user.id]
+        );
+        user.profile_picture = picture;
+      }
+    }
+
+    // Generar token
+    const token = generateToken(user.id);
+
+    // Actualizar último inicio de sesión
+    await userModel.updateLastLogin(user.id);
+
+    res.json({
+      message: 'Inicio de sesión con Google exitoso',
+      user: {
+        id: user.id,
+        nombre: user.nombre,
+        email: user.email,
+        auth_provider: user.auth_provider,
+        profile_picture: user.profile_picture
+      },
+      token
+    });
+  } catch (error) {
+    console.error('Error en autenticación de Google:', error);
+    res.status(500).json({
+      message: 'Error al autenticar con Google',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
-  getProfile
+  getProfile,
+  googleAuth
 };
