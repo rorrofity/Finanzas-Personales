@@ -19,9 +19,12 @@ src/
 #### Componentes Principales
 - `DashboardLayout`: Layout principal con navegación y menú
 - `AuthContext`: Manejo de autenticación y estado del usuario
-- `Transactions`: Gestión de transacciones financieras
-- `Categories`: Administración de categorías
 - `Dashboard`: Visualización de datos y análisis
+- `Transactions`: Transacciones No Facturadas (TC) nacionales (filtro por tarjeta, paginación, ocultar desestimados)
+- `TransactionsIntl`: Transacciones No Facturadas Internacionales (filtro por tarjeta, paginación, ocultar desestimados)
+- `ProjectedTransactions`: Transacciones Proyectadas
+- `Installments`: Compras en Cuotas (TC)
+- `Checking`: Cuenta Corriente (resumen y saldo actual)
 
 ### Backend
 
@@ -84,6 +87,7 @@ users
 
 ### Backend
 - Nodemon para desarrollo
+- Morgan para HTTP logging (en desarrollo)
 - pgAdmin 4 para gestión de BD
 - Postman para pruebas de API
 
@@ -122,8 +126,7 @@ export default ComponentName;
 
 ### Autenticación
 - JWT con expiración
-- Refresh tokens
-- Almacenamiento seguro en localStorage
+- Almacenamiento de token en localStorage
 
 ### Autorización
 - Middleware de autenticación
@@ -201,7 +204,6 @@ refactor: Reorganizar estructura de carpetas
 - Performance monitoring
 
 ### Backend
-- Winston para logging
 - Morgan para HTTP logging
 - Error handling centralizado
 
@@ -214,7 +216,7 @@ refactor: Reorganizar estructura de carpetas
 
 ### Backend
 1. Node.js debugger
-2. Winston logging
+2. Morgan/console logging
 3. SQL query logging
 
 ## 📚 Recursos

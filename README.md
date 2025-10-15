@@ -12,9 +12,12 @@ Una aplicación web completa para el seguimiento y gestión de finanzas personal
 - Análisis de gastos e ingresos
 - Soporte para categorías globales y personalizadas
 - Interfaz intuitiva con edición inline
- - Selector de período (Mes/Año) por extracto de tarjeta
- - Selección de Banco y Tarjeta (Visa/Mastercard) al importar
- - Filtro por período de importación en Dashboard y Transacciones
+- Selector de período (Mes/Año) por extracto de tarjeta
+- Selección de Banco y Tarjeta (Visa/Mastercard) al importar
+- Filtro por período de importación en Dashboard y Transacciones
+- Filtro por Tarjeta en listas de transacciones (TC): Visa/Mastercard/Todas, con persistencia por período en sessionStorage y conteo en títulos
+- Toggle "Ocultar desestimados" en tablas TC; Internacionales homologado con paginación y toggle
+- Toggle en Dashboard para incluir el saldo actual de Cuenta Corriente en la proyección del mes (aplica inmediato por período)
 - Puedes colocar logos en `public/assets/cards/` con los nombres exactos:
   - Visa: `public/assets/cards/visa.png`
   - Mastercard: `public/assets/cards/mastercard.png`
@@ -37,9 +40,16 @@ Una aplicación web completa para el seguimiento y gestión de finanzas personal
   - Eliminar (solo este mes): elimina la occurrence del mes.
   - Eliminar plantilla (desde este mes en adelante): borra la plantilla y todas sus repeticiones futuras; meses anteriores quedan como histórico.
 
+### Filtros por Tarjeta y Homologación Internacionales (TC)
+- Transacciones No Facturadas (Nacionales): Select "Tarjeta" (Todas/Visa/Mastercard) con persistencia por período en `sessionStorage` (`tcFilterCard::transactions::<YYYY-MM>`), conteo dinámico en título y paginación basada en el subconjunto filtrado. Toggle "Ocultar desestimados" aplicado al conjunto antes del filtro por tarjeta.
+- Transacciones No Facturadas Internacionales: Homologado con Nacionales. Incluye paginación (`TablePagination`), toggle "Ocultar desestimados" y filtro de tarjeta con persistencia por período (`tcFilterCard::transactionsIntl::<YYYY-MM>`). Se muestran contadores coherentes con el subset filtrado.
+
+### Dashboard: Saldo Cuenta Corriente (Snapshot)
+- Toggle para incluir el saldo actual de Cuenta Corriente en la proyección de ingresos del mes. Aplica de inmediato sin confirmación y persiste por período en `sessionStorage` (`ccInclude::<YYYY-MM>`). Botón para recapturar snapshot.
+
 Ubicación en la app
 - Menú lateral: `Transacciones Proyectadas` (ruta `/projected-transactions`).
-- La sección existente `Transacciones` fue renombrada visualmente a `Transacciones No Facturadas (TC)` y mantiene su ruta `/transactions`.
+- La sección `Transacciones` corresponde a `Transacciones No Facturadas (TC)` nacionales y mantiene su ruta `/transactions`.
 
 ## Tecnologías Utilizadas
 
@@ -89,7 +99,7 @@ Ubicación en la app
 - descripcion (TEXT)
 - monto (DECIMAL)
 - category_id (INTEGER, REFERENCES categories(id))
-- tipo (VARCHAR) - 'ingreso' o 'gasto'
+- tipo (VARCHAR) - 'ingreso' | 'gasto' | 'pago' | 'desestimar'
 - cuotas (INTEGER)
 - created_at (TIMESTAMP)
 - updated_at (TIMESTAMP)
@@ -111,7 +121,7 @@ Ubicación en la app
 ## Estructura del Proyecto
 
 ```
-windsurf-project/
+Finanzas-Personales/
 ├── backend/
 │   ├── config/
 │   ├── controllers/
@@ -157,7 +167,7 @@ DB_NAME=finanzas_personales
 1. Clonar el repositorio:
 ```bash
 git clone [url-del-repositorio]
-cd windsurf-project
+cd Finanzas-Personales
 ```
 
 2. Instalar dependencias:
