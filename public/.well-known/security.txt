@@ -1,0 +1,10 @@
+Contact: mailto:contacto@rocketflow.cl
+Expires: 2026-12-31T23:59:59z
+Preferred-Languages: es, en
+Canonical: https://finanzas.rocketflow.cl/.well-known/security.txt
+Encryption: https://finanzas.rocketflow.cl/pgp-key.txt
+Acknowledgments: https://finanzas.rocketflow.cl/security-acknowledgments
+
+# Security Policy
+# This is a personal finance management application
+# If you find any security vulnerability, please contact us
