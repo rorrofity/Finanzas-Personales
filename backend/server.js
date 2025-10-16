@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const morgan = require('morgan');
+// const morgan = require('morgan');
 const path = require('path');
 const dotenv = require('dotenv');
 
@@ -21,8 +21,12 @@ const checkingRoutes = require('./routes/checkingRoutes');
 const app = express();
 
 // Middleware
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [process.env.FRONTEND_URL || 'https://finanzas.rocketflow.cl']
+  : ['http://localhost:3000', 'http://localhost:3001'];
+
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -52,6 +56,17 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/installments', installmentsRoutes);
 app.use('/api/intl-unbilled', intlUnbilledRoutes);
 app.use('/api/checking', checkingRoutes);
+
+// Serve static files from React build (only in production)
+if (process.env.NODE_ENV === 'production') {
+  const buildPath = path.join(__dirname, '../build');
+  app.use(express.static(buildPath));
+  
+  // Handle React Router - serve index.html for all non-API routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
