@@ -39,14 +39,6 @@ app.use(express.json());
 //   app.use(morgan('dev'));
 // }
 
-// Basic route
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Bienvenido a Finanzas Personales', 
-    status: 'Backend running successfully' 
-  });
-});
-
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
