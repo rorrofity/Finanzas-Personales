@@ -159,26 +159,40 @@ Finanzas-Personales/
 
 ### Variables de Entorno
 
-Crear un archivo `.env` en la raíz del proyecto (backend):
+⚠️ **IMPORTANTE**: El archivo `.env` debe estar en la **raíz del proyecto**, NO en `/backend/`.
+
+Crear un archivo `.env` en la raíz del proyecto:
 ```env
-PORT=3001
-NODE_ENV=development
-JWT_SECRET=finanzas_secret_key_2024
-DB_USER=postgres
-DB_PASSWORD=admin123
+# Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=finanzas_personales
-GOOGLE_CLIENT_ID=tu_google_client_id.apps.googleusercontent.com
+DB_USER=rpizarro
+DB_PASSWORD=admin123
+
+# Server Configuration
+PORT=3001
+JWT_SECRET=finanzas_secret_key_2024
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Environment
+NODE_ENV=development
 ```
 
 Crear/actualizar archivo `.env.development` en la raíz (frontend):
 ```env
 PORT=3000
-REACT_APP_GOOGLE_CLIENT_ID=tu_google_client_id.apps.googleusercontent.com
+
+# Google OAuth - Frontend
+REACT_APP_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 ```
 
-**Nota**: Para obtener el `GOOGLE_CLIENT_ID`, consulta la guía [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md).
+**Nota**: Para obtener el `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`, consulta la guía [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md).
+
+**Para configuración de producción**, ver [CONFIGURATION.md](./CONFIGURATION.md).
 
 ### Instalación
 
@@ -207,6 +221,9 @@ npm run dev
 
 ## Documentación Adicional
 
+- **[CONFIGURATION.md](./CONFIGURATION.md)**: Guía completa de configuración (desarrollo y producción)
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)**: Guía de deployment a producción
+- **[DEPLOYMENT_PROCESS.md](./DEPLOYMENT_PROCESS.md)**: Scripts automatizados de deployment
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)**: Guía de desarrollo, arquitectura y decisiones técnicas
 - **[GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)**: Configuración paso a paso de Google Sign-On
 

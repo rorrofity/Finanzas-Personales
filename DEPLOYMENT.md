@@ -18,28 +18,57 @@
 
 ## ✅ Estado Actual del Deployment
 
-### Ya Completado:
-- ✅ Base de datos PostgreSQL creada
+### ✅ Completado 100%:
+- ✅ Base de datos PostgreSQL creada y configurada
 - ✅ Node.js 18.x instalado
 - ✅ Repositorio clonado en `/var/www/finanzas-personales`
-- ✅ Variables de entorno configuradas (`.env`)
+- ✅ Variables de entorno configuradas (`.env` en raíz del proyecto)
 - ✅ Dependencias instaladas
-- ✅ Migraciones ejecutadas
-- ✅ Backend corriendo con PM2
-- ✅ Frontend buildeado
-- ✅ Backend configurado para servir frontend
+- ✅ Migraciones ejecutadas (schema con 12 columnas en transactions)
+- ✅ Permisos de BD configurados para finanzas_user
+- ✅ Backend corriendo con PM2 en puerto 3001
+- ✅ Frontend buildeado y servido por el backend
+- ✅ Caddy configurado para `finanzas.rocketflow.cl`
+- ✅ Google OAuth funcionando con dominio
+- ✅ SSL automático configurado (Let's Encrypt)
+- ✅ Scripts de deployment automatizados creados
 
-### Falta Completar:
-- ⏳ Configurar Caddy para `finanzas.rocketflow.cl`
-- ⏳ Configurar Google OAuth con dominio
-- ⏳ Abrir puerto 3001 en firewall
-- ⏳ Probar acceso a la aplicación
+### 🌐 URLs Activas:
+- **Aplicación**: https://finanzas.rocketflow.cl
+- **N8N**: https://rocketflow.cl
+
+### 📊 Credenciales de Producción:
+- **Base de datos**: finanzas_personales
+- **Usuario BD**: finanzas_user
+- **Backend puerto**: 3001
+- **Servidor**: 137.184.12.234
 
 ---
 
 ## 🔧 Pasos Finales en el Servidor
 
-### **Paso 1: Actualizar Código desde GitHub**
+### **Opción A: Deployment Automatizado (Recomendado)**
+
+Usa los scripts automatizados:
+
+```bash
+# Desde tu Mac
+cd /Users/rpizarro/CascadeProjects/Finanzas-Personales
+
+# Deployment normal (mantiene datos)
+./scripts/deploy-to-production.sh
+
+# Deployment con base de datos fresca
+./scripts/deploy-to-production.sh --fresh-db
+```
+
+Ver [DEPLOYMENT_PROCESS.md](./DEPLOYMENT_PROCESS.md) para más detalles.
+
+---
+
+### **Opción B: Deployment Manual**
+
+#### **Paso 1: Actualizar Código desde GitHub**
 
 ```bash
 cd /var/www/finanzas-personales
@@ -121,16 +150,23 @@ curl http://localhost:3001/api/health
 
 ---
 
-### **Paso 6: Configurar Google OAuth**
+### **Paso 6: Configurar Google OAuth** ✅ (Ya Completado)
 
-1. Ve a: https://console.cloud.google.com/apis/credentials
-2. Click en tu **OAuth 2.0 Client ID**
-3. En **"Authorized JavaScript origins"**:
-   - ✅ Agrega: `https://finanzas.rocketflow.cl`
-   - ❌ Elimina: `http://localhost:3000` (opcional, solo si no desarrollas más en local)
-4. En **"Authorized redirect URIs"**:
-   - ✅ Agrega: `https://finanzas.rocketflow.cl`
-5. Click **"Save"**
+**Configuración actual**:
+
+1. **Client ID**: Configurado en Google Cloud Console (ver CONFIGURATION.md)
+2. **Client Secret**: Configurado en `.env` (ver CONFIGURATION.md)
+3. **Authorized JavaScript origins**:
+   - ✅ `http://localhost:3000` (desarrollo)
+   - ✅ `http://localhost:3001` (desarrollo)
+   - ✅ `https://finanzas.rocketflow.cl` (producción)
+4. **Authorized redirect URIs**:
+   - ✅ `http://localhost:3000` (desarrollo)
+   - ✅ `http://localhost:3001` (desarrollo)
+   - ✅ `https://finanzas.rocketflow.cl` (producción)
+   - ✅ `https://finanzas.rocketflow.cl/auth/google/callback`
+
+**Para modificar**: https://console.cloud.google.com/apis/credentials
 
 ---
 
@@ -226,12 +262,17 @@ pm2 restart finanzas-backend
 
 ### Variables de Entorno Sensibles
 **NUNCA** commitees el archivo `.env` al repositorio. Contiene:
-- `DB_PASSWORD`
-- `JWT_SECRET`
-- `GOOGLE_CLIENT_ID`
+- `DB_PASSWORD`: (Ver CONFIGURATION.md)
+- `JWT_SECRET`: (Ver CONFIGURATION.md)
+- `GOOGLE_CLIENT_SECRET`: (Ver CONFIGURATION.md)
 
-### SSL/HTTPS
+**Ubicación correcta**: `/var/www/finanzas-personales/.env` (raíz del proyecto)
+
+### SSL/HTTPS ✅
 Caddy maneja automáticamente los certificados SSL con Let's Encrypt. No necesitas configurar nada adicional.
+
+### Permisos de Base de Datos ✅
+El usuario `finanzas_user` tiene todos los permisos necesarios sobre las tablas del schema public.
 
 ---
 
@@ -252,15 +293,24 @@ pm2 monit
 
 ## ✅ Checklist Final
 
-- [ ] Git pull ejecutado
-- [ ] Backend reiniciado con cambios nuevos
-- [ ] Caddyfile actualizado con `finanzas.rocketflow.cl`
-- [ ] Caddy reloaded sin errores
-- [ ] Puerto 3001 abierto en firewall
-- [ ] Google OAuth configurado con dominio
-- [ ] Aplicación accesible en `https://finanzas.rocketflow.cl`
-- [ ] Login con Google funcionando
-- [ ] Sin errores en logs (`pm2 logs`)
+- [x] Git pull ejecutado
+- [x] Backend reiniciado con cambios nuevos
+- [x] Caddyfile actualizado con `finanzas.rocketflow.cl`
+- [x] Caddy reloaded sin errores
+- [x] Puerto 3001 abierto en firewall
+- [x] Google OAuth configurado con dominio
+- [x] Aplicación accesible en `https://finanzas.rocketflow.cl`
+- [x] Login con Google funcionando
+- [x] Sin errores en logs (`pm2 logs`)
+- [x] Base de datos con schema correcto (12 columnas en transactions)
+- [x] Permisos de BD configurados correctamente
+- [x] Scripts de deployment automatizados creados
+
+### 📚 Documentación Relacionada
+
+- [CONFIGURATION.md](./CONFIGURATION.md) - Configuración completa
+- [DEPLOYMENT_PROCESS.md](./DEPLOYMENT_PROCESS.md) - Scripts automatizados
+- [GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md) - Setup de OAuth
 
 ---
 
