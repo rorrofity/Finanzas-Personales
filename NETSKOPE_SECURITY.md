@@ -1,5 +1,7 @@
 # 🔐 Guía para Pasar Filtros de Netskope
 
+> **📢 ACTUALIZACIÓN**: Esta guía ha sido complementada con una **guía detallada de resolución** basada en logs reales de Netskope. Ver: **[NETSKOPE_RESOLUTION.md](./NETSKOPE_RESOLUTION.md)**
+
 ## 📋 ¿Qué es Netskope?
 
 **Netskope** es una plataforma CASB (Cloud Access Security Broker) que analiza y filtra el tráfico web en empresas para:

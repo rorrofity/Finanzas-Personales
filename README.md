@@ -226,6 +226,7 @@ npm run dev
 - **[DEPLOYMENT_PROCESS.md](./DEPLOYMENT_PROCESS.md)**: Scripts automatizados de deployment
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)**: Guía de desarrollo, arquitectura y decisiones técnicas
 - **[GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)**: Configuración paso a paso de Google Sign-On
+- **[NETSKOPE_RESOLUTION.md](./NETSKOPE_RESOLUTION.md)**: Solución para bloqueos de Netskope y proxies corporativos
 
 ## Notas y Solución de Problemas
 

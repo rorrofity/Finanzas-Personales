@@ -1,0 +1,56 @@
+rocketflow.cl {
+    reverse_proxy n8n:5678 {
+      flush_interval -1
+    }
+}
+
+finanzas.rocketflow.cl {
+    # Headers de seguridad para mejorar confianza con Netskope
+    header {
+        # Strict Transport Security (HSTS)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        
+        # Content Security Policy
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://accounts.google.com https://www.googleapis.com; frame-src https://accounts.google.com"
+        
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        
+        # XSS Protection
+        X-XSS-Protection "1; mode=block"
+        
+        # Content type sniffing
+        X-Content-Type-Options "nosniff"
+        
+        # Referrer Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # Permissions Policy
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        
+        # Remove Server header (security by obscurity)
+        -Server
+    }
+    
+    # Configurar encoding
+    encode gzip zstd
+    
+    # Reverse proxy al backend
+    reverse_proxy host.docker.internal:3001 {
+        # Health check
+        health_uri /api/health
+        health_interval 30s
+        health_timeout 10s
+        
+        # Headers para el backend
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/finanzas.log
+        format json
+    }
+}
