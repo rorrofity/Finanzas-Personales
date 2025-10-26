@@ -221,11 +221,18 @@ npm run dev
 
 ## Documentación Adicional
 
+### Configuración y Deployment
 - **[CONFIGURATION.md](./CONFIGURATION.md)**: Guía completa de configuración (desarrollo y producción)
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)**: Guía de deployment a producción
 - **[DEPLOYMENT_PROCESS.md](./DEPLOYMENT_PROCESS.md)**: Scripts automatizados de deployment
-- **[DEVELOPMENT.md](./DEVELOPMENT.md)**: Guía de desarrollo, arquitectura y decisiones técnicas
 - **[GOOGLE_OAUTH_SETUP.md](./GOOGLE_OAUTH_SETUP.md)**: Configuración paso a paso de Google Sign-On
+
+### Desarrollo y Arquitectura
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)**: Guía de desarrollo, arquitectura y decisiones técnicas
+- **[EMAIL_SYNC_PLAN.md](./EMAIL_SYNC_PLAN.md)**: Plan de implementación para sincronización automática desde Gmail ⭐
+- **[EMAIL_SYNC_TECHNICAL.md](./EMAIL_SYNC_TECHNICAL.md)**: Detalles técnicos y código completo para email sync
+
+### Troubleshooting
 - **[NETSKOPE_RESOLUTION.md](./NETSKOPE_RESOLUTION.md)**: Solución para bloqueos de Netskope y proxies corporativos
 
 ## Notas y Solución de Problemas
