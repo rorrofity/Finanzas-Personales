@@ -1,0 +1,1554 @@
+--
+-- PostgreSQL database dump
+--
+
+\restrict EVdiVsD0otQLBHxPY08T5wOc9mpsKTtrN5fvPopmECcTizHrGpwgfgnUOdsHF3y
+
+-- Dumped from database version 14.19 (Homebrew)
+-- Dumped by pg_dump version 14.19 (Homebrew)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
+
+
+--
+-- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: rpizarro
+--
+
+CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_updated_at_column() OWNER TO rpizarro;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: categories; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.categories (
+    id integer NOT NULL,
+    name character varying(50) NOT NULL,
+    description text,
+    user_id uuid,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.categories OWNER TO rpizarro;
+
+--
+-- Name: categories_id_seq; Type: SEQUENCE; Schema: public; Owner: rpizarro
+--
+
+CREATE SEQUENCE public.categories_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.categories_id_seq OWNER TO rpizarro;
+
+--
+-- Name: categories_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: rpizarro
+--
+
+ALTER SEQUENCE public.categories_id_seq OWNED BY public.categories.id;
+
+
+--
+-- Name: checking_balances; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.checking_balances (
+    user_id uuid NOT NULL,
+    year integer NOT NULL,
+    month integer NOT NULL,
+    initial_balance numeric(14,2) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT checking_balances_initial_balance_check CHECK ((initial_balance >= (0)::numeric)),
+    CONSTRAINT checking_balances_month_check CHECK (((month >= 1) AND (month <= 12))),
+    CONSTRAINT checking_balances_year_check CHECK (((year >= 2000) AND (year <= 2100)))
+);
+
+
+ALTER TABLE public.checking_balances OWNER TO rpizarro;
+
+--
+-- Name: checking_transactions; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.checking_transactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    year integer NOT NULL,
+    month integer NOT NULL,
+    fecha date NOT NULL,
+    descripcion character varying(60) NOT NULL,
+    tipo character varying(10) NOT NULL,
+    amount numeric(14,2) NOT NULL,
+    category_id integer,
+    notas character varying(140),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT checking_transactions_amount_check CHECK ((amount > (0)::numeric)),
+    CONSTRAINT checking_transactions_month_check CHECK (((month >= 1) AND (month <= 12))),
+    CONSTRAINT checking_transactions_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['abono'::character varying, 'cargo'::character varying])::text[]))),
+    CONSTRAINT checking_transactions_year_check CHECK (((year >= 2000) AND (year <= 2100)))
+);
+
+
+ALTER TABLE public.checking_transactions OWNER TO rpizarro;
+
+--
+-- Name: imports; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.imports (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    provider text NOT NULL,
+    network text,
+    product_type text DEFAULT 'credit_card'::text NOT NULL,
+    original_filename text,
+    detected_rows integer DEFAULT 0,
+    inserted_count integer DEFAULT 0,
+    skipped_count integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    period_year integer,
+    period_month integer
+);
+
+
+ALTER TABLE public.imports OWNER TO rpizarro;
+
+--
+-- Name: installment_occurrences; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.installment_occurrences (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    plan_id uuid NOT NULL,
+    year integer NOT NULL,
+    month integer NOT NULL,
+    installment_number integer NOT NULL,
+    amount numeric(12,2) NOT NULL,
+    category_id integer,
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT installment_occurrences_amount_check CHECK ((amount > (0)::numeric))
+);
+
+
+ALTER TABLE public.installment_occurrences OWNER TO rpizarro;
+
+--
+-- Name: installment_plans; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.installment_plans (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    brand character varying(20) NOT NULL,
+    descripcion character varying(100) NOT NULL,
+    amount_per_installment numeric(12,2) NOT NULL,
+    total_installments integer NOT NULL,
+    start_year integer NOT NULL,
+    start_month integer NOT NULL,
+    start_installment integer NOT NULL,
+    category_id integer,
+    notas character varying(140),
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT installment_plans_amount_per_installment_check CHECK ((amount_per_installment > (0)::numeric)),
+    CONSTRAINT installment_plans_brand_check CHECK (((brand)::text = ANY ((ARRAY['visa'::character varying, 'mastercard'::character varying])::text[]))),
+    CONSTRAINT installment_plans_start_installment_check CHECK ((start_installment >= 1)),
+    CONSTRAINT installment_plans_start_month_check CHECK (((start_month >= 1) AND (start_month <= 12))),
+    CONSTRAINT installment_plans_start_year_check CHECK (((start_year >= 2000) AND (start_year <= 2100))),
+    CONSTRAINT installment_plans_total_installments_check CHECK ((total_installments >= 1))
+);
+
+
+ALTER TABLE public.installment_plans OWNER TO rpizarro;
+
+--
+-- Name: intl_unbilled; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.intl_unbilled (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    brand character varying(20) NOT NULL,
+    fecha date NOT NULL,
+    descripcion character varying(255) NOT NULL,
+    amount_usd numeric(14,2) NOT NULL,
+    exchange_rate numeric(14,4) NOT NULL,
+    amount_clp numeric(14,2) NOT NULL,
+    tipo character varying(20) NOT NULL,
+    category_id integer,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    original_fecha date NOT NULL,
+    period_year integer NOT NULL,
+    period_month integer NOT NULL,
+    CONSTRAINT intl_unbilled_brand_check CHECK (((brand)::text = ANY ((ARRAY['visa'::character varying, 'mastercard'::character varying])::text[]))),
+    CONSTRAINT intl_unbilled_exchange_rate_check CHECK ((exchange_rate > (0)::numeric)),
+    CONSTRAINT intl_unbilled_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['gasto'::character varying, 'pago'::character varying, 'desestimar'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.intl_unbilled OWNER TO rpizarro;
+
+--
+-- Name: projected_occurrences; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.projected_occurrences (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    template_id uuid NOT NULL,
+    year integer NOT NULL,
+    month integer NOT NULL,
+    fecha date NOT NULL,
+    override boolean DEFAULT false NOT NULL,
+    nombre character varying(60),
+    tipo character varying(10),
+    monto numeric(14,2),
+    category_id integer,
+    notas character varying(140),
+    active boolean DEFAULT true NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    CONSTRAINT projected_occurrences_month_check CHECK (((month >= 1) AND (month <= 12))),
+    CONSTRAINT projected_occurrences_monto_check CHECK ((monto > (0)::numeric)),
+    CONSTRAINT projected_occurrences_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['ingreso'::character varying, 'gasto'::character varying])::text[]))),
+    CONSTRAINT projected_occurrences_year_check CHECK (((year >= 2000) AND (year <= 2100)))
+);
+
+
+ALTER TABLE public.projected_occurrences OWNER TO rpizarro;
+
+--
+-- Name: projected_templates; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.projected_templates (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    nombre character varying(60) NOT NULL,
+    tipo character varying(10) NOT NULL,
+    monto numeric(14,2) NOT NULL,
+    day_of_month integer NOT NULL,
+    start_year integer NOT NULL,
+    start_month integer NOT NULL,
+    category_id integer,
+    notas character varying(140),
+    repeat_monthly boolean DEFAULT true NOT NULL,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    CONSTRAINT projected_templates_day_of_month_check CHECK (((day_of_month >= 1) AND (day_of_month <= 31))),
+    CONSTRAINT projected_templates_monto_check CHECK ((monto > (0)::numeric)),
+    CONSTRAINT projected_templates_start_month_check CHECK (((start_month >= 1) AND (start_month <= 12))),
+    CONSTRAINT projected_templates_start_year_check CHECK (((start_year >= 2000) AND (start_year <= 2100))),
+    CONSTRAINT projected_templates_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['ingreso'::character varying, 'gasto'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.projected_templates OWNER TO rpizarro;
+
+--
+-- Name: transactions; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.transactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    fecha date NOT NULL,
+    descripcion text NOT NULL,
+    monto numeric(12,2) NOT NULL,
+    categoria character varying(100) DEFAULT 'Sin categorizar'::character varying,
+    tipo character varying(50) NOT NULL,
+    cuotas integer DEFAULT 1,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    import_id uuid,
+    category_id integer,
+    CONSTRAINT transactions_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['ingreso'::character varying, 'gasto'::character varying, 'pago'::character varying, 'desestimar'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.transactions OWNER TO rpizarro;
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: rpizarro
+--
+
+CREATE TABLE public.users (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    nombre character varying(100) NOT NULL,
+    email character varying(100) NOT NULL,
+    password character varying(255),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    ultimo_inicio_sesion timestamp with time zone,
+    google_id character varying(255),
+    auth_provider character varying(20) DEFAULT 'local'::character varying,
+    profile_picture text,
+    CONSTRAINT users_auth_provider_check CHECK (((auth_provider)::text = ANY ((ARRAY['local'::character varying, 'google'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.users OWNER TO rpizarro;
+
+--
+-- Name: COLUMN users.google_id; Type: COMMENT; Schema: public; Owner: rpizarro
+--
+
+COMMENT ON COLUMN public.users.google_id IS 'ID único de Google OAuth (sub claim del JWT)';
+
+
+--
+-- Name: COLUMN users.auth_provider; Type: COMMENT; Schema: public; Owner: rpizarro
+--
+
+COMMENT ON COLUMN public.users.auth_provider IS 'Proveedor de autenticación: local (email/password) o google (Google OAuth)';
+
+
+--
+-- Name: COLUMN users.profile_picture; Type: COMMENT; Schema: public; Owner: rpizarro
+--
+
+COMMENT ON COLUMN public.users.profile_picture IS 'URL de la foto de perfil del usuario (principalmente de Google)';
+
+
+--
+-- Name: categories id; Type: DEFAULT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.categories ALTER COLUMN id SET DEFAULT nextval('public.categories_id_seq'::regclass);
+
+
+--
+-- Data for Name: categories; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.categories (id, name, description, user_id, created_at) FROM stdin;
+1	Comida	Gastos relacionados con alimentación	\N	2025-09-05 22:48:43.332357
+2	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-05 22:48:43.332357
+3	Auto	Gastos relacionados con el vehículo	\N	2025-09-05 22:48:43.332357
+4	Créditos	Pagos de créditos y préstamos	\N	2025-09-05 22:48:43.332357
+5	Compras Camila	Compras personales de Camila	\N	2025-09-05 22:48:43.332357
+6	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-05 22:48:43.332357
+7	Comida	Gastos relacionados con alimentación	\N	2025-09-06 01:26:03.740754
+8	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-06 01:26:03.740754
+9	Auto	Gastos relacionados con el vehículo	\N	2025-09-06 01:26:03.740754
+10	Créditos	Pagos de créditos y préstamos	\N	2025-09-06 01:26:03.740754
+11	Compras Camila	Compras personales de Camila	\N	2025-09-06 01:26:03.740754
+12	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-06 01:26:03.740754
+13	Comida	Gastos relacionados con alimentación	\N	2025-09-08 00:09:53.117177
+14	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-08 00:09:53.117177
+15	Auto	Gastos relacionados con el vehículo	\N	2025-09-08 00:09:53.117177
+16	Créditos	Pagos de créditos y préstamos	\N	2025-09-08 00:09:53.117177
+17	Compras Camila	Compras personales de Camila	\N	2025-09-08 00:09:53.117177
+18	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-08 00:09:53.117177
+19	Comida	Gastos relacionados con alimentación	\N	2025-09-09 20:16:01.036298
+20	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-09 20:16:01.036298
+21	Auto	Gastos relacionados con el vehículo	\N	2025-09-09 20:16:01.036298
+22	Créditos	Pagos de créditos y préstamos	\N	2025-09-09 20:16:01.036298
+23	Compras Camila	Compras personales de Camila	\N	2025-09-09 20:16:01.036298
+24	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-09 20:16:01.036298
+25	Comida	Gastos relacionados con alimentación	\N	2025-09-10 18:24:02.359193
+26	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-10 18:24:02.359193
+27	Auto	Gastos relacionados con el vehículo	\N	2025-09-10 18:24:02.359193
+28	Créditos	Pagos de créditos y préstamos	\N	2025-09-10 18:24:02.359193
+29	Compras Camila	Compras personales de Camila	\N	2025-09-10 18:24:02.359193
+30	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-10 18:24:02.359193
+31	Comida	Gastos relacionados con alimentación	\N	2025-09-11 21:30:18.410974
+32	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-11 21:30:18.410974
+33	Auto	Gastos relacionados con el vehículo	\N	2025-09-11 21:30:18.410974
+34	Créditos	Pagos de créditos y préstamos	\N	2025-09-11 21:30:18.410974
+35	Compras Camila	Compras personales de Camila	\N	2025-09-11 21:30:18.410974
+36	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-11 21:30:18.410974
+37	Comida	Gastos relacionados con alimentación	\N	2025-09-12 14:25:59.37084
+38	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-12 14:25:59.37084
+39	Auto	Gastos relacionados con el vehículo	\N	2025-09-12 14:25:59.37084
+40	Créditos	Pagos de créditos y préstamos	\N	2025-09-12 14:25:59.37084
+41	Compras Camila	Compras personales de Camila	\N	2025-09-12 14:25:59.37084
+42	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-12 14:25:59.37084
+43	Comida	Gastos relacionados con alimentación	\N	2025-09-12 20:33:58.978482
+44	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-12 20:33:58.978482
+45	Auto	Gastos relacionados con el vehículo	\N	2025-09-12 20:33:58.978482
+46	Créditos	Pagos de créditos y préstamos	\N	2025-09-12 20:33:58.978482
+47	Compras Camila	Compras personales de Camila	\N	2025-09-12 20:33:58.978482
+48	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-12 20:33:58.978482
+49	Comida	Gastos relacionados con alimentación	\N	2025-09-14 00:50:09.121047
+50	Cuentas	Pagos de servicios y cuentas mensuales	\N	2025-09-14 00:50:09.121047
+51	Auto	Gastos relacionados con el vehículo	\N	2025-09-14 00:50:09.121047
+52	Créditos	Pagos de créditos y préstamos	\N	2025-09-14 00:50:09.121047
+53	Compras Camila	Compras personales de Camila	\N	2025-09-14 00:50:09.121047
+54	Compras Rodrigo	Compras personales de Rodrigo	\N	2025-09-14 00:50:09.121047
+61	Movilización Rodrigo	Trayectos Pullman, Uber, Metro, Otros	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-17 14:35:03.952676
+62	Supermercado	Compras de Supermercado	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-17 14:36:12.922298
+63	Compras Mascotas	Las compras para los niños del hogar	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-17 14:37:13.54185
+\.
+
+
+--
+-- Data for Name: checking_balances; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.checking_balances (user_id, year, month, initial_balance, created_at, updated_at) FROM stdin;
+35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025	9	1004219.00	2025-09-14 01:56:38.431678-03	2025-09-14 01:56:38.431678-03
+\.
+
+
+--
+-- Data for Name: checking_transactions; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.checking_transactions (id, user_id, year, month, fecha, descripcion, tipo, amount, category_id, notas, created_at, updated_at) FROM stdin;
+f02f978e-1dfc-470b-a954-85fe97cdb415	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025	9	2025-09-15	Traspaso A:Medio De Pago Fintoc	cargo	4735.00	\N	Pasaje Pullman Viña-Santiago	2025-09-15 20:27:19.301263-03	2025-09-15 20:27:19.301263-03
+48c53617-e3f1-4453-99a1-9b1446ea90d9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025	9	2025-09-15	Traspaso A:Medio De Pago Fintoc	cargo	3154.00	\N	Pasaje Pullman Santiago - Viña	2025-09-15 20:28:11.084632-03	2025-09-15 20:28:11.084632-03
+54bf8c3b-a03f-4490-9878-389708e1fec3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025	9	2025-09-17	Traspaso A:Medio De Pago Fintoc\t	cargo	6027.00	\N	Pasaje Pullman Santiago - Viña\t	2025-09-17 14:28:03.374624-03	2025-09-17 14:28:14.268019-03
+c3de140b-890d-4521-bd17-7794a27f5d5d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025	9	2025-09-16	Traspaso A:Medio De Pago Fintoc	cargo	3868.00	\N	Pasaje Pullman Viña-Santiago	2025-09-17 14:27:36.707664-03	2025-09-17 14:28:32.08883-03
+\.
+
+
+--
+-- Data for Name: imports; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.imports (id, user_id, provider, network, product_type, original_filename, detected_rows, inserted_count, skipped_count, created_at, period_year, period_month) FROM stdin;
+efca6b70-5730-4d4a-b26e-86b0ae74933c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (1).xls	74	74	0	2025-09-09 19:21:32.477041-03	2025	10
+55c50c5c-49b5-474c-ad93-2153a48cb5a6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (1).xls	74	74	0	2025-09-09 23:56:42.514378-03	2025	10
+21d37938-6e62-495e-a27f-a6298495434e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (2).xls	39	39	0	2025-09-10 08:35:54.458997-03	2025	10
+5ef3e801-4a9b-4dbe-af07-614a3315777f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (2).xlsx	102	102	0	2025-09-10 13:00:22.570204-03	2025	10
+bf99bee8-b579-413f-9524-ee7fc80d38ad	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	visa	credit_card	Saldo_y_Mov_No_Facturado (2).xls	17	17	0	2025-09-10 16:49:51.997028-03	2025	10
+ed961c95-e4a0-4996-8a85-499f92a65793	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (2).xlsx	102	102	0	2025-09-10 18:27:57.803041-03	2025	10
+f5050f69-7a97-4ac6-981d-93fc572a03e6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	visa	credit_card	Saldo_y_Mov_No_Facturado (2).xls	17	17	0	2025-09-10 18:28:10.970705-03	2025	10
+f3bcf564-73a9-4580-af81-874af34c184f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (3).xls	16	16	0	2025-09-11 18:42:08.361666-03	2025	10
+fe15a68d-d14e-4ae1-970d-0e06948fca49	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (1).xls	74	74	0	2025-09-11 20:33:25.115025-03	2025	10
+bfa0e671-4d95-4c48-8036-2b528fdf1640	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (2).xlsx	39	32	0	2025-09-11 20:33:44.039563-03	2025	10
+8753418e-ad87-4751-adef-10767ec787a0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (3).xls	23	5	0	2025-09-11 20:33:58.430161-03	2025	10
+b22256e6-77ce-4e2f-a52e-c3ea54024907	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (3).xls	105	105	0	2025-09-11 20:35:59.05265-03	2025	10
+cd2d9e4f-0d5e-4950-95ce-099bb68d4814	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	visa	credit_card	Saldo_y_Mov_No_Facturado (2).xls	17	17	0	2025-09-11 20:36:11.441644-03	2025	10
+acdb407a-f785-48e8-a020-a845d2bbc37e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (3).xls	105	105	0	2025-09-11 22:02:52.757028-03	2025	10
+f88ef92c-022d-4d85-aa37-d2a11ba9fb76	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	visa	credit_card	Saldo_y_Mov_No_Facturado (2).xls	17	17	0	2025-09-11 22:03:01.895594-03	2025	10
+e9f472e4-4fc4-4a7d-ab0b-c84a1fc7a265	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado_Nacional.xls	105	105	0	2025-09-12 19:20:20.758236-03	2025	10
+03c8e204-b272-4396-9459-8464746c80cd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado_Nacional.xls	105	105	0	2025-09-12 20:37:17.00946-03	2025	10
+98b92750-2ed9-4b51-973f-2c07c309b980	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (3).xls	8	7	0	2025-09-12 21:02:22.697177-03	2025	10
+1af08740-ef12-48c5-963a-da5b629ec847	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	visa	credit_card	Saldo_y_Mov_No_Facturado (4).xls	17	17	0	2025-09-12 21:03:33.95778-03	2025	10
+680d5e04-a994-4175-9158-458d293a9133	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (6).xls	11	6	0	2025-09-13 23:57:29.746895-03	2025	10
+99aca865-8e67-4d5e-867c-c64f4be7ac34	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (1).xls	118	118	0	2025-09-14 01:35:12.344558-03	2025	10
+0f9d6eac-85d5-4903-9741-d50ab811a9ea	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	visa	credit_card	Saldo_y_Mov_No_Facturado (2).xls	17	17	0	2025-09-14 01:35:58.352021-03	2025	10
+a9aec168-4819-488b-a646-84985a6ceb7f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	banco_chile	mastercard	credit_card	Saldo_y_Mov_No_Facturado (3).xls	29	20	0	2025-09-17 14:18:56.0173-03	2025	10
+\.
+
+
+--
+-- Data for Name: installment_occurrences; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.installment_occurrences (id, user_id, plan_id, year, month, installment_number, amount, category_id, active, created_at, updated_at) FROM stdin;
+65352452-dbc4-473e-93cd-a4520b9c9c0c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2025	11	24	76448.00	\N	t	2025-09-12 00:31:15.879429-03	2025-09-12 00:31:15.879429-03
+0ed6572c-f9a4-4f1b-8729-69906b04fc03	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2025	12	25	76448.00	\N	t	2025-09-12 00:31:15.882166-03	2025-09-12 00:31:15.882166-03
+6fae3741-241e-4334-bf0f-22dfa28ad0c0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	1	26	76448.00	\N	t	2025-09-12 00:31:15.884523-03	2025-09-12 00:31:15.884523-03
+983ff0cc-5003-4648-82bd-2ce6519bc142	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	2	27	76448.00	\N	t	2025-09-12 00:31:15.886162-03	2025-09-12 00:31:15.886162-03
+d8becebc-8c4c-4f60-b89f-3e771419d746	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	3	28	76448.00	\N	t	2025-09-12 00:31:15.888523-03	2025-09-12 00:31:15.888523-03
+fe0c61a4-5a22-49f5-8c1a-853e2a998ac1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	4	29	76448.00	\N	t	2025-09-12 00:31:15.889884-03	2025-09-12 00:31:15.889884-03
+1353e90e-1a3a-45bd-a2a2-c4b869621ae0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	5	30	76448.00	\N	t	2025-09-12 00:31:15.89217-03	2025-09-12 00:31:15.89217-03
+3fed6f90-9ffb-4ba0-980f-d86fe81596c5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	6	31	76448.00	\N	t	2025-09-12 00:31:15.894226-03	2025-09-12 00:31:15.894226-03
+29af0e32-0676-4b5c-a1b8-344e95424acb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	7	32	76448.00	\N	t	2025-09-12 00:31:15.896986-03	2025-09-12 00:31:15.896986-03
+54d9b6d3-4564-40f4-bd55-501f67c499c0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	8	33	76448.00	\N	t	2025-09-12 00:31:15.899974-03	2025-09-12 00:31:15.899974-03
+b65ec753-501e-4d96-b31a-035b3e39c580	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	9	34	76448.00	\N	t	2025-09-12 00:31:15.902185-03	2025-09-12 00:31:15.902185-03
+8f070cb9-bdac-4baf-88e6-efa04396b26b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	10	35	76448.00	\N	t	2025-09-12 00:31:15.903963-03	2025-09-12 00:31:15.903963-03
+9e91f4cc-ca4a-41fc-af91-c3dc69c2216c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2026	11	36	76448.00	\N	t	2025-09-12 00:31:15.906148-03	2025-09-12 00:31:15.906148-03
+486b6283-a759-4c10-b3d5-2334bc85c3ea	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	7f9bd731-e151-4a16-98b9-6298438fc73a	2025	11	12	157402.00	\N	t	2025-09-12 00:31:56.354547-03	2025-09-12 00:31:56.354547-03
+52861ddb-fd3e-47bd-aa82-702ceca18ed1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	aa4e019c-a988-43ac-b556-ab75656f7565	2025	11	10	58250.00	\N	t	2025-09-12 00:32:31.187671-03	2025-09-12 00:32:31.187671-03
+33f98eac-d9af-4dfb-81e2-9b0d65f1a9ac	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	aa4e019c-a988-43ac-b556-ab75656f7565	2025	12	11	58250.00	\N	t	2025-09-12 00:32:31.190124-03	2025-09-12 00:32:31.190124-03
+3b533118-8928-4f8c-b883-5b949963b681	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	aa4e019c-a988-43ac-b556-ab75656f7565	2026	1	12	58250.00	\N	t	2025-09-12 00:32:31.192542-03	2025-09-12 00:32:31.192542-03
+99482568-8732-4021-8e83-35bf05a2c686	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2025	11	8	18958.00	\N	t	2025-09-12 00:33:10.09941-03	2025-09-12 00:33:10.09941-03
+f088293b-d2cc-4034-999c-93f2a49fc06e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2025	12	9	18958.00	\N	t	2025-09-12 00:33:10.100751-03	2025-09-12 00:33:10.100751-03
+75178d7d-56e8-4563-ad86-af459bf403c9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	1	10	18958.00	\N	t	2025-09-12 00:33:10.102789-03	2025-09-12 00:33:10.102789-03
+13c2ddfb-9f3c-4568-8665-3045a535a73d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	2	11	18958.00	\N	t	2025-09-12 00:33:10.104594-03	2025-09-12 00:33:10.104594-03
+01ee42d1-4c7c-4759-b29d-7e9a7b8c8c40	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	3	12	18958.00	\N	t	2025-09-12 00:33:10.10637-03	2025-09-12 00:33:10.10637-03
+82ec37a7-2325-4cb5-a2d2-2dae44cce3e9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	4	13	18958.00	\N	t	2025-09-12 00:33:10.107761-03	2025-09-12 00:33:10.107761-03
+e1cc0188-a2c5-4746-88ce-1251ad7c0390	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	5	14	18958.00	\N	t	2025-09-12 00:33:10.109611-03	2025-09-12 00:33:10.109611-03
+18b3e9fc-6b17-4908-b21a-186d4a0bb597	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	6	15	18958.00	\N	t	2025-09-12 00:33:10.112512-03	2025-09-12 00:33:10.112512-03
+5c6f56fc-d91c-48e2-84ba-6defc7e9f47f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	7	16	18958.00	\N	t	2025-09-12 00:33:10.115845-03	2025-09-12 00:33:10.115845-03
+0c55faaa-e3d7-40c6-a7d2-d5e0f4bd48d4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	8	17	18958.00	\N	t	2025-09-12 00:33:10.117481-03	2025-09-12 00:33:10.117481-03
+1ad3a4eb-1e0f-49f3-abd4-243247c6af71	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	9	18	18958.00	\N	t	2025-09-12 00:33:10.120565-03	2025-09-12 00:33:10.120565-03
+b21ddf42-d978-43d0-801e-3da7b5569347	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	10	19	18958.00	\N	t	2025-09-12 00:33:10.123699-03	2025-09-12 00:33:10.123699-03
+f6206db2-2d2e-4ed0-9fa7-9b9fb54dc659	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	11	20	18958.00	\N	t	2025-09-12 00:33:10.124961-03	2025-09-12 00:33:10.124961-03
+d5be2bd0-3e1e-4e59-823c-a57e86f9d37b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2026	12	21	18958.00	\N	t	2025-09-12 00:33:10.127224-03	2025-09-12 00:33:10.127224-03
+aaaa23fb-0dcc-419b-a6ef-c4811f02d2e4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2027	1	22	18958.00	\N	t	2025-09-12 00:33:10.130186-03	2025-09-12 00:33:10.130186-03
+9f565a4b-5beb-4dbf-b2be-f390b0ddb340	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2027	2	23	18958.00	\N	t	2025-09-12 00:33:10.132741-03	2025-09-12 00:33:10.132741-03
+8250c710-f13f-4ade-ae78-13c776d26ca6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2027	3	24	18958.00	\N	t	2025-09-12 00:33:10.134348-03	2025-09-12 00:33:10.134348-03
+0ef7ffe2-6e5e-4767-9d69-25c893e5e461	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1bb15c63-f997-4a18-8050-f7cf712ffbad	2025	11	7	16667.00	\N	t	2025-09-12 00:33:42.230286-03	2025-09-12 00:33:42.230286-03
+85c8a502-7020-494e-821d-77349342d1b1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1bb15c63-f997-4a18-8050-f7cf712ffbad	2025	12	8	16667.00	\N	t	2025-09-12 00:33:42.232368-03	2025-09-12 00:33:42.232368-03
+cf4c3927-5e4d-4814-991f-dd34706cc769	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1bb15c63-f997-4a18-8050-f7cf712ffbad	2026	1	9	16667.00	\N	t	2025-09-12 00:33:42.234401-03	2025-09-12 00:33:42.234401-03
+43285066-e4d3-45a0-ae0c-a0cbd1dbaed8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1bb15c63-f997-4a18-8050-f7cf712ffbad	2026	2	10	16667.00	\N	t	2025-09-12 00:33:42.23649-03	2025-09-12 00:33:42.23649-03
+663a23f9-235b-4273-9cfa-8ec81338b83d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1bb15c63-f997-4a18-8050-f7cf712ffbad	2026	3	11	16667.00	\N	t	2025-09-12 00:33:42.238476-03	2025-09-12 00:33:42.238476-03
+4db037e3-453f-4383-be4e-d387c12521a3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1bb15c63-f997-4a18-8050-f7cf712ffbad	2026	4	12	16667.00	\N	t	2025-09-12 00:33:42.239824-03	2025-09-12 00:33:42.239824-03
+467774bf-e993-41b4-827b-26ecd106e718	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2025	11	3	107982.00	\N	t	2025-09-12 00:34:04.22595-03	2025-09-12 00:34:04.22595-03
+8fd654b3-83a4-4a85-bfb4-111e8795cd5d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2025	12	4	107982.00	\N	t	2025-09-12 00:34:04.228361-03	2025-09-12 00:34:04.228361-03
+f8bba9c5-e391-429f-aed9-111275e05578	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	1	5	107982.00	\N	t	2025-09-12 00:34:04.230197-03	2025-09-12 00:34:04.230197-03
+59f2c36f-5bf5-44f4-bdc8-3430531fd75a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	2	6	107982.00	\N	t	2025-09-12 00:34:04.232277-03	2025-09-12 00:34:04.232277-03
+40ed4f52-7b7a-4fc7-834f-b469d1fe884a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	3	7	107982.00	\N	t	2025-09-12 00:34:04.233372-03	2025-09-12 00:34:04.233372-03
+e30bf5eb-3cf8-457a-abc3-c2584c36317b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	4	8	107982.00	\N	t	2025-09-12 00:34:04.234688-03	2025-09-12 00:34:04.234688-03
+46819f8e-c706-4cdb-80b4-764a02799382	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	5	9	107982.00	\N	t	2025-09-12 00:34:04.236705-03	2025-09-12 00:34:04.236705-03
+d91dc3c0-8060-4c66-8a72-e646910dcbfa	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	6	10	107982.00	\N	t	2025-09-12 00:34:04.238418-03	2025-09-12 00:34:04.238418-03
+b6053787-4859-4911-a785-f7c1180a2bad	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	7	11	107982.00	\N	t	2025-09-12 00:34:04.240161-03	2025-09-12 00:34:04.240161-03
+644ab3c1-e47c-4848-bf59-9ac5ef6d51c9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	8	12	107982.00	\N	t	2025-09-12 00:34:04.241098-03	2025-09-12 00:34:04.241098-03
+79b7bbcb-e7f1-4ef9-8810-c8d830ab003d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	9	13	107982.00	\N	t	2025-09-12 00:34:04.242155-03	2025-09-12 00:34:04.242155-03
+01b1b1dd-4f95-4870-a808-8c4e74dc36e4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	10	14	107982.00	\N	t	2025-09-12 00:34:04.244047-03	2025-09-12 00:34:04.244047-03
+913207a6-8f05-4fec-999e-f1d9776b9cdc	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	11	15	107982.00	\N	t	2025-09-12 00:34:04.246143-03	2025-09-12 00:34:04.246143-03
+38f2c39a-7da0-4ef5-a032-121cbd53d96a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2026	12	16	107982.00	\N	t	2025-09-12 00:34:04.248138-03	2025-09-12 00:34:04.248138-03
+a6a79f12-faf5-4e14-bc4a-4b9dbcf99c09	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	1	17	107982.00	\N	t	2025-09-12 00:34:04.249249-03	2025-09-12 00:34:04.249249-03
+0e61621c-106c-4bb7-806c-bafc2c9fb261	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	2	18	107982.00	\N	t	2025-09-12 00:34:04.250313-03	2025-09-12 00:34:04.250313-03
+c9060646-13d2-435c-aaa1-caaea9e8d14b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	3	19	107982.00	\N	t	2025-09-12 00:34:04.251555-03	2025-09-12 00:34:04.251555-03
+23ee816d-b515-4929-958c-739ffe2404c8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	4	20	107982.00	\N	t	2025-09-12 00:34:04.252866-03	2025-09-12 00:34:04.252866-03
+40f10e22-31e1-4d18-8418-8e89be282479	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	5	21	107982.00	\N	t	2025-09-12 00:34:04.254379-03	2025-09-12 00:34:04.254379-03
+21bdfab1-573e-498a-9b2d-8a95309b01a1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2025	10	3	107982.00	\N	t	2025-09-12 00:34:04.22441-03	2025-09-13 00:47:33.143295-03
+d6c346ac-eea8-43f8-9cc1-89f5b31acfed	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1bb15c63-f997-4a18-8050-f7cf712ffbad	2025	10	7	16667.00	\N	t	2025-09-12 00:33:42.227009-03	2025-09-13 00:47:41.674754-03
+922566f0-4c3e-4ae5-a4b9-9995529b55f2	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	aa4e019c-a988-43ac-b556-ab75656f7565	2025	10	10	58250.00	\N	t	2025-09-12 00:32:31.184889-03	2025-09-13 00:48:16.581747-03
+29ad40d6-9893-4f2f-b7c0-6ae4d3e05829	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	7f9bd731-e151-4a16-98b9-6298438fc73a	2025	10	12	157402.00	\N	t	2025-09-12 00:31:56.350597-03	2025-09-13 00:48:30.731171-03
+bb3c1dc7-6617-424a-a7e1-7b3fd9b1db4c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	012fd8f8-2c9f-4614-9141-3f67f5ed211b	2025	10	8	18958.00	\N	t	2025-09-12 00:33:10.096652-03	2025-09-13 00:48:46.408458-03
+b6253599-6107-4342-9449-293e826395db	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	6	22	107982.00	\N	t	2025-09-12 00:34:04.255984-03	2025-09-12 00:34:04.255984-03
+655df23f-1fa7-4bbc-a1d8-9ee5ccfdb0b6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	7	23	107982.00	\N	t	2025-09-12 00:34:04.258786-03	2025-09-12 00:34:04.258786-03
+e8dfb3ba-e506-43e2-9ec0-950981896560	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	8	24	107982.00	\N	t	2025-09-12 00:34:04.260129-03	2025-09-12 00:34:04.260129-03
+18e9bce6-c4e0-4717-9b6f-27ceeb669d38	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	9	25	107982.00	\N	t	2025-09-12 00:34:04.262087-03	2025-09-12 00:34:04.262087-03
+8bd2e861-a18c-474d-b6be-70fee4e10c18	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	10	26	107982.00	\N	t	2025-09-12 00:34:04.264195-03	2025-09-12 00:34:04.264195-03
+db8c262c-b62b-407d-a295-15d6998b6a92	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	11	27	107982.00	\N	t	2025-09-12 00:34:04.26575-03	2025-09-12 00:34:04.26575-03
+2c0e44c1-6c1f-46c5-9c82-efa1b352ee94	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2027	12	28	107982.00	\N	t	2025-09-12 00:34:04.266946-03	2025-09-12 00:34:04.266946-03
+91d07e19-62ad-47e7-8b60-b226bf300dd5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2028	1	29	107982.00	\N	t	2025-09-12 00:34:04.26801-03	2025-09-12 00:34:04.26801-03
+f0a5e50d-5fde-47c3-a27a-8258da1ac5ed	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2028	2	30	107982.00	\N	t	2025-09-12 00:34:04.269522-03	2025-09-12 00:34:04.269522-03
+b53f9cd2-145a-4d94-a15e-20304edcc27c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2028	3	31	107982.00	\N	t	2025-09-12 00:34:04.2711-03	2025-09-12 00:34:04.2711-03
+21d087dd-24d8-4c58-a480-f2c229f48b83	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2028	4	32	107982.00	\N	t	2025-09-12 00:34:04.272896-03	2025-09-12 00:34:04.272896-03
+2958e522-ac17-482b-ad39-a4562f50cc0c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2028	5	33	107982.00	\N	t	2025-09-12 00:34:04.274265-03	2025-09-12 00:34:04.274265-03
+1e11ffd7-0db1-4b5c-8643-294a4130f1f8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2028	6	34	107982.00	\N	t	2025-09-12 00:34:04.275612-03	2025-09-12 00:34:04.275612-03
+66436cea-1ff5-40cb-a776-06a1dca4ad84	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2028	7	35	107982.00	\N	t	2025-09-12 00:34:04.277518-03	2025-09-12 00:34:04.277518-03
+dd66eae5-422e-49a4-827b-02207c896edf	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f19d18eb-590b-4b9f-9760-352589cd0478	2028	8	36	107982.00	\N	t	2025-09-12 00:34:04.279009-03	2025-09-12 00:34:04.279009-03
+e8337566-9ee5-4b2f-8a07-713ea40dfbc6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e022a761-af61-469f-bd00-8cab7908393b	2025	11	3	21334.00	\N	t	2025-09-12 00:34:44.255405-03	2025-09-12 00:34:44.255405-03
+fb893d41-72a2-4316-935a-a6f5fe92e7ae	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e022a761-af61-469f-bd00-8cab7908393b	2025	12	4	21334.00	\N	t	2025-09-12 00:34:44.257209-03	2025-09-12 00:34:44.257209-03
+6296277b-7c08-48eb-b2ee-fd38b6599941	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e022a761-af61-469f-bd00-8cab7908393b	2026	1	5	21334.00	\N	t	2025-09-12 00:34:44.258842-03	2025-09-12 00:34:44.258842-03
+4b81adb2-095d-442f-bc0d-b98dc0e7214c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e022a761-af61-469f-bd00-8cab7908393b	2026	2	6	21334.00	\N	t	2025-09-12 00:34:44.260762-03	2025-09-12 00:34:44.260762-03
+9005f4c7-50f9-4bdd-b637-8db0717c46b7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e022a761-af61-469f-bd00-8cab7908393b	2025	10	3	21334.00	\N	t	2025-09-12 00:34:44.253688-03	2025-09-13 00:48:38.372899-03
+5b4cde87-b5d7-46bf-83bc-a0495c034511	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2025	11	2	216102.00	\N	t	2025-09-12 00:43:14.745912-03	2025-09-12 00:43:14.745912-03
+0012ab6c-16fe-4b58-b4ee-3dd7bff3758e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2025	12	3	216102.00	\N	t	2025-09-12 00:43:14.748038-03	2025-09-12 00:43:14.748038-03
+9f8c8c5d-71d4-4e62-8705-9e24f0af25bb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	1	4	216102.00	\N	t	2025-09-12 00:43:14.749978-03	2025-09-12 00:43:14.749978-03
+790bae69-26e2-4fe8-8013-b92213625fad	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	2	5	216102.00	\N	t	2025-09-12 00:43:14.751329-03	2025-09-12 00:43:14.751329-03
+3f684d0a-c0d7-4d7e-8bb4-4caf0aab8f52	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	3	6	216102.00	\N	t	2025-09-12 00:43:14.752716-03	2025-09-12 00:43:14.752716-03
+b9711627-cd2b-470f-82b6-58952106cf4c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	4	7	216102.00	\N	t	2025-09-12 00:43:14.754358-03	2025-09-12 00:43:14.754358-03
+a64d548e-95e6-49f4-84a6-62a1cfbcc617	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	5	8	216102.00	\N	t	2025-09-12 00:43:14.755787-03	2025-09-12 00:43:14.755787-03
+86dc0ec8-3c6a-448c-9cae-c91b672068ef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	6	9	216102.00	\N	t	2025-09-12 00:43:14.757703-03	2025-09-12 00:43:14.757703-03
+d4ac7b25-109d-4955-bf44-c8c0ee6f03b2	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	7	10	216102.00	\N	t	2025-09-12 00:43:14.759413-03	2025-09-12 00:43:14.759413-03
+1bd43958-b038-465b-b68f-5490db9ab119	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	8	11	216102.00	\N	t	2025-09-12 00:43:14.760789-03	2025-09-12 00:43:14.760789-03
+832db10f-e063-48e2-86c5-0ff8abed94d2	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	9	12	216102.00	\N	t	2025-09-12 00:43:14.762174-03	2025-09-12 00:43:14.762174-03
+44a4b5c3-ca57-4b67-aeac-0eba76110a22	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	10	13	216102.00	\N	t	2025-09-12 00:43:14.763917-03	2025-09-12 00:43:14.763917-03
+3a22397f-bcc3-4318-887b-728e093e970c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	11	14	216102.00	\N	t	2025-09-12 00:43:14.765776-03	2025-09-12 00:43:14.765776-03
+9a27eb0c-06c5-4b3b-93ba-88e6a74f6fa8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2026	12	15	216102.00	\N	t	2025-09-12 00:43:14.767332-03	2025-09-12 00:43:14.767332-03
+92380849-c00b-4c7e-90a2-f08b882fa54d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	1	16	216102.00	\N	t	2025-09-12 00:43:14.768626-03	2025-09-12 00:43:14.768626-03
+e1ff4792-cd4d-4f61-a223-bf867418beb9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	2	17	216102.00	\N	t	2025-09-12 00:43:14.769974-03	2025-09-12 00:43:14.769974-03
+ba0a782c-6f86-4909-a72f-71c6d23ecf38	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	3	18	216102.00	\N	t	2025-09-12 00:43:14.771704-03	2025-09-12 00:43:14.771704-03
+2c73d2e6-b66e-4b71-8187-7951e8efdf5b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	4	19	216102.00	\N	t	2025-09-12 00:43:14.773341-03	2025-09-12 00:43:14.773341-03
+b85aa218-3185-4130-9e37-5ce28f9f1eaa	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	5	20	216102.00	\N	t	2025-09-12 00:43:14.775021-03	2025-09-12 00:43:14.775021-03
+3dac2767-5a80-4404-90d9-1d34797037e5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	6	21	216102.00	\N	t	2025-09-12 00:43:14.776095-03	2025-09-12 00:43:14.776095-03
+45cf7544-5730-4850-855d-4de7265d2e53	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	7	22	216102.00	\N	t	2025-09-12 00:43:14.777247-03	2025-09-12 00:43:14.777247-03
+d7e26ce2-b5fc-41d9-9863-f48b2f402f55	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	8	23	216102.00	\N	t	2025-09-12 00:43:14.778773-03	2025-09-12 00:43:14.778773-03
+065d4b9e-5ce8-45ae-bb2b-3d753c37639c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2027	9	24	216102.00	\N	t	2025-09-12 00:43:14.780233-03	2025-09-12 00:43:14.780233-03
+b4174d19-30dc-47f8-bfb0-ff26988ef78d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d1abb1d-c17d-49bd-966e-67408a4db204	2025	10	24	76448.00	\N	t	2025-09-12 00:31:15.874417-03	2025-09-13 00:47:06.164786-03
+ac727837-e28e-469c-9729-0dcefa6ae14b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f252d21a-3704-4eed-af67-50ee7d3c191c	2025	10	2	216102.00	\N	t	2025-09-12 00:43:14.741862-03	2025-09-13 00:47:27.419145-03
+0e57b141-d7e7-4a48-8106-4584cbc4ebc9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	89427d30-ca38-4e40-b2ba-aeed86095e62	2025	10	4	32000.00	\N	t	2025-09-12 00:34:22.341379-03	2025-09-13 00:48:21.94385-03
+4635c425-7721-45a4-b32b-9af41a361e0e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b1508da6-63e1-400c-bd99-0270eead66a7	2025	10	2	20993.00	\N	t	2025-09-13 00:51:16.327806-03	2025-09-13 00:51:16.327806-03
+e15d8109-8313-4a2d-8e8e-89208bfbfa2a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b1508da6-63e1-400c-bd99-0270eead66a7	2025	11	3	20993.00	\N	t	2025-09-13 00:51:16.331277-03	2025-09-13 00:51:16.331277-03
+762faa4c-d333-430d-bf77-8eeee3e70822	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c49e7d9f-2ea7-45f2-8458-b8e41e397f5a	2025	10	2	90658.00	\N	t	2025-09-13 00:51:50.753265-03	2025-09-13 00:51:50.753265-03
+28e6f436-6501-4342-ad4f-31de057eed22	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c49e7d9f-2ea7-45f2-8458-b8e41e397f5a	2025	11	3	90658.00	\N	t	2025-09-13 00:51:50.756857-03	2025-09-13 00:51:50.756857-03
+9f6c7367-0d14-4c80-9203-c959561954e4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c49e7d9f-2ea7-45f2-8458-b8e41e397f5a	2025	12	4	90658.00	\N	t	2025-09-13 00:51:50.76003-03	2025-09-13 00:51:50.76003-03
+baa89cbd-488d-4b9b-b4ea-7fa537b147c1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c49e7d9f-2ea7-45f2-8458-b8e41e397f5a	2026	1	5	90658.00	\N	t	2025-09-13 00:51:50.762019-03	2025-09-13 00:51:50.762019-03
+74633a91-1cc2-4c85-8705-9557eded23b1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c49e7d9f-2ea7-45f2-8458-b8e41e397f5a	2026	2	6	90658.00	\N	t	2025-09-13 00:51:50.764135-03	2025-09-13 00:51:50.764135-03
+dd5579f4-4674-4c7b-9d8d-c762c1d13ec0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	490973c1-274d-4c70-ba2a-0e58357e6468	2025	10	2	39990.00	\N	t	2025-09-13 00:52:17.479861-03	2025-09-13 00:52:17.479861-03
+7bb0d8a1-804f-4ece-aa32-30fdab423119	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	490973c1-274d-4c70-ba2a-0e58357e6468	2025	11	3	39990.00	\N	t	2025-09-13 00:52:17.481661-03	2025-09-13 00:52:17.481661-03
+961e749e-a153-441b-a977-1ee2cded86ba	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2025	10	2	23330.00	\N	t	2025-09-13 00:52:56.987754-03	2025-09-13 00:52:56.987754-03
+13e9134d-1425-46be-a579-798934a912a4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2025	11	3	23330.00	\N	t	2025-09-13 00:52:56.993699-03	2025-09-13 00:52:56.993699-03
+3993061d-c418-47f9-b00d-900e7e7e0421	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2025	12	4	23330.00	\N	t	2025-09-13 00:52:56.99545-03	2025-09-13 00:52:56.99545-03
+5189033e-12be-4fd4-9950-6b8232f4db91	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2026	1	5	23330.00	\N	t	2025-09-13 00:52:56.997521-03	2025-09-13 00:52:56.997521-03
+a72cf9dd-9e28-4992-b3a4-2abf881be9f9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2026	2	6	23330.00	\N	t	2025-09-13 00:52:56.999937-03	2025-09-13 00:52:56.999937-03
+42c9fcd7-072c-45df-b2ff-6c80f507d9eb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2026	3	7	23330.00	\N	t	2025-09-13 00:52:57.002509-03	2025-09-13 00:52:57.002509-03
+892c40db-0cf7-4186-8309-d24235fec9de	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2026	4	8	23330.00	\N	t	2025-09-13 00:52:57.004088-03	2025-09-13 00:52:57.004088-03
+007d3f99-8b72-487e-8076-a86c8a354f9e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2026	5	9	23330.00	\N	t	2025-09-13 00:52:57.005509-03	2025-09-13 00:52:57.005509-03
+0e3e6b48-a90c-40cd-966d-f41745be33f6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2026	6	10	23330.00	\N	t	2025-09-13 00:52:57.006958-03	2025-09-13 00:52:57.006958-03
+b2808709-fa8b-4c4c-bee2-9e6b7b2267f5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2026	7	11	23330.00	\N	t	2025-09-13 00:52:57.00888-03	2025-09-13 00:52:57.00888-03
+634bc623-8178-42cd-8bf5-78782cfc74d4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b3406da0-d348-47f0-abf0-afeb0d2660b7	2026	8	12	23330.00	\N	t	2025-09-13 00:52:57.010361-03	2025-09-13 00:52:57.010361-03
+31157699-b2e3-4a2b-87b9-1b765b9ce8ee	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	16ed809e-300a-4515-bc45-6ad31929ee3c	2025	10	2	27623.00	\N	t	2025-09-13 00:53:28.594998-03	2025-09-13 00:53:28.594998-03
+9e01c1ee-aee2-4c34-9b0f-45f918b27edd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	16ed809e-300a-4515-bc45-6ad31929ee3c	2025	11	3	27623.00	\N	t	2025-09-13 00:53:28.598019-03	2025-09-13 00:53:28.598019-03
+c4221975-c90b-401b-8144-35ac7de9370b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c2b8473c-b139-4566-92bb-3b69877588f9	2025	10	2	32483.00	\N	t	2025-09-13 00:54:09.112899-03	2025-09-13 00:54:09.112899-03
+4f9bf293-5827-4d46-88b9-155c138285a1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c2b8473c-b139-4566-92bb-3b69877588f9	2025	11	3	32483.00	\N	t	2025-09-13 00:54:09.11636-03	2025-09-13 00:54:09.11636-03
+f9753304-54af-4f79-8854-dfd4f6ed2330	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c2b8473c-b139-4566-92bb-3b69877588f9	2025	12	4	32483.00	\N	t	2025-09-13 00:54:09.118569-03	2025-09-13 00:54:09.118569-03
+cb45934a-43a9-4a37-b9ab-646f5e42dc18	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c2b8473c-b139-4566-92bb-3b69877588f9	2026	1	5	32483.00	\N	t	2025-09-13 00:54:09.122043-03	2025-09-13 00:54:09.122043-03
+38d2789e-3b08-405c-bbfa-73ffdb0f7f3a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c2b8473c-b139-4566-92bb-3b69877588f9	2026	2	6	32483.00	\N	t	2025-09-13 00:54:09.123926-03	2025-09-13 00:54:09.123926-03
+f5c5e580-e8ae-4533-9aa8-b5bc3a51be89	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2025	10	1	20708.00	\N	t	2025-09-13 00:55:04.182281-03	2025-09-13 00:55:04.182281-03
+fb104a34-73e1-4b9e-ab27-aa02a290cf73	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2025	11	2	20708.00	\N	t	2025-09-13 00:55:04.187199-03	2025-09-13 00:55:04.187199-03
+21c95e53-e7b1-4153-80f3-5606a007f322	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2025	12	3	20708.00	\N	t	2025-09-13 00:55:04.189199-03	2025-09-13 00:55:04.189199-03
+e70c1828-1862-4d09-8601-d2da5404c6cf	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	1	4	20708.00	\N	t	2025-09-13 00:55:04.191199-03	2025-09-13 00:55:04.191199-03
+83796660-b9e1-4254-950f-1c2dfceb2eb2	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	2	5	20708.00	\N	t	2025-09-13 00:55:04.193728-03	2025-09-13 00:55:04.193728-03
+736a8057-2c59-44d0-9251-f37d1010ba13	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	3	6	20708.00	\N	t	2025-09-13 00:55:04.197083-03	2025-09-13 00:55:04.197083-03
+8f87b37b-793b-4c37-991e-a415b7486d24	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	4	7	20708.00	\N	t	2025-09-13 00:55:04.198949-03	2025-09-13 00:55:04.198949-03
+75c0f59d-1eb1-4440-b784-b01234ae18f5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	5	8	20708.00	\N	t	2025-09-13 00:55:04.200284-03	2025-09-13 00:55:04.200284-03
+a255c224-a507-4b56-8531-9117fc1d7e7c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	6	9	20708.00	\N	t	2025-09-13 00:55:04.201515-03	2025-09-13 00:55:04.201515-03
+5ebfae1c-73a7-4644-975e-d6b4f3971a7a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	7	10	20708.00	\N	t	2025-09-13 00:55:04.203114-03	2025-09-13 00:55:04.203114-03
+63c8f5b2-abf2-4033-8f4e-fcfb406393d2	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	8	11	20708.00	\N	t	2025-09-13 00:55:04.204825-03	2025-09-13 00:55:04.204825-03
+d9026659-5409-4ba4-9df5-3748695bc7a5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	9	12	20708.00	\N	t	2025-09-13 00:55:04.205852-03	2025-09-13 00:55:04.205852-03
+7c0ddbf0-3af1-4686-9a22-e518a43e53b4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	10	13	20708.00	\N	t	2025-09-13 00:55:04.207127-03	2025-09-13 00:55:04.207127-03
+3626063b-ea51-4b11-a245-8eff3440c47f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	11	14	20708.00	\N	t	2025-09-13 00:55:04.208573-03	2025-09-13 00:55:04.208573-03
+14a4da59-990a-40d7-83cf-682d3cdfa8e1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2026	12	15	20708.00	\N	t	2025-09-13 00:55:04.209733-03	2025-09-13 00:55:04.209733-03
+c692036a-51f0-4324-a4b3-5d0630443f3c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	1	16	20708.00	\N	t	2025-09-13 00:55:04.211-03	2025-09-13 00:55:04.211-03
+24ce3d3f-c2ee-4531-8a49-996eed93e4b7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	2	17	20708.00	\N	t	2025-09-13 00:55:04.21661-03	2025-09-13 00:55:04.21661-03
+bc337a10-ca25-4f69-84d6-6591a15ebc45	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	3	18	20708.00	\N	t	2025-09-13 00:55:04.219652-03	2025-09-13 00:55:04.219652-03
+e0fdb867-8d72-4933-876f-ad38101ba520	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	4	19	20708.00	\N	t	2025-09-13 00:55:04.222273-03	2025-09-13 00:55:04.222273-03
+6232e96b-0475-4ca2-9ca4-3d5226950e4d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	5	20	20708.00	\N	t	2025-09-13 00:55:04.224908-03	2025-09-13 00:55:04.224908-03
+6e726a3e-c153-485e-9a6e-cfe08c68f42a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	6	21	20708.00	\N	t	2025-09-13 00:55:04.227416-03	2025-09-13 00:55:04.227416-03
+ec0269ab-eac7-4071-8a6a-dd3ca4d42472	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	7	22	20708.00	\N	t	2025-09-13 00:55:04.230708-03	2025-09-13 00:55:04.230708-03
+08e52878-4f0c-435e-98dc-514d51bf6a1b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	8	23	20708.00	\N	t	2025-09-13 00:55:04.232975-03	2025-09-13 00:55:04.232975-03
+55801093-8b93-4b64-b3e6-c844875a5885	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	2027	9	24	20708.00	\N	t	2025-09-13 00:55:04.234923-03	2025-09-13 00:55:04.234923-03
+c52633bb-9755-4f56-8796-5c9e089ac474	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	3d32f7b6-f7c7-4bae-bac0-2c3b2b58e1eb	2025	10	1	41740.00	\N	t	2025-09-13 00:55:41.613188-03	2025-09-13 00:55:41.613188-03
+3f1fc6e7-3779-4e82-b372-a7f69668c0bd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	3d32f7b6-f7c7-4bae-bac0-2c3b2b58e1eb	2025	11	2	41740.00	\N	t	2025-09-13 00:55:41.61786-03	2025-09-13 00:55:41.61786-03
+df0af797-0dbf-43fc-b0e6-27b12c7640bf	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	3d32f7b6-f7c7-4bae-bac0-2c3b2b58e1eb	2025	12	3	41740.00	\N	t	2025-09-13 00:55:41.622186-03	2025-09-13 00:55:41.622186-03
+58bf117c-41ba-41ab-8b32-8b6cc78e8894	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	67cc053e-1c24-4168-ae1c-ee981db31d0c	2025	10	18	56249.00	\N	t	2025-09-13 00:57:57.48103-03	2025-09-13 00:57:57.48103-03
+512a7e69-b5c2-4cb8-965a-d967efe0f579	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	67cc053e-1c24-4168-ae1c-ee981db31d0c	2025	11	19	56249.00	\N	t	2025-09-13 00:57:57.484299-03	2025-09-13 00:57:57.484299-03
+eedade23-d489-4834-bd32-b21cfb452739	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	67cc053e-1c24-4168-ae1c-ee981db31d0c	2025	12	20	56249.00	\N	t	2025-09-13 00:57:57.486465-03	2025-09-13 00:57:57.486465-03
+612c3976-9bbb-43c3-bb8b-b8d920f116dd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	67cc053e-1c24-4168-ae1c-ee981db31d0c	2026	1	21	56249.00	\N	t	2025-09-13 00:57:57.493153-03	2025-09-13 00:57:57.493153-03
+7f2c8ab1-ea0b-4d1a-b606-4ae1022cb76e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	67cc053e-1c24-4168-ae1c-ee981db31d0c	2026	2	22	56249.00	\N	t	2025-09-13 00:57:57.495019-03	2025-09-13 00:57:57.495019-03
+f4ae8349-292f-4653-86ba-055b7f790699	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	67cc053e-1c24-4168-ae1c-ee981db31d0c	2026	3	23	56249.00	\N	t	2025-09-13 00:57:57.496738-03	2025-09-13 00:57:57.496738-03
+61634b9a-75e5-4e5b-b217-33f0e55db3d7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	67cc053e-1c24-4168-ae1c-ee981db31d0c	2026	4	24	56249.00	\N	t	2025-09-13 00:57:57.498527-03	2025-09-13 00:57:57.498527-03
+eb082e31-9dcb-460e-aebc-8c4d0f10d82f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	297a489c-2d19-4379-8bdc-818abde1bbf1	2025	10	18	48124.00	\N	t	2025-09-13 00:58:32.44626-03	2025-09-13 00:58:32.44626-03
+05ec23f6-f020-4327-a087-90d308260025	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	297a489c-2d19-4379-8bdc-818abde1bbf1	2025	11	19	48124.00	\N	t	2025-09-13 00:58:32.455432-03	2025-09-13 00:58:32.455432-03
+27246680-6926-4b3c-9c8b-0b2b1f2081c6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	297a489c-2d19-4379-8bdc-818abde1bbf1	2025	12	20	48124.00	\N	t	2025-09-13 00:58:32.458144-03	2025-09-13 00:58:32.458144-03
+2f305978-c682-4776-b83d-a0f95b49742b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	297a489c-2d19-4379-8bdc-818abde1bbf1	2026	1	21	48124.00	\N	t	2025-09-13 00:58:32.461304-03	2025-09-13 00:58:32.461304-03
+fed8a3ab-b039-423d-83d7-d505ae9efebd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	297a489c-2d19-4379-8bdc-818abde1bbf1	2026	2	22	48124.00	\N	t	2025-09-13 00:58:32.465766-03	2025-09-13 00:58:32.465766-03
+635e2597-9252-477b-88ba-08cd271478f1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	297a489c-2d19-4379-8bdc-818abde1bbf1	2026	3	23	48124.00	\N	t	2025-09-13 00:58:32.469547-03	2025-09-13 00:58:32.469547-03
+a3772867-dcad-4987-bc76-2af87f8fe8ee	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	297a489c-2d19-4379-8bdc-818abde1bbf1	2026	4	24	48124.00	\N	t	2025-09-13 00:58:32.472554-03	2025-09-13 00:58:32.472554-03
+f3110562-abda-4fa2-8d06-1ea5393640d1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	18623f29-3cb4-4eda-bbe4-4f3b473b1e13	2025	10	18	3082.00	\N	t	2025-09-13 00:58:55.041877-03	2025-09-13 00:58:55.041877-03
+63d5f90e-aa10-4633-b938-a01c0fc500c3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	18623f29-3cb4-4eda-bbe4-4f3b473b1e13	2025	11	19	3082.00	\N	t	2025-09-13 00:58:55.044119-03	2025-09-13 00:58:55.044119-03
+4a0df6df-9240-48e2-bf91-b43a10ef280d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	18623f29-3cb4-4eda-bbe4-4f3b473b1e13	2025	12	20	3082.00	\N	t	2025-09-13 00:58:55.046703-03	2025-09-13 00:58:55.046703-03
+fe934026-33ce-41b4-9582-774b031ac8fa	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	18623f29-3cb4-4eda-bbe4-4f3b473b1e13	2026	1	21	3082.00	\N	t	2025-09-13 00:58:55.049634-03	2025-09-13 00:58:55.049634-03
+bfe103e6-fd00-47f9-83f6-785f56d42e4b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	18623f29-3cb4-4eda-bbe4-4f3b473b1e13	2026	2	22	3082.00	\N	t	2025-09-13 00:58:55.051997-03	2025-09-13 00:58:55.051997-03
+31f1e78a-f0bf-4de5-96f7-38deaab6b878	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	18623f29-3cb4-4eda-bbe4-4f3b473b1e13	2026	3	23	3082.00	\N	t	2025-09-13 00:58:55.053691-03	2025-09-13 00:58:55.053691-03
+3fc4dbcc-e27f-46ae-a52f-d46bb1dda784	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	18623f29-3cb4-4eda-bbe4-4f3b473b1e13	2026	4	24	3082.00	\N	t	2025-09-13 00:58:55.055602-03	2025-09-13 00:58:55.055602-03
+f9627f75-3100-4cd1-bebc-f7c9be8df50b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	064d2b7d-ab6f-46d1-b66f-dd6d20019a03	2025	10	4	61791.00	\N	t	2025-09-13 00:59:43.160848-03	2025-09-13 00:59:43.160848-03
+4e22e718-6ffc-4c5e-9ba9-f1e7d72ea8f1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	064d2b7d-ab6f-46d1-b66f-dd6d20019a03	2025	11	5	61791.00	\N	t	2025-09-13 00:59:43.164737-03	2025-09-13 00:59:43.164737-03
+d2d2aab7-d5f5-4abe-9a86-352c333eda76	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	064d2b7d-ab6f-46d1-b66f-dd6d20019a03	2025	12	6	61791.00	\N	t	2025-09-13 00:59:43.167598-03	2025-09-13 00:59:43.167598-03
+7dca6f40-504d-44e4-8947-c712b58ba364	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	3cebd1f9-3a2f-4467-94e4-1d6b830544da	2025	10	4	57689.00	\N	t	2025-09-13 01:06:43.021241-03	2025-09-13 01:06:43.021241-03
+d66403bc-4227-45db-9130-0c7981a56750	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	3cebd1f9-3a2f-4467-94e4-1d6b830544da	2025	11	5	57689.00	\N	t	2025-09-13 01:06:43.025549-03	2025-09-13 01:06:43.025549-03
+e4ceade8-5cb3-47af-b9ec-7038a4024c94	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	3cebd1f9-3a2f-4467-94e4-1d6b830544da	2025	12	6	57689.00	\N	t	2025-09-13 01:06:43.027807-03	2025-09-13 01:06:43.027807-03
+1f87e8f6-aea9-415b-9f62-801b96477c34	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	9cf17fae-5b99-489b-884e-6479a5c66977	2025	10	3	93333.00	\N	t	2025-09-13 14:41:22.979808-03	2025-09-13 14:41:22.979808-03
+cd1a07b5-6363-4e65-a692-95f04c2cae8e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c5ba6c12-3b86-4385-9f76-36f1ba38164d	2025	10	3	34767.00	\N	t	2025-09-13 14:42:59.216025-03	2025-09-13 14:42:59.216025-03
+a8232aa9-e190-436e-bd1c-36ffc30316fa	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	3a907e06-f413-4d43-b17a-5217e5953ee6	2025	10	2	37196.00	\N	t	2025-09-13 14:43:28.428241-03	2025-09-13 14:43:28.428241-03
+8e384010-4e68-408e-8eb7-f010f725bea5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	3a907e06-f413-4d43-b17a-5217e5953ee6	2025	11	3	37196.00	\N	t	2025-09-13 14:43:28.430037-03	2025-09-13 14:43:28.430037-03
+10f5bf68-0e3b-44f9-a2bd-f1506c56136c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d6fac725-5f2f-4e11-9f0b-2f08acebfd05	2025	10	2	13766.00	\N	t	2025-09-13 14:43:52.10943-03	2025-09-13 14:43:52.10943-03
+20fd894d-2bdc-4c52-b5b8-edff5d25f664	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d6fac725-5f2f-4e11-9f0b-2f08acebfd05	2025	11	3	13766.00	\N	t	2025-09-13 14:43:52.111995-03	2025-09-13 14:43:52.111995-03
+09d0205c-d00a-4163-a1a6-6a76df901afb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d7010ac4-3e5d-498b-94f5-66974c2e06c5	2025	10	2	8333.00	\N	t	2025-09-13 14:44:21.559042-03	2025-09-13 14:44:21.559042-03
+e71590de-6f38-4eab-a00f-d366b66162e0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d7010ac4-3e5d-498b-94f5-66974c2e06c5	2025	11	3	8333.00	\N	t	2025-09-13 14:44:21.561159-03	2025-09-13 14:44:21.561159-03
+e5dcea5a-9901-42a2-8fd5-d6c240de22ff	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fe05e731-e710-4a04-bf6c-06079892d5fd	2025	10	2	7667.00	\N	t	2025-09-13 14:44:43.95725-03	2025-09-13 14:44:43.95725-03
+b0acc7c7-1c57-416a-94e3-82356d2e1438	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	fe05e731-e710-4a04-bf6c-06079892d5fd	2025	11	3	7667.00	\N	t	2025-09-13 14:44:43.95919-03	2025-09-13 14:44:43.95919-03
+4c316b45-fab5-42bd-ba79-26655a8834a5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	113b5957-cf7a-4a9a-8889-304ca69a1cad	2025	10	2	7266.00	\N	t	2025-09-13 14:45:07.282972-03	2025-09-13 14:45:07.282972-03
+41ed13e7-5e8f-4bec-86d9-ef4ec545dcc3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	113b5957-cf7a-4a9a-8889-304ca69a1cad	2025	11	3	7266.00	\N	t	2025-09-13 14:45:07.285135-03	2025-09-13 14:45:07.285135-03
+4f343289-6be4-4eab-855c-8d083701456a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	8d29be07-8049-493e-b436-8d972ef04795	2025	10	2	8064.00	\N	t	2025-09-13 14:45:28.09284-03	2025-09-13 14:45:28.09284-03
+a3644521-9a0e-46bd-92d5-c73cd06e0bed	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	8d29be07-8049-493e-b436-8d972ef04795	2025	11	3	8064.00	\N	t	2025-09-13 14:45:28.094708-03	2025-09-13 14:45:28.094708-03
+\.
+
+
+--
+-- Data for Name: installment_plans; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.installment_plans (id, user_id, brand, descripcion, amount_per_installment, total_installments, start_year, start_month, start_installment, category_id, notas, active, created_at, updated_at) FROM stdin;
+1d1abb1d-c17d-49bd-966e-67408a4db204	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	AVANCE PAGO TC TASA INT. 0,60%	76448.00	36	2025	10	23	\N	\N	t	2025-09-12 00:31:15.861533-03	2025-09-12 00:31:15.861533-03
+7f9bd731-e151-4a16-98b9-6298438fc73a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	MP *JETSMART TASA INT. 2,19%	157402.00	12	2025	10	11	\N	\N	t	2025-09-12 00:31:56.344422-03	2025-09-12 00:31:56.344422-03
+aa4e019c-a988-43ac-b556-ab75656f7565	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	MERCADO PAGO 4 TCOM TASA INT. 0,00%	58250.00	12	2025	10	9	\N	\N	t	2025-09-12 00:32:31.17855-03	2025-09-12 00:32:31.17855-03
+012fd8f8-2c9f-4614-9141-3f67f5ed211b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	TRAVEL TIENDA TCOMP TASA INT. 0,00%	18958.00	24	2025	10	7	\N	\N	t	2025-09-12 00:33:10.091543-03	2025-09-12 00:33:10.091543-03
+1bb15c63-f997-4a18-8050-f7cf712ffbad	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	ESTETICA OROFACIAL SPA TASA INT. 0,00%	16667.00	12	2025	10	6	\N	\N	t	2025-09-12 00:33:42.222193-03	2025-09-12 00:33:42.222193-03
+f19d18eb-590b-4b9f-9760-352589cd0478	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	CRED. PAGO EN CUOTA TASA INT. 1,82%	107982.00	36	2025	10	2	\N	\N	t	2025-09-12 00:34:04.218978-03	2025-09-12 00:34:04.218978-03
+89427d30-ca38-4e40-b2ba-aeed86095e62	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	MP *CONSTANZA ANDR TASA INT. 0,00%	32000.00	3	2025	10	3	\N	\N	t	2025-09-12 00:34:22.337685-03	2025-09-12 00:34:22.337685-03
+e022a761-af61-469f-bd00-8cab7908393b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	TRAVEL DUTY TCOMP TASA INT. 0,00%	21334.00	6	2025	10	2	\N	\N	t	2025-09-12 00:34:44.250031-03	2025-09-12 00:34:44.250031-03
+f252d21a-3704-4eed-af67-50ee7d3c191c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	CRED. PAGO EN CUOTA TASA INT. 1,82%	216102.00	24	2025	10	1	\N	\N	t	2025-09-12 00:43:14.734744-03	2025-09-12 00:43:14.734744-03
+b1508da6-63e1-400c-bd99-0270eead66a7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	BACKONLINE MUT TASA INT. 0,00%	20993.00	3	2025	10	2	\N	\N	t	2025-09-13 00:51:16.318912-03	2025-09-13 00:51:16.318912-03
+c49e7d9f-2ea7-45f2-8458-b8e41e397f5a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	VINA DEL MAR TASA INT. 0,00%	90658.00	6	2025	10	2	\N	Bajo	t	2025-09-13 00:51:50.747672-03	2025-09-13 00:51:50.747672-03
+490973c1-274d-4c70-ba2a-0e58357e6468	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	REEBOK MARINA ARAUCO TASA INT. 0,00%	39990.00	3	2025	10	2	\N	\N	t	2025-09-13 00:52:17.474754-03	2025-09-13 00:52:17.474754-03
+b3406da0-d348-47f0-abf0-afeb0d2660b7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	STORE MARINA ARAUCO TASA INT. 0,00%	23330.00	12	2025	10	2	\N	\N	t	2025-09-13 00:52:56.982544-03	2025-09-13 00:52:56.982544-03
+16ed809e-300a-4515-bc45-6ad31929ee3c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	ZARA MARINA ARAUCO. TASA INT. 0,00%	27623.00	3	2025	10	2	\N	\N	t	2025-09-13 00:53:28.589848-03	2025-09-13 00:53:28.589848-03
+c2b8473c-b139-4566-92bb-3b69877588f9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	ESC.DE CONDUCTORES VIN TASA INT. 0,00%	32483.00	6	2025	10	2	\N	\N	t	2025-09-13 00:54:09.107509-03	2025-09-13 00:54:09.107509-03
+fa542cf3-48e6-4c7c-958c-f425fe3a7dbf	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	TRAVEL TIENDA TCOMP TASA INT. 0,00%	20708.00	24	2025	10	1	\N	Lavadora	t	2025-09-13 00:55:04.176191-03	2025-09-13 00:55:04.176191-03
+3d32f7b6-f7c7-4bae-bac0-2c3b2b58e1eb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	MERCADOPAGO *WILDLA TASA INT 0,00%	41740.00	3	2025	10	1	\N	\N	t	2025-09-13 00:55:41.60701-03	2025-09-13 00:55:41.60701-03
+0ea06f5a-02f6-4e3f-b12f-0ebcae7eab74	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	MP *CRUZVERDE TASA INT. 0,00%	37050.00	3	2025	10	3	\N	\N	t	2025-09-12 00:38:33.518601-03	2025-09-13 00:55:53.661503-03
+67cc053e-1c24-4168-ae1c-ee981db31d0c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	MACONLINE WEB10 TASA INT. 0,00%	56249.00	24	2025	10	18	\N	\N	t	2025-09-13 00:57:57.477203-03	2025-09-13 00:57:57.477203-03
+297a489c-2d19-4379-8bdc-818abde1bbf1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	TRAVEL TIENDA TCOMP TASA INT. 0,00%	48124.00	24	2025	10	18	\N	\N	t	2025-09-13 00:58:32.440545-03	2025-09-13 00:58:32.440545-03
+18623f29-3cb4-4eda-bbe4-4f3b473b1e13	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	FLOW *SAMSUNG TASA INT. 0,00%	3082.00	24	2025	10	18	\N	\N	t	2025-09-13 00:58:55.03592-03	2025-09-13 00:58:55.03592-03
+064d2b7d-ab6f-46d1-b66f-dd6d20019a03	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	COOPERATIVA EL GRAN TASA INT. 2,60%	61791.00	6	2025	10	4	\N	\N	t	2025-09-13 00:59:43.155441-03	2025-09-13 00:59:43.155441-03
+083fad51-1368-48c9-b7e3-a7632dd9673f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	MERCADOPAGO*MLA TASA INT. 2,60%	57689.00	6	2025	10	4	\N	\N	t	2025-09-13 01:00:15.796217-03	2025-09-13 01:06:01.150683-03
+3cebd1f9-3a2f-4467-94e4-1d6b830544da	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	MERCADOPAGO*MLA TASA INT. 2,60%	57689.00	6	2025	10	4	\N	\N	t	2025-09-13 01:06:43.014678-03	2025-09-13 01:06:43.014678-03
+9cf17fae-5b99-489b-884e-6479a5c66977	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	HE ESPINOZA SPA TASA INT. 0,00%	93333.00	3	2025	10	3	\N	\N	t	2025-09-13 14:41:22.973261-03	2025-09-13 14:41:22.973261-03
+b3917943-7387-481e-8ebf-2d2069e44e88	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	BODEGAS OLMUE TASA INT. 0,00%	34767.00	1	2025	10	1	\N	\N	t	2025-09-13 14:41:55.838297-03	2025-09-13 14:42:20.626409-03
+c5ba6c12-3b86-4385-9f76-36f1ba38164d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	BODEGAS OLMUE TASA INT. 0,00%	34767.00	3	2025	10	3	\N	\N	t	2025-09-13 14:42:59.212087-03	2025-09-13 14:42:59.212087-03
+3a907e06-f413-4d43-b17a-5217e5953ee6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	HIPER 978 LIMACHE TASA INT. 0,00%	37196.00	3	2025	10	2	\N	\N	t	2025-09-13 14:43:28.423493-03	2025-09-13 14:43:28.423493-03
+d6fac725-5f2f-4e11-9f0b-2f08acebfd05	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	EXPRESS VINA DEL MA TASA INT. 0,00%	13766.00	3	2025	10	2	\N	\N	t	2025-09-13 14:43:52.106805-03	2025-09-13 14:43:52.106805-03
+d7010ac4-3e5d-498b-94f5-66974c2e06c5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	COMERCIAL Y SERVICI TASA INT. 0,00%	8333.00	3	2025	10	2	\N	\N	t	2025-09-13 14:44:21.556269-03	2025-09-13 14:44:21.556269-03
+fe05e731-e710-4a04-bf6c-06079892d5fd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	MERCADOPAGO*PRAIASU TASA INT. 0,00%	7667.00	3	2025	10	2	\N	\N	t	2025-09-13 14:44:43.952966-03	2025-09-13 14:44:43.952966-03
+113b5957-cf7a-4a9a-8889-304ca69a1cad	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	MP *EXPER SPA TASA INT. 0,00%	7266.00	3	2025	10	2	\N	\N	t	2025-09-13 14:45:07.279428-03	2025-09-13 14:45:07.279428-03
+8d29be07-8049-493e-b436-8d972ef04795	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	visa	SALCOBRAND OLMUE TASA INT. 0,00%	8064.00	3	2025	10	2	\N	\N	t	2025-09-13 14:45:28.090241-03	2025-09-13 14:45:28.090241-03
+\.
+
+
+--
+-- Data for Name: intl_unbilled; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.intl_unbilled (id, user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, category_id, created_at, updated_at, original_fecha, period_year, period_month) FROM stdin;
+1625c070-0250-4996-9bd2-8d3113d20272	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-17	NETFLIX.COM            CA            USA	10.55	980.0000	10339.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:48:43.754939-03	2025-09-17	2025	10
+cfce5893-4535-4c20-90a8-5aadc3651880	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-12	OPENAI *CHATGPT SUBSCR COMPRAS INT.MA	23.80	980.0000	23324.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:48:45.907767-03	2025-09-12	2025	10
+28a3e256-fe47-4494-a900-242b3ee1464b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-10	APPLE.COM/BILL COMPRAS INT.MA	5.24	980.0000	5135.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:48:48.836301-03	2025-09-10	2025	10
+f27fc218-d3f4-4f2c-b716-640b51ed368b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-10	OCULUS *K8J4SYQ4R2 COMPRAS INT.MA	9.99	980.0000	9790.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:48:51.098006-03	2025-09-10	2025	10
+01d3fea7-526b-423f-874e-30997b1faac7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-06	Disney Plus COMPRAS INT.MA	14.90	980.0000	14602.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:48:55.004998-03	2025-09-06	2025	10
+d39e565e-83c8-4e8b-9866-a1d2558b2dd9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-05	OPENAI *CHATGPT SUBSCR COMPRAS INT.MA	23.80	980.0000	23324.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:48:57.325701-03	2025-09-05	2025	10
+48f3a2d9-a61a-4c30-a2c8-3c73bdc41e74	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-02	SONGSTERR COMPRAS INT.MA	4.40	980.0000	4312.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:48:59.707917-03	2025-09-02	2025	10
+db5a40e3-8e70-41e3-ae85-b4021cd105b9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-01	DIGITALOCEAN.COM COMPRAS INT.MA	1.68	980.0000	1646.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:49:01.739202-03	2025-09-01	2025	10
+8a6823d1-a8b3-4af8-981b-16ed6555b722	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-08-26	APPLE.COM/BILL COMPRAS INT.MA	11.54	980.0000	11309.00	gasto	50	2025-09-17 14:18:12.260456-03	2025-09-17 14:49:03.85501-03	2025-08-26	2025	10
+c927dd17-e588-417e-9ad2-e28671f2005d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-08-26	APPLE.COM/BILL COMPRAS INT.MA	11.54	950.0000	10963.00	gasto	\N	2025-09-12 20:11:07.819944-03	2025-09-12 20:11:07.819944-03	2025-08-26	2025	8
+752c241d-6603-465c-ae2a-820bd9ee11a7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-08-26	APPLE.COM/BILL COMPRAS INT.MA	11.54	950.0000	10963.00	gasto	\N	2025-09-12 20:11:56.36795-03	2025-09-12 20:11:56.36795-03	2025-08-26	2025	8
+3ebdeb2b-226a-4947-af6f-dbbf5519a561	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	mastercard	2025-09-08	TRASPASO DEUDA INTERNA TRA.DOLAR/PESO	-161.95	980.0000	-158711.00	desestimar	\N	2025-09-17 14:18:12.260456-03	2025-09-17 14:18:17.794758-03	2025-09-08	2025	10
+\.
+
+
+--
+-- Data for Name: projected_occurrences; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.projected_occurrences (id, user_id, template_id, year, month, fecha, override, nombre, tipo, monto, category_id, notas, active, created_at, updated_at) FROM stdin;
+82adc54f-b23f-49e7-a1c1-01be00aad48f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2025	10	2025-10-02	t	Arriendo	gasto	950000.00	\N	\N	t	2025-09-10 18:30:04.682807	2025-09-10 18:30:04.682807
+cf3d47ce-6734-4322-bc84-3ccbb68ee8cd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2025	11	2025-11-02	f	\N	\N	\N	\N	\N	t	2025-09-10 18:30:10.923637	2025-09-10 18:30:10.923637
+97b48c1d-e3e9-42fc-9dbe-fa7be0256a52	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2025	10	2025-10-01	t	Sueldo	ingreso	4600000.00	\N	\N	t	2025-09-10 18:43:26.878894	2025-09-10 18:43:26.878894
+38e91119-41ef-43de-924c-8245d6a4493a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2025	10	2025-10-01	t	Credito 2	gasto	695982.00	\N	\N	t	2025-09-10 18:50:10.676509	2025-09-10 18:50:10.676509
+3e060106-722c-4e19-b942-f3c109f61ecb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2025	10	2025-10-01	t	Gas Lipigas	gasto	65000.00	\N	Estimado	t	2025-09-10 18:53:00.110143	2025-09-10 18:53:00.110143
+e194dced-95b0-4ec5-aa56-2e9dc8a282ca	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2025	10	2025-10-01	t	Internet	gasto	21000.00	\N	\N	t	2025-09-10 18:53:27.528494	2025-09-10 18:53:27.528494
+5a2db8a8-8a4c-4700-8f72-9c4b1c87eeec	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2025	10	2025-10-01	t	Luz	gasto	60000.00	\N	\N	t	2025-09-10 18:53:49.998818	2025-09-10 18:53:49.998818
+bc9ac805-63d7-4a15-92a8-8e106542aa19	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2025	10	2025-10-01	t	Claro Celular	gasto	20500.00	\N	\N	t	2025-09-10 18:54:39.320448	2025-09-10 18:54:39.320448
+dcefafee-2062-4503-9882-171834b8a74b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2025	10	2025-10-01	t	Pago Universidad	gasto	100000.00	\N	\N	t	2025-09-10 18:55:15.974574	2025-09-10 18:55:15.974574
+e1749293-c738-4194-b67f-b102bed5da01	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2025	10	2025-10-20	t	Seguro Auto	gasto	95000.00	\N	\N	t	2025-09-10 18:56:57.938707	2025-09-10 18:56:57.938707
+96a8c23f-6391-495e-9eb8-759ea31dd1de	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-09-11 00:09:15.628659	2025-09-11 00:09:15.628659
+5594b8e6-7f97-403e-8808-345c4ac76aef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-09-11 00:09:15.633192	2025-09-11 00:09:15.633192
+2ab5314c-07c1-479a-8bf9-6e32a899b7c4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-09-11 00:09:15.635134	2025-09-11 00:09:15.635134
+2e9b90f9-e421-4731-bd0e-668eba3da990	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-09-11 00:09:15.636191	2025-09-11 00:09:15.636191
+b5a6e84b-98a7-4bf2-b52e-ffb72cd42e06	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-09-11 00:09:15.63759	2025-09-11 00:09:15.63759
+b783c45a-086a-41cb-a2f7-acd59ee8cd54	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-09-11 00:09:15.638776	2025-09-11 00:09:15.638776
+afa2962d-f9c5-481d-bd5a-301f63af433a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2025	11	2025-11-20	f	\N	\N	\N	\N	\N	t	2025-09-11 00:09:15.639699	2025-09-11 00:09:15.639699
+f396ee21-e3f7-4666-bbab-c15f5e6e5c3e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-09-11 00:09:15.641428	2025-09-11 00:09:15.641428
+6b0bcbbd-998c-4dae-bc2f-ceb1133016d5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2025	12	2025-12-02	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.720046	2025-09-12 10:43:28.720046
+52e4c437-0a1b-45f2-9e5c-5bc0396f8da9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2025	12	2025-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.728712	2025-09-12 10:43:28.728712
+01b8f240-2d10-47c2-88e7-04e2d8205f0c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2025	12	2025-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.733692	2025-09-12 10:43:28.733692
+913ae06a-5711-4b85-866d-93015b97c671	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2025	12	2025-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.73763	2025-09-12 10:43:28.73763
+c30f74ad-e6ad-4b46-8780-d6eb91061f2c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2025	12	2025-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.740238	2025-09-12 10:43:28.740238
+6521b77f-cef9-41e5-ae25-ae189c0b8572	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2025	12	2025-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.742042	2025-09-12 10:43:28.742042
+c5caf009-2e34-442c-b3fa-bd42f2db2d22	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2025	12	2025-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.74307	2025-09-12 10:43:28.74307
+8006bbeb-0281-4edc-bd2c-7a97180ef284	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2025	12	2025-12-20	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.744424	2025-09-12 10:43:28.744424
+89a8ec0b-ab28-41c8-8b77-3946fbb5ad60	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2025	12	2025-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 10:43:28.746101	2025-09-12 10:43:28.746101
+ebcb6803-0b81-4569-8e89-81bea39d015b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	12	2026-12-02	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.84058	2025-09-12 11:24:14.84058
+1d14464d-2ffd-463a-a76d-05ef80095297	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	12	2026-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.845575	2025-09-12 11:24:14.845575
+334c0a8d-af0d-4caf-99d8-41635799019c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	12	2026-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.848601	2025-09-12 11:24:14.848601
+922f8dcc-4f9b-4b5f-8782-53d38b4438f9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	12	2026-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.85227	2025-09-12 11:24:14.85227
+6a89f0df-e932-40e4-93dc-649a75b26f57	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	12	2026-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.853515	2025-09-12 11:24:14.853515
+b1c85962-58f4-4c98-a000-a0aeaa5322fd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	12	2026-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.85484	2025-09-12 11:24:14.85484
+b2839eed-5885-4232-ae28-c6c75e5b6cd9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	12	2026-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.856306	2025-09-12 11:24:14.856306
+92e2e350-b58a-4aa9-8bcd-0da3cb921628	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	12	2026-12-20	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.857364	2025-09-12 11:24:14.857364
+860354be-5a31-4691-8bfe-e6305a719c98	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	12	2026-12-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:14.858549	2025-09-12 11:24:14.858549
+a143084c-c315-468c-a8eb-0cb44a623c7e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	1	2026-01-02	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.148621	2025-09-12 11:24:34.148621
+48823a20-27e9-40e5-9d54-f107682e5c8d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	1	2026-01-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.152657	2025-09-12 11:24:34.152657
+1b6d1756-a6f8-4a59-a51f-994b6286537e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	1	2026-01-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.156763	2025-09-12 11:24:34.156763
+ce77f9d5-556b-4986-ba45-dee0892d47fa	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	1	2026-01-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.160117	2025-09-12 11:24:34.160117
+e0eabc43-f6fa-4336-ae4d-848abdc29001	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	1	2026-01-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.161907	2025-09-12 11:24:34.161907
+ef856133-bdcc-4b88-ba07-4fa5eccf7aab	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	1	2026-01-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.163225	2025-09-12 11:24:34.163225
+a65497d8-3480-4c2d-bb68-0d1fd5bb045e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	1	2026-01-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.164822	2025-09-12 11:24:34.164822
+7e7ea6fa-96ed-491d-a265-669d320fc3bf	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	1	2026-01-20	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.165995	2025-09-12 11:24:34.165995
+2b5535bb-5564-4437-b2d7-1fc5f7b02edb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	1	2026-01-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:34.167156	2025-09-12 11:24:34.167156
+6f1f60ba-b065-4242-8040-715d34985ae9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	2	2026-02-02	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.598651	2025-09-12 11:24:36.598651
+267c2462-8e91-4b97-bb78-ba4de0cf4c0f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	2	2026-02-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.601161	2025-09-12 11:24:36.601161
+08608579-efa8-4ef6-a99c-3c220c8923f3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	2	2026-02-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.604833	2025-09-12 11:24:36.604833
+160d80cc-040e-4e13-bd01-e77a4f8cddbd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	2	2026-02-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.607476	2025-09-12 11:24:36.607476
+1d88ad3f-8b71-4860-aeb5-9ff2d0eea93f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	2	2026-02-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.609672	2025-09-12 11:24:36.609672
+aa48bd94-3332-4d96-bdc4-30dcbffe86ef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	2	2026-02-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.611494	2025-09-12 11:24:36.611494
+9d5cd2b3-687c-4fbf-8e78-2d713efb897c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	2	2026-02-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.613006	2025-09-12 11:24:36.613006
+5f72c16e-3dca-4bb4-9784-37be60a78a1d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	2	2026-02-20	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.614533	2025-09-12 11:24:36.614533
+a3ce256b-c211-4ed6-a8d5-5a9e03779ff5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	2	2026-02-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:36.615981	2025-09-12 11:24:36.615981
+7649ee65-bd94-4b0d-b6d5-4b056cc7644f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	4	2026-04-02	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.362501	2025-09-12 11:24:38.362501
+8118bd2d-555c-4753-9c04-35aa3fff0ff8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	4	2026-04-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.3644	2025-09-12 11:24:38.3644
+55eed398-73ad-4d16-b680-36165a7fcdef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	4	2026-04-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.369493	2025-09-12 11:24:38.369493
+71f6929b-fab6-4151-bfb4-571cc8cd38a3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	4	2026-04-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.372444	2025-09-12 11:24:38.372444
+29fa9d4b-dffd-48f7-af9b-e977b0fce074	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	4	2026-04-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.373918	2025-09-12 11:24:38.373918
+1f00ad2c-6327-40e7-b56e-2592420f666e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	4	2026-04-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.375571	2025-09-12 11:24:38.375571
+e46a3342-1f7b-4076-bf00-be1cc52a9fbd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	4	2026-04-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.376796	2025-09-12 11:24:38.376796
+9626bf92-bdb1-4d3d-9439-d07934733373	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	4	2026-04-20	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.378302	2025-09-12 11:24:38.378302
+09fcac29-fcee-4ac7-9622-4bb0029f3efc	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	4	2026-04-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:38.379927	2025-09-12 11:24:38.379927
+10fad56b-a727-4d49-a5bb-e698ee9de19e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	7	2026-07-02	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.516852	2025-09-12 11:24:40.516852
+8f03ecaa-77d7-43aa-ac19-d621b9d404d8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	7	2026-07-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.520728	2025-09-12 11:24:40.520728
+e23f2b4e-09a9-41e6-9e41-bbd5bd1294ee	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	7	2026-07-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.526189	2025-09-12 11:24:40.526189
+3fcff20a-b28f-4eb0-bb38-0b828cd9254f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	7	2026-07-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.529036	2025-09-12 11:24:40.529036
+26dcdcfc-99b8-46c5-8ccf-2c7d4a4911f0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	7	2026-07-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.53085	2025-09-12 11:24:40.53085
+09d76960-726d-4783-ac25-43bccbdadd96	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	7	2026-07-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.532768	2025-09-12 11:24:40.532768
+9d04090e-6520-4bb0-ab57-27995ec39221	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	7	2026-07-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.534559	2025-09-12 11:24:40.534559
+1fd28139-fe32-4da7-9431-7300980b7807	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	7	2026-07-20	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.536075	2025-09-12 11:24:40.536075
+6165b8e2-53fe-447f-8178-8a916007e249	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	7	2026-07-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:40.537836	2025-09-12 11:24:40.537836
+2290c506-38f4-4b2a-bc46-4edfd3971a7a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	6	2026-06-02	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.809366	2025-09-12 11:24:42.809366
+db27af7b-f27f-4f2c-9f12-862c9f191a0a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	6	2026-06-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.811342	2025-09-12 11:24:42.811342
+cf35a7a3-1cc5-4289-bd93-60e381a6de4f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	6	2026-06-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.814395	2025-09-12 11:24:42.814395
+645eff7a-e872-42c9-8bd5-fc85f6d2b0eb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	6	2026-06-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.816576	2025-09-12 11:24:42.816576
+efc4561c-2e67-45a2-aafd-d27398df7d26	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	6	2026-06-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.817924	2025-09-12 11:24:42.817924
+ee064042-d053-4c74-ba63-f0184d180f3e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	6	2026-06-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.819152	2025-09-12 11:24:42.819152
+ee5dda17-4a94-4ab9-ae88-0b4b5c68b571	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	6	2026-06-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.820755	2025-09-12 11:24:42.820755
+7c33fc37-bcca-492f-b05d-140012b00c1e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	6	2026-06-20	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.822335	2025-09-12 11:24:42.822335
+a7517b71-451d-4c5b-b918-3c08ce5bfea2	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	6	2026-06-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:42.82387	2025-09-12 11:24:42.82387
+9dbfe5f6-f6a7-42b4-98e7-d31a6b4f32ac	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	11	2026-11-02	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.695431	2025-09-12 11:24:44.695431
+996583ef-6984-485e-af39-e359c2904234	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	11	2026-11-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.697112	2025-09-12 11:24:44.697112
+8ec08a86-9162-4ba8-8d1f-0cdb64163929	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	11	2026-11-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.699478	2025-09-12 11:24:44.699478
+30ca16e4-fd8b-4ae4-8929-36a8d4441383	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	11	2026-11-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.701269	2025-09-12 11:24:44.701269
+257b3ec0-884c-45fb-9370-43d2ba217ee7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	11	2026-11-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.702341	2025-09-12 11:24:44.702341
+6c020e27-b02b-4c2b-9486-a0af34856172	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	11	2026-11-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.703505	2025-09-12 11:24:44.703505
+d768294e-6a29-4bc4-9266-0bdd679478be	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	11	2026-11-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.704405	2025-09-12 11:24:44.704405
+f2f37e42-f267-4ab9-ae8b-9ab1d1b5609e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	11	2026-11-20	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.70521	2025-09-12 11:24:44.70521
+0aa81d0b-9b02-4085-99a4-a313453b944e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	11	2026-11-01	f	\N	\N	\N	\N	\N	t	2025-09-12 11:24:44.70636	2025-09-12 11:24:44.70636
+5a60f4d0-fbf1-4c48-964b-2c38d56b7b50	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	10	2026-10-02	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.084092	2025-09-12 12:14:51.084092
+2bd3a11d-247c-41b1-957f-58898675d67b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	10	2026-10-01	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.093948	2025-09-12 12:14:51.093948
+45243307-77ab-491f-9b6e-de45630e6954	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	10	2026-10-01	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.098454	2025-09-12 12:14:51.098454
+d0c35d11-60be-48f9-aec1-e9f94f19f622	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	10	2026-10-01	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.102414	2025-09-12 12:14:51.102414
+a4b76d79-6665-4487-952d-5e3ac26e8d3f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	10	2026-10-01	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.10473	2025-09-12 12:14:51.10473
+3636e5cb-1e5f-470d-a283-30820263f2ef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	10	2026-10-01	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.106783	2025-09-12 12:14:51.106783
+eddaae46-a95c-4990-a78b-0113615a8e20	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	10	2026-10-01	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.108776	2025-09-12 12:14:51.108776
+12f0803e-4126-4cea-addd-6e3c39672359	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	10	2026-10-20	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.109599	2025-09-12 12:14:51.109599
+e96fe354-b2f3-47b1-a3fb-1167f7fd566d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	10	2026-10-01	f	\N	\N	\N	\N	\N	t	2025-09-12 12:14:51.111055	2025-09-12 12:14:51.111055
+e71b2bac-3e7b-49b6-b864-e41f6fda8044	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	ce606d1d-b56d-4605-84b2-ecfa332886ab	2025	10	2025-10-01	t	Transferencia Maria Jose	ingreso	142745.00	\N	\N	t	2025-09-13 14:52:33.354278	2025-09-13 14:52:33.354278
+6515a03f-8bda-46eb-972f-b10aa54f5174	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f92a5c92-b861-46be-9b60-c85ba2217716	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-09-13 14:52:38.497685	2025-09-13 14:52:38.497685
+7e77c321-e5cb-44e2-82cf-6457c8b23811	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f92a5c92-b861-46be-9b60-c85ba2217716	2025	12	2025-12-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:24:21.380824	2025-09-15 20:24:21.380824
+4cdb8319-e2a4-433c-a422-e54ac8243fe5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f92a5c92-b861-46be-9b60-c85ba2217716	2026	1	2026-01-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:24:37.493811	2025-09-15 20:24:37.493811
+f3c0d2b3-9c4b-48c5-9fd5-d8354499ca34	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f92a5c92-b861-46be-9b60-c85ba2217716	2026	10	2026-10-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:25:11.259806	2025-09-15 20:25:11.259806
+94bbe245-612f-489a-9dc5-7c11a698135d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	d45f3924-e493-4c28-b654-7bb0eaa3ed47	2026	9	2026-09-02	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.04065	2025-09-15 20:28:37.04065
+2b914a37-3718-4cca-8571-5ffc573e7305	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	e6d75f01-9ee8-430a-bb72-41e393e59e32	2026	9	2026-09-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.044932	2025-09-15 20:28:37.044932
+ffea43d0-6dd7-4ffb-9b74-df636450f20d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	2026	9	2026-09-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.047897	2025-09-15 20:28:37.047897
+597e7105-df35-417a-91d9-d2f9f3bb7a4e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b70eca76-44d6-42bc-ae86-a95aba177fa2	2026	9	2026-09-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.052042	2025-09-15 20:28:37.052042
+0a84b4dd-8530-4c61-ad9c-0b2a89ccd813	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f92a5c92-b861-46be-9b60-c85ba2217716	2026	9	2026-09-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.053682	2025-09-15 20:28:37.053682
+b6a1c836-c664-41be-8ef2-5dfaa73cc5a8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b79c717c-83d9-48c0-a2a9-7f695a76dbb0	2026	9	2026-09-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.054792	2025-09-15 20:28:37.054792
+69abc0b0-58fb-4067-a61c-f0dff678114e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c398548b-f51a-475c-ac9f-2f0414134b01	2026	9	2026-09-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.056347	2025-09-15 20:28:37.056347
+12557fdf-fec6-44b4-8881-2898bc3c134e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	1d3a187c-06cf-42b8-a643-944f0a748a6f	2026	9	2026-09-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.058012	2025-09-15 20:28:37.058012
+af60932c-fe07-42a2-a6f1-4d9889f5b6cd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c3753b14-4f97-410c-ab1d-1c47285c067a	2026	9	2026-09-20	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.059934	2025-09-15 20:28:37.059934
+d11bedff-d738-4fe3-a7de-92a36a812569	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	c1470118-fe1e-4597-a912-59bf63ba3a81	2026	9	2026-09-01	f	\N	\N	\N	\N	\N	t	2025-09-15 20:28:37.061607	2025-09-15 20:28:37.061607
+f5186b48-6879-4337-8eab-e63e3a7fd3c7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f92a5c92-b861-46be-9b60-c85ba2217716	2025	10	2025-10-01	t	Gastos Comunes	gasto	705000.00	\N	Gastos Comunes de Agosto y Septiembre	t	2025-09-13 14:36:50.201242	2025-09-17 14:29:32.391958
+0a2c7b3e-1728-4351-8d15-e853af603d7b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f92a5c92-b861-46be-9b60-c85ba2217716	2026	12	2026-12-01	f	\N	\N	\N	\N	\N	t	2025-09-17 15:22:57.581602	2025-09-17 15:22:57.581602
+ed513979-f1c7-4979-b41b-695ba14f2194	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	f92a5c92-b861-46be-9b60-c85ba2217716	2026	4	2026-04-01	f	\N	\N	\N	\N	\N	t	2025-09-17 15:24:30.713817	2025-09-17 15:24:30.713817
+43243be0-b138-4107-bb37-fdd6a0eadec6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b36c20d8-16c4-4c2d-bac9-b9b7003387cf	2025	10	2025-10-03	t	Credito 2 - Reordenamiento	gasto	658000.00	\N	\N	t	2025-10-09 01:10:45.806866	2025-10-09 01:10:45.806866
+2897d550-e692-4e53-bdf8-32d0b79196c8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	b36c20d8-16c4-4c2d-bac9-b9b7003387cf	2025	11	2025-11-03	f	\N	\N	\N	\N	\N	t	2025-10-09 01:10:58.048346	2025-10-09 01:10:58.048346
+31afcc52-66bf-478c-8e49-d09c889d750d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	ecba49e5-c531-4787-a390-49db7570c780	2025	10	2025-10-01	t	Claro Celular	gasto	20500.00	\N	\N	t	2025-10-15 18:37:09.282933	2025-10-15 18:37:09.282933
+2f980038-0b16-4bed-a3b6-971bd8b20bf0	39e79b4f-1666-4ba2-8732-4de65b70a0b0	8b896e44-a94a-4392-ba8a-50339def5ff2	2025	10	2025-10-01	t	Claro Celular	gasto	20500.00	\N	\N	t	2025-10-15 18:38:34.045158	2025-10-15 18:38:34.045158
+9b489365-8615-45cf-91f6-b2abbd9eb582	39e79b4f-1666-4ba2-8732-4de65b70a0b0	68783a8e-3f13-4a5d-a3b6-040c178d510f	2025	10	2025-10-01	t	Credito Auto	gasto	695982.00	\N	\N	t	2025-10-15 18:38:50.695263	2025-10-15 18:38:50.695263
+cf6bd433-12d1-4476-a4c1-76cd1ffc2110	39e79b4f-1666-4ba2-8732-4de65b70a0b0	aeffbb2b-416f-4f96-aa49-2f6d772b5e9a	2025	10	2025-10-01	t	Gas Lipigas	gasto	70000.00	\N	\N	t	2025-10-15 18:39:03.052975	2025-10-15 18:39:03.052975
+ed82d307-21ef-471d-8f0f-5cfcd985e8b6	39e79b4f-1666-4ba2-8732-4de65b70a0b0	9789e593-1707-491f-a5ab-1271962c9514	2025	10	2025-10-01	t	Gastos Comunes	gasto	350000.00	\N	\N	t	2025-10-15 18:39:18.591436	2025-10-15 18:39:18.591436
+7116e5e5-b759-4f8a-b415-d5f7fe3e4659	39e79b4f-1666-4ba2-8732-4de65b70a0b0	6d963d68-30d6-41bd-b2c9-d6e90adb4193	2025	10	2025-10-01	t	Internet - Movistar	gasto	21500.00	\N	\N	t	2025-10-15 18:39:31.57409	2025-10-15 18:39:31.57409
+6591cd52-bb22-4aa6-ba3b-294e916221fe	39e79b4f-1666-4ba2-8732-4de65b70a0b0	45922fe4-55f0-49aa-8ad3-3f5ca23b49a0	2025	10	2025-10-01	t	Luz	gasto	60000.00	\N	\N	t	2025-10-15 18:39:43.097599	2025-10-15 18:39:43.097599
+f4de04cc-3d15-4714-b6bb-dc159a261b31	39e79b4f-1666-4ba2-8732-4de65b70a0b0	f566daae-e3c1-46d2-bd31-4c289b961909	2025	10	2025-10-01	t	Pago Universidad	gasto	110000.00	\N	\N	t	2025-10-15 18:40:00.424495	2025-10-15 18:40:00.424495
+09145aee-b59d-4ded-a3d4-d96e4b5cb5d7	39e79b4f-1666-4ba2-8732-4de65b70a0b0	218108f6-adea-4ea5-ad46-df316705008d	2025	10	2025-10-01	t	Arriendo	gasto	950000.00	\N	\N	t	2025-10-15 18:40:11.931161	2025-10-15 18:40:11.931161
+233ea56d-e5d6-40dd-b7fa-dcf29af17c9c	39e79b4f-1666-4ba2-8732-4de65b70a0b0	b50e3889-2fc1-42b6-bd2f-87d039f2a96e	2025	10	2025-10-01	t	Credito - Reordenamiento	gasto	660000.00	\N	\N	t	2025-10-15 18:40:28.581238	2025-10-15 18:40:28.581238
+98f640e5-b4cb-4ee2-a35d-41674375db41	39e79b4f-1666-4ba2-8732-4de65b70a0b0	c987b4ed-ee4d-4a80-9c6b-21a10c8788e6	2025	10	2025-10-01	t	Seguro Auto	gasto	95000.00	\N	\N	t	2025-10-15 18:40:39.773539	2025-10-15 18:40:39.773539
+7c6a6ccf-2f65-489a-b5d5-114b8233049f	39e79b4f-1666-4ba2-8732-4de65b70a0b0	2b959c00-76ec-47b2-9e15-a7b41b1b058b	2025	10	2025-10-01	t	Sueldo	ingreso	4650000.00	\N	\N	t	2025-10-15 18:40:54.652168	2025-10-15 18:40:54.652168
+21467e18-7b3a-4cdc-865a-770b4f593fb9	39e79b4f-1666-4ba2-8732-4de65b70a0b0	218108f6-adea-4ea5-ad46-df316705008d	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.746487	2025-10-15 18:45:00.746487
+152d44f7-23fa-4f19-971f-4c4fced232e3	39e79b4f-1666-4ba2-8732-4de65b70a0b0	8b896e44-a94a-4392-ba8a-50339def5ff2	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.751035	2025-10-15 18:45:00.751035
+c3266c43-4f80-4223-bb30-407495144685	39e79b4f-1666-4ba2-8732-4de65b70a0b0	b50e3889-2fc1-42b6-bd2f-87d039f2a96e	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.753278	2025-10-15 18:45:00.753278
+38e8845c-1a3b-4263-a383-369f42e47625	39e79b4f-1666-4ba2-8732-4de65b70a0b0	68783a8e-3f13-4a5d-a3b6-040c178d510f	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.755449	2025-10-15 18:45:00.755449
+d305a499-c8b2-4247-a845-4404fffed88f	39e79b4f-1666-4ba2-8732-4de65b70a0b0	aeffbb2b-416f-4f96-aa49-2f6d772b5e9a	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.757116	2025-10-15 18:45:00.757116
+2ef79971-e1b3-44c3-9b05-0a9c4a16d9ca	39e79b4f-1666-4ba2-8732-4de65b70a0b0	9789e593-1707-491f-a5ab-1271962c9514	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.758806	2025-10-15 18:45:00.758806
+bcf567ef-72e2-48be-a661-baec8eb47de8	39e79b4f-1666-4ba2-8732-4de65b70a0b0	6d963d68-30d6-41bd-b2c9-d6e90adb4193	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.76117	2025-10-15 18:45:00.76117
+713bac11-969d-48a5-8e09-9c3625d8a8ee	39e79b4f-1666-4ba2-8732-4de65b70a0b0	45922fe4-55f0-49aa-8ad3-3f5ca23b49a0	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.763506	2025-10-15 18:45:00.763506
+d0b208ea-25f7-4de5-b2e1-8e9d044dd211	39e79b4f-1666-4ba2-8732-4de65b70a0b0	f566daae-e3c1-46d2-bd31-4c289b961909	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.765248	2025-10-15 18:45:00.765248
+0de85726-8c8e-4a4d-8e9c-b4985cde8852	39e79b4f-1666-4ba2-8732-4de65b70a0b0	c987b4ed-ee4d-4a80-9c6b-21a10c8788e6	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.766517	2025-10-15 18:45:00.766517
+596053e2-7332-4007-9812-111a6f7cd866	39e79b4f-1666-4ba2-8732-4de65b70a0b0	2b959c00-76ec-47b2-9e15-a7b41b1b058b	2025	11	2025-11-01	f	\N	\N	\N	\N	\N	t	2025-10-15 18:45:00.768165	2025-10-15 18:45:00.768165
+\.
+
+
+--
+-- Data for Name: projected_templates; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.projected_templates (id, user_id, nombre, tipo, monto, day_of_month, start_year, start_month, category_id, notas, repeat_monthly, created_at, updated_at) FROM stdin;
+d45f3924-e493-4c28-b654-7bb0eaa3ed47	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Arriendo	gasto	950000.00	2	2025	10	\N	\N	t	2025-09-10 18:30:04.674822	2025-09-10 18:30:04.674822
+c1470118-fe1e-4597-a912-59bf63ba3a81	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Sueldo	ingreso	4600000.00	1	2025	10	\N	\N	t	2025-09-10 18:43:26.871007	2025-09-10 18:43:26.871007
+c43d44f4-44f9-476f-8f72-2d0ba6b7ca7b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Credito 2	gasto	695982.00	1	2025	10	\N	\N	t	2025-09-10 18:50:10.671855	2025-09-10 18:50:10.671855
+b70eca76-44d6-42bc-ae86-a95aba177fa2	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Gas Lipigas	gasto	65000.00	1	2025	10	\N	Estimado	t	2025-09-10 18:53:00.102836	2025-09-10 18:53:00.102836
+b79c717c-83d9-48c0-a2a9-7f695a76dbb0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Internet	gasto	21000.00	1	2025	10	\N	\N	t	2025-09-10 18:53:27.523708	2025-09-10 18:53:27.523708
+c398548b-f51a-475c-ac9f-2f0414134b01	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Luz	gasto	60000.00	1	2025	10	\N	\N	t	2025-09-10 18:53:49.994252	2025-09-10 18:53:49.994252
+e6d75f01-9ee8-430a-bb72-41e393e59e32	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Claro Celular	gasto	20500.00	1	2025	10	\N	\N	t	2025-09-10 18:54:39.313436	2025-09-10 18:54:39.313436
+1d3a187c-06cf-42b8-a643-944f0a748a6f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Pago Universidad	gasto	100000.00	1	2025	10	\N	\N	t	2025-09-10 18:55:15.968887	2025-09-10 18:55:15.968887
+c3753b14-4f97-410c-ab1d-1c47285c067a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Seguro Auto	gasto	95000.00	20	2025	10	\N	\N	t	2025-09-10 18:56:57.932735	2025-09-10 18:56:57.932735
+f92a5c92-b861-46be-9b60-c85ba2217716	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Gastos Comunes	gasto	350000.00	1	2025	10	\N	\N	t	2025-09-13 14:36:50.191886	2025-09-13 14:36:50.191886
+ce606d1d-b56d-4605-84b2-ecfa332886ab	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Transferencia Maria Jose	ingreso	142745.00	1	2025	10	\N	\N	f	2025-09-13 14:52:33.349584	2025-09-13 14:52:33.349584
+b36c20d8-16c4-4c2d-bac9-b9b7003387cf	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Credito 2 - Reordenamiento	gasto	658000.00	3	2025	10	\N	\N	t	2025-10-09 01:10:45.800819	2025-10-09 01:10:45.800819
+ecba49e5-c531-4787-a390-49db7570c780	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Claro Celular	gasto	20500.00	1	2025	10	\N	\N	t	2025-10-15 18:37:09.273618	2025-10-15 18:37:09.273618
+8b896e44-a94a-4392-ba8a-50339def5ff2	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Claro Celular	gasto	20500.00	1	2025	10	\N	\N	t	2025-10-15 18:38:34.038694	2025-10-15 18:38:34.038694
+68783a8e-3f13-4a5d-a3b6-040c178d510f	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Credito Auto	gasto	695982.00	1	2025	10	\N	\N	t	2025-10-15 18:38:50.692653	2025-10-15 18:38:50.692653
+aeffbb2b-416f-4f96-aa49-2f6d772b5e9a	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Gas Lipigas	gasto	70000.00	1	2025	10	\N	\N	t	2025-10-15 18:39:03.050602	2025-10-15 18:39:03.050602
+9789e593-1707-491f-a5ab-1271962c9514	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Gastos Comunes	gasto	350000.00	1	2025	10	\N	\N	t	2025-10-15 18:39:18.588234	2025-10-15 18:39:18.588234
+6d963d68-30d6-41bd-b2c9-d6e90adb4193	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Internet - Movistar	gasto	21500.00	1	2025	10	\N	\N	t	2025-10-15 18:39:31.570603	2025-10-15 18:39:31.570603
+45922fe4-55f0-49aa-8ad3-3f5ca23b49a0	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Luz	gasto	60000.00	1	2025	10	\N	\N	t	2025-10-15 18:39:43.095546	2025-10-15 18:39:43.095546
+f566daae-e3c1-46d2-bd31-4c289b961909	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Pago Universidad	gasto	110000.00	1	2025	10	\N	\N	t	2025-10-15 18:40:00.421234	2025-10-15 18:40:00.421234
+218108f6-adea-4ea5-ad46-df316705008d	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Arriendo	gasto	950000.00	1	2025	10	\N	\N	t	2025-10-15 18:40:11.927726	2025-10-15 18:40:11.927726
+b50e3889-2fc1-42b6-bd2f-87d039f2a96e	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Credito - Reordenamiento	gasto	660000.00	1	2025	10	\N	\N	t	2025-10-15 18:40:28.578094	2025-10-15 18:40:28.578094
+c987b4ed-ee4d-4a80-9c6b-21a10c8788e6	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Seguro Auto	gasto	95000.00	1	2025	10	\N	\N	t	2025-10-15 18:40:39.769714	2025-10-15 18:40:39.769714
+2b959c00-76ec-47b2-9e15-a7b41b1b058b	39e79b4f-1666-4ba2-8732-4de65b70a0b0	Sueldo	ingreso	4650000.00	1	2025	10	\N	\N	t	2025-10-15 18:40:54.649875	2025-10-15 18:40:54.649875
+\.
+
+
+--
+-- Data for Name: transactions; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.transactions (id, user_id, fecha, descripcion, monto, categoria, tipo, cuotas, created_at, updated_at, import_id, category_id) FROM stdin;
+b72ef3c6-bd98-4173-948b-60b2b01716fb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	FRANCISCA GUERRERO COMPRAS	9980.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.441781-03	2025-09-14 01:35:12.441781-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+4454cc96-ab72-4c5e-8db1-f255490cd2ef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	TRASPASO DEUDA INTERNA TRA.DOLAR/PESO	159521.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.47743-03	2025-09-14 01:35:12.47743-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+7dd63793-19e3-466a-beae-46ca7225d3cd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-13	UNIMARC 4 PONIENTE     VINA DEL MAR  CHL	15210.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.372997-03	2025-09-17 14:37:56.303963-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+c1b03ab0-e9d2-4806-b04d-6c3b9b6ef09f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-13	PLAYA LICORES Y ROCK A VALPARAISO    CHL	18100.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.370586-03	2025-09-17 14:38:00.802073-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+c54a281d-3561-4a5d-b17e-e16288a0a5dc	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-13	MERCADOPAGO KOMBISTO  Las Condes    CHL	1500.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.356507-03	2025-09-17 14:38:15.770948-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	54
+30f87f77-f418-4803-9dd3-961e6c69eb05	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-13	COMERCIALIZADORA E INM VALPARAISO    CHL	1760.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.362526-03	2025-09-17 14:38:18.875783-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	54
+a82d7bfa-86ea-454a-b990-4cb004a2d7bd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-13	COMERCIALIZADORA E INM VALPARAISO    CHL	2000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.36719-03	2025-09-17 14:38:20.963688-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	54
+1de714b3-d16f-4863-8879-a494fafb8f2d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-12	APP COPEC BIP!         SANTIAGO      CHL	1660.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.386728-03	2025-09-17 14:38:27.858995-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+f6d02813-a880-4d66-82c4-0becb617445f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-12	HELADOS COLETTI SPA    VALPARAISO    CHL	3500.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.381096-03	2025-09-17 14:38:41.427457-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+ebc4a096-764b-42f9-a31d-55fca3161a5d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-12	EL PASILLO DE LAS COSA VINA DEL MAR  CHL	1980.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.384397-03	2025-09-17 14:38:38.963298-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+d2eb1ff2-df2e-4f28-8cfb-9688ec2462ef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-12	VINA DEL MAR           VALPARAISO    CHL	5000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.375981-03	2025-09-17 14:38:44.804432-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+1affc30c-16a0-4c7a-8ef5-fe508a7c76df	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-11	FLANNERY S COMPRAS	14289.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.396608-03	2025-09-17 14:38:48.229505-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	54
+b40a657a-8fc1-494c-ba02-e32e588e26eb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-11	PETROBRAS METRO PAJARI COMPRAS	1180.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.394325-03	2025-09-17 14:38:56.386902-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	54
+5b292760-6b90-4236-b8bc-443829acfcb5	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-11	DESTAPAS BEER HOUSE COMPRAS	44935.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.390707-03	2025-09-17 14:38:58.727976-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+2cbdab03-6188-4ae5-8147-248a47eaa437	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-11	PAYU *UBER TRIP COMPRAS	2138.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.388522-03	2025-09-17 14:39:01.760463-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+18fbc667-b01b-4b75-9eb3-1535b0d3a4dd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-10	APP COPEC BIP] COMPRAS	1740.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.405616-03	2025-09-17 14:39:04.16175-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+5b4746c0-b0fe-4b1a-a1a0-e2e906fa5549	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	PEDIDOSYA CL RESTAURAN COMPRAS	13370.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.450964-03	2025-09-17 14:39:10.737654-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+4264fde0-192a-4b67-bcba-b54e2991b851	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	UNIMARC 4 PONIENTE COMPRAS	8700.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.444839-03	2025-09-17 14:39:13.169032-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+cf09f1c4-164e-40f0-8259-6e6dc1255d46	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	AMAZON PRIME COMPRAS	6490.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.437934-03	2025-09-17 14:39:28.048331-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	50
+8cff8110-c3a2-48ff-b5f1-86f810491429	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	DL*GOOGLE YOUTUBE** COMPRAS	11000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.43336-03	2025-09-17 14:39:30.096386-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	50
+ffc5399c-10a3-4f97-829d-2a57247bf71c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	PAYU *UBER TRIP COMPRAS	2159.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.426915-03	2025-09-17 14:39:35.907136-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+3788ae4b-00b4-46d1-b310-d15e47bc0b44	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	APP COPEC BIP] COMPRAS	1740.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.424029-03	2025-09-17 14:39:38.686547-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+3a93c1de-7318-4c70-b600-3b457aa89b7d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	PAYU *UBER TRIP COMPRAS	2515.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.420982-03	2025-09-17 14:39:46.267703-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+642a5ebe-228e-4848-8932-fc82bff26938	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	MERCADOPAGO *CABIFY25 COMPRAS	2695.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.418041-03	2025-09-17 14:39:49.79937-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+71507c08-c22e-4029-94a1-3ac0465a47b6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	STA ISABEL 1 PON.VINA COMPRAS	14173.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.414521-03	2025-09-17 14:39:52.520861-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+5bd00914-1f48-47a3-944b-fd6d380d3b83	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	PELUQUERIA CANINA COMPRAS	30000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.412057-03	2025-09-17 14:39:56.625641-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	63
+3ee22b63-6de5-455c-bbf1-97d37df68d98	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	BAKERY LYNCH COMPRAS	1210.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.409135-03	2025-09-17 14:40:00.600333-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+59ed566a-eeeb-4ff5-a1a7-4b84ba847f27	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	KIRA COMPRAS	41940.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.473873-03	2025-09-17 14:40:08.709639-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	63
+cc9d8615-8fb7-4565-b0e6-fd6d44723520	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	LIDER.CL TIENDA WEBPAY CRED.COMPRAS	-1950.00	Sin categorizar	pago	1	2025-09-14 01:35:12.471124-03	2025-09-17 14:40:12.320661-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+2643a758-3230-4440-974e-db75c7f8687f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-06	DL*GOOGLE YOUTUBE** COMPRAS	1790.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.511957-03	2025-09-17 14:40:17.58065-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	50
+476524f2-0e9a-4621-9384-79a65cb0b5b4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-07	BAKERY SP LIMITADA COMPRAS	10970.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.480027-03	2025-09-17 14:40:20.398097-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+40323360-79b8-41f9-bd6c-18210cd71eea	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-07	UNIMARC 4 PONIENTE COMPRAS	11200.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.483501-03	2025-09-17 14:40:22.032187-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+9f7bd85a-d1fc-4c3f-9da5-69740e990af7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-07	BAKERY LYNCH COMPRAS	6660.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.487727-03	2025-09-17 14:40:23.800164-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+0e9d9893-9999-40ea-b47d-9527b2f2ddef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-07	GASTRONOMIA SD SPA COMPRAS	55660.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.492824-03	2025-09-17 14:40:26.448635-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+c1e3d5c9-7f61-4e33-8b57-6e9dad7c1511	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	PAYU *FLIXBUS COMPRAS	3699.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.452441-03	2025-09-17 14:40:28.424151-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+d37d156a-d3f5-4d76-9cd4-011772a60a11	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	PAYU *UBER TRIP COMPRAS	2041.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.455385-03	2025-09-17 14:40:30.260271-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+f53b67c4-2401-42de-8cb1-0f7bc36e1f4e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	MAXIK COMPRAS	1190.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.459117-03	2025-09-17 14:40:37.951421-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+0466a49a-d9ee-4417-bd9c-fab8f8bd2bbd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	TIENDA MUNDO RURAL COMPRAS	1990.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.46331-03	2025-09-17 14:40:39.441316-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+3cfc03ff-eab2-4ff3-be8d-75bd1b9b0aa4	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	MAXIK COMPRAS	1690.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.467303-03	2025-09-17 14:40:40.814364-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+7e2fe378-c732-4af6-ad1d-07921c69d018	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-06	LIDER.CL TIENDA WEBPAY COMPRAS	69620.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.505308-03	2025-09-17 14:41:06.459284-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+8d450045-9d70-4f92-ad48-549c9291a770	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-06	COPEC APP COMPRAS	19701.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.508682-03	2025-09-17 14:41:03.029619-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	50
+00a729e8-c71c-49d7-93bc-7d490cb5eb3f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-05	UNIMARC 4 PONIENTE COMPRAS	51472.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.529989-03	2025-09-17 14:41:14.408708-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+cab8c19c-0075-4a67-8eb9-8c316ed78378	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-05	BAKERY SP LIMITADA COMPRAS	3990.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.522917-03	2025-09-17 14:41:16.128753-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+53557ca4-7479-48cd-b45d-7e505c166a39	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-05	KUNSTMANN CRAFT BAR COMPRAS	64470.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.516181-03	2025-09-17 14:41:19.508563-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+f544f754-09d0-4291-bcb0-0ce61d0c1488	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-30	ACLIN COMPRAS	17470.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.572764-03	2025-09-14 01:35:12.572764-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+d9a2a68f-ffe5-4297-94eb-beb84f44a54b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	CONSULTA COMPRAS	16770.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.622859-03	2025-09-14 01:35:12.622859-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+bd3e7296-f775-4014-9c56-be3e0ba36d34	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	VINA DEL MAR COMPRAS	17136.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.655311-03	2025-09-14 01:35:12.655311-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+be4af70c-15c1-4a0f-ac58-47aaa6cfa72b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	MERPAGO*COMERCIALCANAS COMPRAS	41965.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.6819-03	2025-09-14 01:35:12.6819-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+19cd6870-0e52-44ba-9c98-1fc45c9b492b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-30	ACLIN 3 CPC	253420.00	Sin categorizar	desestimar	1	2025-09-14 01:35:12.579083-03	2025-09-14 01:35:12.579083-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+18da927e-cacb-40dc-a6ff-19e6a18ebe2f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	FONASA VINA NORTE N CUOTAS	104773.00	Sin categorizar	desestimar	1	2025-09-14 01:35:12.64757-03	2025-09-14 01:35:12.64757-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+4957d67e-e2fe-471a-bcf5-30ff36d5b1ef	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	FARM. AHUMADA SPA L703 N CUOTAS	58663.00	Sin categorizar	desestimar	1	2025-09-14 01:35:12.640081-03	2025-09-14 01:35:12.640081-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+2d7a0402-a0bf-4396-ab52-aeb8c6fa03ac	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-05	PAYU *UBER TRIP COMPRAS	2632.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.535151-03	2025-09-17 14:41:09.626985-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+64e66a04-9e28-4df3-aa51-90e01a75bf8c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-05	APP COPEC BIP] COMPRAS	1740.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.533101-03	2025-09-17 14:41:11.695388-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+5ae3bae5-af53-454f-b489-0a5530135d72	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-04	CQ SPA COMPRAS	39556.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.549093-03	2025-09-17 14:41:23.410612-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+6a9fb17b-2288-477e-a804-a6d36decbead	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-04	PEDIDOSYA CL COMPRAS	11400.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.547474-03	2025-09-17 14:41:25.90978-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+26f6e0eb-ade7-46db-9ef5-d623dc826c8b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-04	CLARO RECAUDACION COMPRAS	20332.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.545723-03	2025-09-17 14:41:30.733355-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	50
+c348a4d6-7adc-4b47-90dd-d23e2cae64b6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-04	PAYU *UBER TRIP COMPRAS	2316.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.540038-03	2025-09-17 14:41:32.528288-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+35f88e84-49c5-427f-99d0-fffa8b5cd932	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-03	FARM. AHUMADA SPA L703 COMPRAS	39909.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.556109-03	2025-09-17 14:41:39.660375-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	50
+083b4de9-7e00-48bf-b374-69f85d1dc598	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-03	PAYU *UBER TRIP COMPRAS	1838.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.553129-03	2025-09-17 14:41:41.974244-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+78e625d3-3ec0-403d-a6b2-9b5e54746e9d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-03	APP COPEC BIP] COMPRAS	1740.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.551108-03	2025-09-17 14:41:43.768601-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+069745bd-66bd-486e-bd4a-b4f4bc725bec	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-02	APP COPEC BIP] COMPRAS	1740.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.563098-03	2025-09-17 14:41:45.867377-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+996fa1e4-7af8-4905-b14c-837626f30a2f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-02	PAYU *UBER TRIP COMPRAS	2365.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.558532-03	2025-09-17 14:41:47.668647-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+2ea8c688-5a7b-4e30-b372-33b31d319f9a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-01	PAYU *UBER TRIP COMPRAS	2202.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.570034-03	2025-09-17 14:41:49.494786-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+d0f7fb8a-cc51-4bde-8b77-8f31d0454118	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-01	MERCADOPAGO *CABIFY25 COMPRAS	2679.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.566665-03	2025-09-17 14:41:52.035019-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+522c652d-176f-4c19-b3b6-d03abb60e678	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-30	TUU*bomberosVinaDelMa COMPRAS	1204.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.575885-03	2025-09-17 14:42:03.3636-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	51
+6d33d98c-67cb-42ce-a045-ae9ad77f01b1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-29	JUSTO COMPRAS	33000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.582096-03	2025-09-17 14:42:18.713242-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+dd9d2c98-5cc5-4fc0-93c9-4fee3e8c69bf	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	PAYU *UBER TRIP COMPRAS	1956.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.61951-03	2025-09-17 14:42:20.78301-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+c0538d13-222b-4e6c-9b45-95b793ca7121	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	MERPAGO*GREEN MARKET S COMPRAS	34490.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.615942-03	2025-09-17 14:42:24.738008-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+4db4dcaf-fadb-4a9a-9f12-1b4c81323d22	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	ESPACIO GOURMET COMPRAS	30277.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.607832-03	2025-09-17 14:42:35.549447-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+bca77369-84fe-436f-8d0b-ccd5fb143458	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	HELP.HBOMAX.COM H**MAX COMPRAS	13990.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.611862-03	2025-09-17 14:42:30.735618-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	54
+1795591a-155d-4b02-94b8-b33d1a4f95e9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	PAYU *UBER TRIP COMPRAS	5505.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.604299-03	2025-09-17 14:42:37.725852-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+ad9f0f3e-8873-41f4-a086-9be1fb42597f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	CIRUMED COMPRAS	111260.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.599815-03	2025-09-17 14:42:41.68707-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+dd818f77-1b3c-4b92-8748-b028f2f735e7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	PAYU *UBER TRIP COMPRAS	1930.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.595995-03	2025-09-17 14:42:43.81878-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+bb28cd2c-8ddb-492a-9be7-41359a753406	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	MERPAGO*GREEN MARKET S COMPRAS	9190.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.591714-03	2025-09-17 14:42:48.755273-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+b9ab6c1d-33cf-49c5-9db0-a5299ab8f207	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	SUC LOUNGE S.A 105 COMPRAS	37980.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.588036-03	2025-09-17 14:42:52.950787-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+ffbc6848-b77d-44e3-a779-541da2ada7c3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	PAYU *UBER TRIP COMPRAS	5022.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.584956-03	2025-09-17 14:42:55.873169-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+b05d4ff8-7b47-4588-9b86-e9ab2b2e2483	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	PAYU *UBER TRIP COMPRAS	1836.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.636125-03	2025-09-17 14:43:22.312994-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+b21831ae-f884-45d8-972c-70e3771b5705	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	APP COPEC BIP] COMPRAS	2530.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.625644-03	2025-09-17 14:43:54.368771-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+1948e215-e80b-4e15-af40-d8945cf312bc	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	BAKERY SP LIMITADA COMPRAS	3990.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.632467-03	2025-09-17 14:43:42.835898-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+fa9918f4-2a58-4859-bde6-737beccb5cac	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	SOCIEDAD VICINAY HENRI COMPRAS	25000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.6293-03	2025-09-17 14:43:56.989508-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+a40f9ac7-e5e7-4e69-ba66-1c421c8b0df6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	CEGIN LTDA COMPRAS	40000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.701464-03	2025-09-17 14:44:11.193519-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+30b68014-f14e-48e5-b946-9efb559f38fc	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	PAYU *FLIXBUS COMPRAS	2774.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.697503-03	2025-09-17 14:44:13.894762-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+02ffe036-603e-42b2-b331-70c021e8ce4f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	PAYU *UBER TRIP COMPRAS	2024.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.69069-03	2025-09-17 14:44:15.939408-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+c2e2607d-eb85-4d2b-bec3-d59d2b52602a	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	CEGIN LTDA COMPRAS	6000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.685703-03	2025-09-17 14:44:17.985549-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+de5fdeac-3626-496b-b41e-6c28d7e433dd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	CEGIN LTDA COMPRAS	7680.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.678085-03	2025-09-17 14:44:26.093068-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+6b671222-d4d4-4672-9f90-f633817c6105	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	CEGIN COMPRAS	30410.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.673993-03	2025-09-17 14:44:29.161656-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+6046bc5a-809c-4b01-998f-9e83338496cb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	AHUM L145 LIBERTAD 335 COMPRAS	12023.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.670393-03	2025-09-17 14:44:31.845389-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+7cf3cbf4-f1e7-42f2-a97f-dcb7f7a097ee	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	CEGIN COMPRAS	30000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.666471-03	2025-09-17 14:44:36.100369-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	53
+d2070123-568d-48ff-bc77-1c843cd30afb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	PAYU *UBER TRIP COMPRAS	2953.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.66354-03	2025-09-17 14:45:09.725532-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+ee2f5657-dd20-486f-9b49-662747cf3042	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	APP COPEC BIP] COMPRAS	1740.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.659327-03	2025-09-17 14:45:11.343397-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+9467cc0a-8998-425e-9f07-c9794882e621	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	SABORES DE MANCORA COMPRAS	32380.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.651329-03	2025-09-17 14:45:16.996246-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+0894c818-023a-4bf3-8a15-3db674e3cef9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-05	Pago Pesos TEF PAGO NORMAL	-3297843.00	Sin categorizar	desestimar	1	2025-09-14 01:35:12.536988-03	2025-09-14 01:35:12.536988-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+6ae82ada-bcf9-4d15-8f2e-571ab1af0700	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-08	Avance en cuotas TE AVANCE EN CTAS	528800.00	Sin categorizar	desestimar	1	2025-09-14 01:35:58.359789-03	2025-09-14 01:35:58.359789-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	\N
+7a0b9d7e-59ea-4648-b0c5-d67e7516bbc6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-05	Pago Pesos TEF PAGO NORMAL	-564092.00	Sin categorizar	desestimar	1	2025-09-14 01:35:58.363679-03	2025-09-14 01:35:58.363679-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	\N
+ab80eb39-a14e-4485-b861-342a8f4a08bd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-17	COPEC APP              SANTIAGO      CHL	5280.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.034087-03	2025-09-17 14:35:29.299591-03	a9aec168-4819-488b-a646-84985a6ceb7f	49
+f1ee44c5-1efa-4b35-a9a3-1cca0413e263	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-09	FRANCISCA GUERRERO 3 CPC	98020.00	Sin categorizar	desestimar	1	2025-09-14 01:35:12.447981-03	2025-09-14 01:35:12.447981-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	\N
+78eb10c1-f2de-4757-9c6a-0b76a22f9e40	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-17	APP COPEC BIP!         SANTIAGO      CHL	1740.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.030753-03	2025-09-17 14:35:31.886176-03	a9aec168-4819-488b-a646-84985a6ceb7f	61
+05e24aea-90d3-4bcc-8503-0d675d0e0817	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-17	MERCADOPAGO CABIFY25  Las Condes    CHL	2695.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.026324-03	2025-09-17 14:35:34.857957-03	a9aec168-4819-488b-a646-84985a6ceb7f	61
+c8d3100e-7bf6-408e-a0c5-14f5fb5e4501	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-16	APP COPEC BIP!         SANTIAGO      CHL	1740.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.043165-03	2025-09-17 14:35:39.392776-03	a9aec168-4819-488b-a646-84985a6ceb7f	61
+31901ef9-f62a-4114-8c85-ffa35c302891	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-16	UNIMARC 4 PONIENTE     VINA DEL MAR  CHL	40303.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.040253-03	2025-09-17 14:36:21.216485-03	a9aec168-4819-488b-a646-84985a6ceb7f	62
+772b68b9-d107-45b8-82f4-228649611ed7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-16	BAKERY SP LIMITADA     VALPARAISO    CHL	7623.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.037625-03	2025-09-17 14:36:26.035989-03	a9aec168-4819-488b-a646-84985a6ceb7f	49
+ba218a17-13ef-4c01-9e7d-aeecbc9d556c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-16	MERPAGOSAN CAMILO PRO SANTIAGO      CHL	1980.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.03564-03	2025-09-17 14:36:35.200076-03	a9aec168-4819-488b-a646-84985a6ceb7f	54
+4870fd86-b48a-4e50-b5d1-9b1f452f8d22	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-26	PAYU *UBER TRIP COMPRAS	1609.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.704747-03	2025-09-17 14:44:06.162469-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+b2c4d229-1107-4c35-8d4a-9246b1150f5e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-25	PAYU *UBER EATS COMPRAS	44959.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.724788-03	2025-09-17 14:45:19.223203-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+95a2d002-dedd-4d18-84e4-62bc0a8efae1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-25	PAYU *FLIXBUS COMPRAS	2774.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.721262-03	2025-09-17 14:45:21.110359-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+a2bbeb97-3fd8-407a-b439-0523573b5e23	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-25	BAKERY LYNCH COMPRAS	16800.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.718044-03	2025-09-17 14:45:22.975761-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+bb753c7b-093c-44f3-b10c-d4f15088bbfd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-25	TUU*GREEN LAB COMPRAS	3690.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.714803-03	2025-09-17 14:45:24.865855-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+5a29e291-f45b-403d-8ad3-2fabf4e5d2a3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-25	TUU*GREEN LAB COMPRAS	8118.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.711877-03	2025-09-17 14:45:27.304993-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+d8d067dd-2243-4701-86e3-8768143f06f3	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-25	PAYU *UBER TRIP COMPRAS	2276.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.707454-03	2025-09-17 14:45:31.680496-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+2889bef4-324c-4736-8981-8bf2f5c68744	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	FUDO *PATIO CENTRAL COMPRAS	6500.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.762861-03	2025-09-17 14:45:34.47734-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+288876b5-88a6-4c72-86e6-91039be30468	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	PAYU *UBER TRIP COMPRAS	10834.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.752812-03	2025-09-17 14:45:36.216909-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+9790501d-9a74-4bba-92cf-77b3d2364cd8	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	FUDO *PATIO CENTRAL COMPRAS	21450.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.748595-03	2025-09-17 14:45:43.890948-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+74dec002-086f-41d0-a523-8b48a108f452	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	FUDO *PATIO CENTRAL COMPRAS	4000.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.745243-03	2025-09-17 14:45:45.592124-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+bf366e87-339d-4503-954d-4f94e47c0d79	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	EL BAR DEL TIO COMPRAS	210980.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.741635-03	2025-09-17 14:45:47.646409-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+4b99c7c7-03ef-436a-974f-96001a4c2b7f	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	PAYU *UBER TRIP COMPRAS	7107.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.737616-03	2025-09-17 14:45:55.43852-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+2c471689-7edb-44bf-a45d-30b84495c1d2	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	PAYU *UBER TRIP COMPRAS	1326.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.734339-03	2025-09-17 14:45:57.095551-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+bcc4d71e-885d-4bc2-8c49-7a80ab88b18d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	PAYU *UBER TRIP COMPRAS	1275.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.730893-03	2025-09-17 14:45:58.819978-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+f2bc22ad-1ac8-4108-afcb-b43a226dd68e	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	STA ISABEL 1 PON.VINA COMPRAS	29213.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.728353-03	2025-09-17 14:46:00.922816-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	62
+746bbccb-b91d-4c22-a1f3-9b860712b64d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-23	BAKERY SP LIMITADA COMPRAS	6670.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.777892-03	2025-09-17 14:46:05.115982-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+2d1ddcc5-865a-4b2b-b0d2-0ee1c57bf4f6	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-23	PEDIDOSYA CL COMPRAS	43460.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.770953-03	2025-09-17 14:46:06.920738-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	49
+0e69f395-0548-41b7-94d4-ef7a37006920	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-22	UBER RIDES COMPRAS	3407.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.806237-03	2025-09-17 14:46:09.291162-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+eedc16dc-c996-424e-957a-d38c85027dea	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-22	UBER RIDES COMPRAS	1956.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.792797-03	2025-09-17 14:46:12.129146-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+e860133a-e0a6-4e44-a050-d6af94847930	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-22	PAYU *UBER TRIP COMPRAS	4564.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.785589-03	2025-09-17 14:46:14.306467-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	61
+34588d9a-59a3-4c10-b0a1-8c5b223401d1	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-04	SAN CAMILO COMPRAS	2990.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.365476-03	2025-09-17 14:46:19.651551-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+1719d705-d7da-45a6-acdf-2628535234bc	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-03	VINA DEL MAR COMPRAS	2190.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.367825-03	2025-09-17 14:46:21.571645-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+432f1c0c-f8ea-47bd-863a-d77630474ccb	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-01	MAXIK COMPRAS	1190.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.376163-03	2025-09-17 14:46:23.312641-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+6db6fe7a-84a3-4273-abc2-24168c27d920	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-01	CAFETERIA LA VINOTE COMPRAS	7992.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.373494-03	2025-09-17 14:46:25.997181-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+1188e639-f193-4d83-bf90-c6bef32c733c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-31	TUU*coccolino COMPRAS	11480.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.378992-03	2025-09-17 14:46:27.893464-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+a6dc66f9-a185-4b85-a485-619c343e7ada	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-30	MIO NONO DIABUNO E. COMPRAS	13000.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.383298-03	2025-09-17 14:46:30.149475-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+51587f8b-74be-4e5b-8b39-0308178a173d	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-30	BOTILLERIA IMPACTO COMPRAS	2390.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.381283-03	2025-09-17 14:46:32.36853-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+6320f5aa-6ee9-4187-b1d9-a62241577788	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	UNIMARC 4 PONIENTE COMPRAS	14960.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.387146-03	2025-09-17 14:46:35.078852-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	62
+d4171604-7e5b-4642-9a65-079b5b5f024c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	VINA DEL MAR COMPRAS	7370.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.402048-03	2025-09-17 14:47:02.569096-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+f354fc70-7c15-41b5-9540-86546d13189b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	VINA DEL MAR COMPRAS	3780.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.389542-03	2025-09-17 14:46:57.274724-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+264482fc-c51f-475f-b96a-0392db80201c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-28	MARINA VINA MMA COMPRAS	3600.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.385191-03	2025-09-17 14:46:58.948706-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	49
+3f254614-866b-4ed3-ab13-3e61ec65ffd7	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-25	OFFIMANIA COMPRAS	6570.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.39139-03	2025-09-17 14:46:49.197257-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	54
+02988881-dffd-44c2-936f-ed885a453a97	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-25	LO PRADO 4 COMPRAS	5000.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.393725-03	2025-09-17 14:46:51.566297-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	54
+895bdaa9-f8c7-4de4-b848-eb03d876da69	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-22	SANIDENT COMPRAS	35000.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.404506-03	2025-09-17 14:47:05.957508-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	54
+6f247bbb-b8d7-48c7-9996-76c28acbbdaf	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-24	MERCADOPAGO*KOMBIST COMPRAS	2700.00	Sin categorizar	gasto	1	2025-09-14 01:35:58.399217-03	2025-09-17 14:47:10.422735-03	0f9d6eac-85d5-4903-9741-d50ab811a9ea	54
+0d61370c-d300-47bd-a5eb-af90e7124487	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-15	TIENDA MUNDO RURAL COMPRAS	1800.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.050235-03	2025-09-17 14:18:56.050235-03	a9aec168-4819-488b-a646-84985a6ceb7f	\N
+54362e7a-da20-4eee-9815-2939c416ce28	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-16	PAYU   UBER TRIP      SANTIAGO      CHL	2147.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.044719-03	2025-09-17 14:35:36.858535-03	a9aec168-4819-488b-a646-84985a6ceb7f	61
+79ceec03-6e7b-45f9-9749-0f9dcc81b9fd	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-15	PAYU *UBER TRIP COMPRAS	2051.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.062136-03	2025-09-17 14:36:37.860199-03	a9aec168-4819-488b-a646-84985a6ceb7f	61
+015b97a5-a9eb-47de-bcea-f554e3c9e8c9	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-15	TANTA/MUU/CANTINA W COMPRAS	232760.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.060258-03	2025-09-17 14:36:45.005997-03	a9aec168-4819-488b-a646-84985a6ceb7f	54
+280c8925-12e3-44c0-842a-9620598be25c	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-15	MAKE UP URBANO VINA COMPRAS	59160.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.057248-03	2025-09-17 14:36:53.144759-03	a9aec168-4819-488b-a646-84985a6ceb7f	53
+4facb29c-13af-417b-8a24-44ee48471749	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-15	TUU*barassiMascotas COMPRAS	50500.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.054858-03	2025-09-17 14:37:26.110218-03	a9aec168-4819-488b-a646-84985a6ceb7f	63
+559f7716-a014-483f-af09-bf9398d7d369	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-15	LOUNGE MARINA ARAUCO COMPRAS	12990.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.052706-03	2025-09-17 14:37:28.928192-03	a9aec168-4819-488b-a646-84985a6ceb7f	53
+c49de6cf-9377-47f7-a1e3-f84f2d2bc66b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-15	VENTIPAY CREDITO COMPRAS	24900.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.051406-03	2025-09-17 14:37:36.219802-03	a9aec168-4819-488b-a646-84985a6ceb7f	50
+617766ef-928d-411e-a58a-54dc73c0f51b	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-15	MERCADOPAGO *CABIFY25 COMPRAS	2695.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.048805-03	2025-09-17 14:37:44.091382-03	a9aec168-4819-488b-a646-84985a6ceb7f	61
+cdac3177-b5fb-4d71-b468-57bf17afced0	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-14	JUMBO CON CON COMPRAS	164570.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.066407-03	2025-09-17 14:37:47.003672-03	a9aec168-4819-488b-a646-84985a6ceb7f	62
+3170ad3b-f3c9-4ad1-90e2-240191e82023	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-14	DL*GOOGLE YOUTUBE** COMPRAS	8990.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.064076-03	2025-09-17 14:37:52.033997-03	a9aec168-4819-488b-a646-84985a6ceb7f	50
+deb77e5f-82cd-4300-8b40-d5f64b7ac315	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-12	PAYU *UBER TRIP COMPRAS	2199.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.071935-03	2025-09-17 14:38:23.009096-03	a9aec168-4819-488b-a646-84985a6ceb7f	61
+4b64e214-5f73-4a11-9328-e08d9f9e7000	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-09-12	DL*GOOGLE YOUTUBE** COMPRAS	4299.00	Sin categorizar	gasto	1	2025-09-17 14:18:56.069615-03	2025-09-17 14:38:25.386346-03	a9aec168-4819-488b-a646-84985a6ceb7f	50
+34f7788b-edb3-47d3-849f-1c724ca80e86	35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	2025-08-27	GOOGLE PLAY YOUTUBE COMPRAS	14190.00	Sin categorizar	gasto	1	2025-09-14 01:35:12.643542-03	2025-09-17 14:43:15.4909-03	99aca865-8e67-4d5e-867c-c64f4be7ac34	50
+\.
+
+
+--
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: rpizarro
+--
+
+COPY public.users (id, nombre, email, password, created_at, updated_at, ultimo_inicio_sesion, google_id, auth_provider, profile_picture) FROM stdin;
+24c6812a-6b57-4673-abb7-77d905720674	Usuario Prueba	test@example.com	$2a$10$YourHashedPasswordHere	2025-09-05 22:48:43.320219-04	2025-09-05 22:48:43.320219-04	\N	\N	local	\N
+48c8745d-4167-4fc2-94cc-e1353a2f89fc	Test User 2	test2@example.com	$2a$10$w5FeiuQBbd9dYbpKxRVMRuG7FmJ/n8ifk.HX4Tt6RsmCC2pBcnn/W	2025-09-05 22:50:47.904272-04	2025-09-05 22:50:52.496976-04	2025-09-05 22:50:52.496976-04	\N	local	\N
+35b6d8e3-ad20-4d31-8395-34ba92f2c5ac	Rodrigo	prueba@test.com	$2a$10$Dqee81XDUZSoV8cp1YAM1.SLEb3/Q2/xXRhQFoQzwM5G6wwP6PmJu	2025-09-05 22:55:43.141542-04	2025-10-15 18:36:22.588366-03	2025-10-15 18:36:22.588366-03	\N	local	\N
+39e79b4f-1666-4ba2-8732-4de65b70a0b0	Rodrigo Pizarro	r.pizarro.leeson@gmail.com	\N	2025-10-15 17:47:25.871799-03	2025-10-15 18:38:20.308684-03	2025-10-15 18:38:20.308684-03	105408582125529053388	google	https://lh3.googleusercontent.com/a/ACg8ocJCiD_vah5LrlguyjjmPNgIZRT34pthPY0C6zNMc_dwXyOWqY56=s96-c
+\.
+
+
+--
+-- Name: categories_id_seq; Type: SEQUENCE SET; Schema: public; Owner: rpizarro
+--
+
+SELECT pg_catalog.setval('public.categories_id_seq', 69, true);
+
+
+--
+-- Name: categories categories_name_user_id_key; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_name_user_id_key UNIQUE (name, user_id);
+
+
+--
+-- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: checking_balances checking_balances_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.checking_balances
+    ADD CONSTRAINT checking_balances_pkey PRIMARY KEY (user_id, year, month);
+
+
+--
+-- Name: checking_transactions checking_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.checking_transactions
+    ADD CONSTRAINT checking_transactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: imports imports_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.imports
+    ADD CONSTRAINT imports_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: installment_occurrences installment_occurrences_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.installment_occurrences
+    ADD CONSTRAINT installment_occurrences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: installment_occurrences installment_occurrences_plan_id_year_month_key; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.installment_occurrences
+    ADD CONSTRAINT installment_occurrences_plan_id_year_month_key UNIQUE (plan_id, year, month);
+
+
+--
+-- Name: installment_plans installment_plans_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.installment_plans
+    ADD CONSTRAINT installment_plans_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: intl_unbilled intl_unbilled_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.intl_unbilled
+    ADD CONSTRAINT intl_unbilled_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: projected_occurrences projected_occurrences_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.projected_occurrences
+    ADD CONSTRAINT projected_occurrences_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: projected_occurrences projected_occurrences_template_id_year_month_key; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.projected_occurrences
+    ADD CONSTRAINT projected_occurrences_template_id_year_month_key UNIQUE (template_id, year, month);
+
+
+--
+-- Name: projected_templates projected_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.projected_templates
+    ADD CONSTRAINT projected_templates_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: transactions transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_email_key UNIQUE (email);
+
+
+--
+-- Name: users users_google_id_key; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_google_id_key UNIQUE (google_id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_checking_tx_fecha; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_checking_tx_fecha ON public.checking_transactions USING btree (fecha);
+
+
+--
+-- Name: idx_checking_tx_user_period; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_checking_tx_user_period ON public.checking_transactions USING btree (user_id, year, month);
+
+
+--
+-- Name: idx_imports_period; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_imports_period ON public.imports USING btree (user_id, period_year, period_month);
+
+
+--
+-- Name: idx_imports_user_id_created_at; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_imports_user_id_created_at ON public.imports USING btree (user_id, created_at DESC);
+
+
+--
+-- Name: idx_installment_occurrences_period; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_installment_occurrences_period ON public.installment_occurrences USING btree (year, month);
+
+
+--
+-- Name: idx_installment_occurrences_user; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_installment_occurrences_user ON public.installment_occurrences USING btree (user_id);
+
+
+--
+-- Name: idx_installment_plans_brand; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_installment_plans_brand ON public.installment_plans USING btree (brand);
+
+
+--
+-- Name: idx_installment_plans_user; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_installment_plans_user ON public.installment_plans USING btree (user_id);
+
+
+--
+-- Name: idx_intl_unbilled_brand; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_intl_unbilled_brand ON public.intl_unbilled USING btree (brand);
+
+
+--
+-- Name: idx_intl_unbilled_fecha; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_intl_unbilled_fecha ON public.intl_unbilled USING btree (fecha);
+
+
+--
+-- Name: idx_intl_unbilled_period; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_intl_unbilled_period ON public.intl_unbilled USING btree (user_id, period_year, period_month);
+
+
+--
+-- Name: idx_intl_unbilled_user; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_intl_unbilled_user ON public.intl_unbilled USING btree (user_id);
+
+
+--
+-- Name: idx_projected_occurrences_user_period; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_projected_occurrences_user_period ON public.projected_occurrences USING btree (user_id, year, month);
+
+
+--
+-- Name: idx_projected_templates_user_period; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_projected_templates_user_period ON public.projected_templates USING btree (user_id, start_year, start_month);
+
+
+--
+-- Name: idx_transactions_import_id; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_transactions_import_id ON public.transactions USING btree (import_id);
+
+
+--
+-- Name: idx_users_auth_provider; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_users_auth_provider ON public.users USING btree (auth_provider);
+
+
+--
+-- Name: idx_users_google_id; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE INDEX idx_users_google_id ON public.users USING btree (google_id);
+
+
+--
+-- Name: ux_transactions_user_fecha_desc_monto; Type: INDEX; Schema: public; Owner: rpizarro
+--
+
+CREATE UNIQUE INDEX ux_transactions_user_fecha_desc_monto ON public.transactions USING btree (user_id, fecha, descripcion, monto);
+
+
+--
+-- Name: users update_users_updated_at; Type: TRIGGER; Schema: public; Owner: rpizarro
+--
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: categories categories_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: checking_balances checking_balances_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.checking_balances
+    ADD CONSTRAINT checking_balances_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: checking_transactions checking_transactions_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.checking_transactions
+    ADD CONSTRAINT checking_transactions_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: checking_transactions checking_transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.checking_transactions
+    ADD CONSTRAINT checking_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: transactions fk_category; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES public.categories(id);
+
+
+--
+-- Name: imports imports_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.imports
+    ADD CONSTRAINT imports_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: installment_occurrences installment_occurrences_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.installment_occurrences
+    ADD CONSTRAINT installment_occurrences_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: installment_occurrences installment_occurrences_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.installment_occurrences
+    ADD CONSTRAINT installment_occurrences_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.installment_plans(id) ON DELETE CASCADE;
+
+
+--
+-- Name: installment_occurrences installment_occurrences_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.installment_occurrences
+    ADD CONSTRAINT installment_occurrences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: installment_plans installment_plans_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.installment_plans
+    ADD CONSTRAINT installment_plans_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: installment_plans installment_plans_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.installment_plans
+    ADD CONSTRAINT installment_plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: intl_unbilled intl_unbilled_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.intl_unbilled
+    ADD CONSTRAINT intl_unbilled_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: intl_unbilled intl_unbilled_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.intl_unbilled
+    ADD CONSTRAINT intl_unbilled_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: projected_occurrences projected_occurrences_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.projected_occurrences
+    ADD CONSTRAINT projected_occurrences_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: projected_occurrences projected_occurrences_template_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.projected_occurrences
+    ADD CONSTRAINT projected_occurrences_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.projected_templates(id) ON DELETE CASCADE;
+
+
+--
+-- Name: projected_occurrences projected_occurrences_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.projected_occurrences
+    ADD CONSTRAINT projected_occurrences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: projected_templates projected_templates_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.projected_templates
+    ADD CONSTRAINT projected_templates_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE SET NULL;
+
+
+--
+-- Name: projected_templates projected_templates_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.projected_templates
+    ADD CONSTRAINT projected_templates_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: transactions transactions_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT transactions_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id);
+
+
+--
+-- Name: transactions transactions_import_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT transactions_import_id_fkey FOREIGN KEY (import_id) REFERENCES public.imports(id) ON DELETE SET NULL;
+
+
+--
+-- Name: transactions transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: rpizarro
+--
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict EVdiVsD0otQLBHxPY08T5wOc9mpsKTtrN5fvPopmECcTizHrGpwgfgnUOdsHF3y
+
