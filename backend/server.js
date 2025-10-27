@@ -78,6 +78,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/installments', installmentsRoutes);
 app.use('/api/intl-unbilled', intlUnbilledRoutes);
 app.use('/api/checking', checkingRoutes);
+app.use('/api/transactions', syncRoutes);
 
 // Serve static files from React build (only in production)
 if (process.env.NODE_ENV === 'production') {
