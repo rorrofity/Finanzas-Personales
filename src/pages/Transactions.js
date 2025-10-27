@@ -531,20 +531,31 @@ const Transactions = () => {
       <Paper>
         <Box p={2} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
           <Typography variant="h6">Transacciones • {titleBrandLabel} ({filteredTransactions.length})</Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => handleOpenDialog()}
-          >
-            Nueva Transacción
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setOpenImportDialog(true)}
-          >
-            Importar CSV
-          </Button>
+          <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+            <SyncButton 
+              onSyncComplete={() => {
+                fetchTransactions();
+              }}
+              variant="outlined"
+              size="small"
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => handleOpenDialog()}
+            >
+              Nueva Transacción
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => setOpenImportDialog(true)}
+            >
+              Importar CSV
+            </Button>
+          </Box>
+        </Box>
+        <Box p={2} display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <FormControlLabel
             control={
               <Switch

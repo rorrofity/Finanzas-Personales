@@ -554,21 +554,30 @@ const Dashboard = () => {
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 6 }}>
       <MonthPicker />
-      {/* Título principal del Dashboard */}
-      <Typography 
-        variant="h3" 
-        component="h1" 
-        gutterBottom 
-        sx={{ 
-          mb: 4,
-          fontFamily: 'Inter, sans-serif',
-          fontWeight: 700,
-          color: theme.palette.primary.main,
-          letterSpacing: '-0.5px'
-        }}
-      >
-        Dashboard Financiero
-      </Typography>
+      
+      {/* Título principal del Dashboard con botón de sincronización */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+        <Typography 
+          variant="h3" 
+          component="h1" 
+          sx={{ 
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 700,
+            color: theme.palette.primary.main,
+            letterSpacing: '-0.5px'
+          }}
+        >
+          Dashboard Financiero
+        </Typography>
+        
+        <SyncButton 
+          onSyncComplete={() => {
+            fetchDashboardData();
+          }}
+          variant="outlined"
+          size="medium"
+        />
+      </Box>
 
       {/* Card principal: Saldo actual Cuenta Corriente + Toggle */}
       <Grid container spacing={4} sx={{ mb: 1 }}>
