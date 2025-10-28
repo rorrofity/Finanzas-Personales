@@ -37,6 +37,7 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
+import SyncButton from '../components/SyncButton';
 import { usePeriod } from '../contexts/PeriodContext';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
