@@ -16,6 +16,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const installmentsRoutes = require('./routes/installmentsRoutes');
 const intlUnbilledRoutes = require('./routes/intlUnbilledRoutes');
 const checkingRoutes = require('./routes/checkingRoutes');
+const syncRoutes = require('./routes/syncRoutes');
 
 // Initialize Express app
 const app = express();
