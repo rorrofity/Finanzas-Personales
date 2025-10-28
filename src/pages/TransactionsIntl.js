@@ -31,6 +31,7 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import MonthPicker from '../components/MonthPicker';
+import SyncButton from '../components/SyncButton';
 import { usePeriod } from '../contexts/PeriodContext';
 import axios from 'axios';
 
@@ -228,6 +229,13 @@ const TransactionsIntl = () => {
       <MonthPicker />
       <Typography variant="h5" sx={{ mt: 2, mb: 2, fontWeight: 700 }}>Transacciones No Facturadas Internacionales (TC) • {titleBrandLabel} ({filteredRows.length})</Typography>
       <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+        <SyncButton 
+          onSyncComplete={() => {
+            fetchRows();
+          }}
+          variant="outlined"
+          size="small"
+        />
         <Button variant="contained" onClick={() => setOpenImport(true)}>Importar archivo</Button>
         <FormControlLabel
           control={<Switch checked={hideDismissed} onChange={(e)=>{ setHideDismissed(e.target.checked); setPage(0); }} />}
