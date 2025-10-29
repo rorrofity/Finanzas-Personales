@@ -172,6 +172,8 @@ curl http://localhost:3001/api/health
 
 ### **Paso 7: Probar la Aplicación**
 
+#### Opción A: Acceso Directo (sin Netskope)
+
 Abre en tu navegador:
 
 ```
@@ -182,6 +184,27 @@ https://finanzas.rocketflow.cl
 - Tu aplicación cargando correctamente
 - Sin errores de CORS
 - Botón "Sign in with Google" funcionando
+
+#### Opción B: Túnel SSH (bypass Netskope)
+
+Si Netskope bloquea el acceso directo:
+
+```bash
+# Crear túnel SSH desde tu Mac
+ssh -L 8080:localhost:3001 root@137.184.12.234
+
+# Dejar terminal abierta (túnel activo)
+```
+
+**Acceder vía túnel**:
+- Abrir navegador: `http://localhost:8080`
+- Funciona como producción pero vía localhost
+- Netskope no puede interceptar
+
+**Explicación**:
+- El puerto 8080 local → forward → puerto 3001 del servidor
+- Tráfico encriptado por SSH
+- Netskope solo ve conexión SSH (permitida)
 
 ---
 

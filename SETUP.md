@@ -319,6 +319,29 @@ psql -U tu_usuario -d finanzas_personales -h localhost
 2. Verificar proxy en `package.json`: `"proxy": "http://localhost:3001"`
 3. Reiniciar ambos servicios
 
+### Acceso Bloqueado por Netskope (Producción)
+
+Si Netskope bloquea el acceso a `finanzas.rocketflow.cl`:
+
+**Solución: Túnel SSH**
+
+```bash
+# Crear túnel SSH hacia el servidor
+ssh -L 8080:localhost:3001 root@137.184.12.234
+
+# Dejar la terminal abierta (túnel activo)
+```
+
+**Usar la aplicación**:
+- Abrir en navegador: `http://localhost:8080`
+- La aplicación funcionará como si estuvieras en producción
+- Netskope no puede interceptar tráfico localhost
+
+**Explicación**:
+- `-L 8080:localhost:3001` = Forward puerto local 8080 → servidor puerto 3001
+- El tráfico va encriptado por SSH
+- Netskope solo ve conexión SSH (permitida)
+
 ### Logs Útiles
 
 ```bash

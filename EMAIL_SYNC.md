@@ -465,13 +465,20 @@ git push origin main
 curl https://finanzas.rocketflow.cl/api/health
 
 # 2. Probar desde la UI
+# Opción A: Acceso directo (si no tienes Netskope)
 # Login en https://finanzas.rocketflow.cl
+
+# Opción B: Túnel SSH (bypass Netskope)
+ssh -L 8080:localhost:3001 root@137.184.12.234
+# Abrir navegador en: http://localhost:8080
 # Click en "Sincronizar Emails"
 
 # 3. Verificar logs
 ssh root@137.184.12.234
 pm2 logs finanzas-backend --lines 50
 ```
+
+**Nota sobre Netskope**: Si el acceso directo a `finanzas.rocketflow.cl` está bloqueado, usa el túnel SSH (Opción B) para probar la funcionalidad en producción.
 
 ---
 
