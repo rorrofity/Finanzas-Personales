@@ -46,7 +46,7 @@ Abre: http://localhost:3000
 
 ---
 
-## �� Documentación
+## 📚 Documentación
 
 ### Configuración
 - **[SETUP.md](./SETUP.md)** - Guía completa de configuración local y producción
@@ -54,6 +54,12 @@ Abre: http://localhost:3000
   - Google OAuth
   - Base de datos
   - Troubleshooting
+
+### Acceso Remoto
+- **[NETSKOPE_BYPASS.md](./NETSKOPE_BYPASS.md)** - Túnel SSH para bypass de Netskope
+  - Acceso a producción vía localhost
+  - Comandos útiles
+  - Troubleshooting de túneles
 
 ### Funcionalidades
 - **[EMAIL_SYNC.md](./EMAIL_SYNC.md)** - Sincronización automática de emails
