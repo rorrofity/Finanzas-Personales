@@ -38,6 +38,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
+import SyncButton from '../components/SyncButton';
 import { usePeriod } from '../contexts/PeriodContext';
 
 const Transactions = () => {

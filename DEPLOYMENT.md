@@ -216,37 +216,6 @@ docker logs n8n-docker-caddy-caddy-1
 
 ## 🎯 Integración con N8N
 
-Una vez que todo funcione, podrás implementar el botón "Sync" que:
-
-1. **Frontend** → `POST /api/transactions/sync-emails`
-2. **Backend** → `POST http://localhost:5678/webhook/sync-emails` (N8N)
-3. **N8N** → Procesa emails y responde con transacciones
-4. **Backend** → Guarda transacciones en PostgreSQL
-5. **Frontend** → Muestra resultado al usuario
-
-**Ventajas:**
-- ✅ Latencia cero (todo en mismo servidor)
-- ✅ Sin necesidad de webhooks públicos
-- ✅ Comunicación interna segura
-
----
-
-## 📝 Comandos Útiles
-
-```bash
-# Ver logs del backend
-pm2 logs finanzas-backend
-
-# Reiniciar backend
-pm2 restart finanzas-backend
-
-# Ver estado de todos los procesos
-pm2 status
-
-# Ver logs de Caddy
-docker logs n8n-docker-caddy-caddy-1 --tail 50
-
-# Ver logs de N8N
 docker logs n8n-docker-caddy-n8n-1 --tail 50
 
 # Actualizar código desde GitHub
