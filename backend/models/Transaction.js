@@ -183,7 +183,7 @@ class Transaction {
         LEFT JOIN categories c ON t.category_id = c.id
         LEFT JOIN imports i ON t.import_id = i.id
         WHERE t.user_id = $1
-        ${periodYear && periodMonth ? 'AND i.period_year = $2 AND i.period_month = $3' : (startDate && endDate ? 'AND t.fecha >= $2 AND t.fecha <= $3' : '')}
+        ${periodYear && periodMonth ? 'AND EXTRACT(YEAR FROM t.fecha) = $2 AND EXTRACT(MONTH FROM t.fecha) = $3' : (startDate && endDate ? 'AND t.fecha >= $2 AND t.fecha <= $3' : '')}
         ORDER BY ${field === 'category_name' ? 'c.name' : (field === 'provider' ? 'i.provider' : (field === 'network' ? 'i.network' : 't.' + field))} ${direction}, t.created_at DESC
       `;
       

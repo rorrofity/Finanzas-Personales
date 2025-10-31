@@ -27,7 +27,24 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
   : ['http://localhost:3000', 'http://localhost:3001'];
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    // Permitir requests sin origin (como Postman, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // En desarrollo, permitir localhost.run y lhr.life (túneles)
+    if (process.env.NODE_ENV !== 'production') {
+      if (origin.includes('localhost.run') || origin.includes('.lhr.life')) {
+        return callback(null, true);
+      }
+    }
+    
+    // Verificar lista de orígenes permitidos
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -79,7 +96,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/installments', installmentsRoutes);
 app.use('/api/intl-unbilled', intlUnbilledRoutes);
 app.use('/api/checking', checkingRoutes);
-app.use('/api/transactions', syncRoutes);
+app.use('/api/sync', syncRoutes); // Cambiar a /api/sync para evitar conflicto con auth middleware
 
 // Serve static files from React build (only in production)
 if (process.env.NODE_ENV === 'production') {

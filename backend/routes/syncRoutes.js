@@ -156,11 +156,21 @@ router.post('/sync-save', async (req, res) => {
     
     for (const txn of transactions) {
       try {
-        // Validar datos mínimos de la transacción
-        if (!txn.fecha || !txn.descripcion || !txn.monto || !txn.email_id) {
+        // Validar datos mínimos de la transacción (campos requeridos en la tabla)
+        if (!txn.fecha || !txn.descripcion || txn.monto === null || txn.monto === undefined || !txn.tipo) {
           errors.push({
             transaction: txn.descripcion || 'Sin descripción',
-            error: 'Datos incompletos en la transacción'
+            error: 'Datos incompletos: se requiere fecha, descripcion, monto y tipo',
+            received: { fecha: txn.fecha, descripcion: txn.descripcion, monto: txn.monto, tipo: txn.tipo }
+          });
+          continue;
+        }
+        
+        // Validar que email_id existe para prevenir duplicados
+        if (!txn.email_id) {
+          errors.push({
+            transaction: txn.descripcion,
+            error: 'email_id requerido para prevenir duplicados'
           });
           continue;
         }
@@ -191,12 +201,12 @@ router.post('/sync-save', async (req, res) => {
           [
             importId, 
             userId, 
-            txn.banco || 'email', 
-            txn.tarjeta || 'unknown'
+            txn.banco || 'email', // banco_chile, santander, bci, etc.
+            txn.tarjeta_ultimos_4 ? `****${txn.tarjeta_ultimos_4}` : 'unknown' // ****3076
           ]
         );
         
-        // Insertar transacción
+        // Insertar transacción con campos parseados de N8N
         await client.query(
           `INSERT INTO transactions 
            (id, user_id, fecha, descripcion, monto, tipo, 
@@ -204,19 +214,23 @@ router.post('/sync-save', async (req, res) => {
            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
           [
             userId,
-            txn.fecha,
-            txn.descripcion.substring(0, 255), // Limitar longitud
-            txn.monto,
-            txn.tipo || 'gasto',
-            'Sin categorizar', // categoría por defecto
-            txn.cuotas || 1,
+            txn.fecha, // Ya viene en formato YYYY-MM-DD desde N8N
+            txn.descripcion, // Descripción del comercio parseada
+            txn.monto, // Monto numérico parseado
+            txn.tipo, // 'gasto' (viene de N8N)
+            'Sin categorizar', // categoría por defecto (usuario categoriza después)
+            txn.cuotas || 1, // Cuotas (viene de N8N, default 1)
             importId,
             JSON.stringify({
-              email_id: txn.email_id,
-              banco: txn.banco || 'desconocido',
-              tarjeta: txn.tarjeta || 'desconocida',
-              email_subject: txn.email_subject || '',
-              email_date: txn.email_date || txn.fecha,
+              email_id: txn.email_id, // ID único del email para prevenir duplicados
+              subject: txn.subject || '', // Subject del email
+              from: txn.from || '', // Remitente
+              banco: txn.banco || 'desconocido', // banco_chile
+              tipo_transaccion: txn.tipo_transaccion || '', // compra_tc
+              tarjeta_ultimos_4: txn.tarjeta_ultimos_4 || '', // 3076
+              tipo_tarjeta: txn.tipo_tarjeta || '', // visa/mastercard
+              hora: txn.hora || '', // HH:MM
+              snippet: txn.snippet || '', // Texto del email para referencia
               source: 'email_sync',
               parsed_at: new Date().toISOString()
             })

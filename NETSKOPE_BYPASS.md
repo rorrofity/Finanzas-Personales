@@ -17,7 +17,7 @@ Netskope intercepta y bloquea el acceso a `https://finanzas.rocketflow.cl`
 Abre una terminal y ejecuta:
 
 ```bash
-ssh -L 8080:localhost:3001 root@137.184.12.234
+ssh -L 5679:localhost:5678 root@137.184.12.234
 ```
 
 **Dejar esta terminal abierta** (el túnel estará activo mientras la terminal esté abierta)
@@ -189,4 +189,42 @@ ssh -i ~/.ssh/tu_llave -L 8080:localhost:3001 root@137.184.12.234
 
 ---
 
-**Última actualización**: 2025-10-29
+## 🌐 Acceder a la Aplicación Web de Finanzas
+
+### Túnel SSH para la Aplicación Web
+
+Si necesitas acceder a la aplicación de finanzas personales en producción:
+
+```bash
+ssh -L 8080:localhost:3001 root@137.184.12.234
+```
+
+**Acceder**:
+- URL: `http://localhost:8080`
+- Esto conecta tu puerto local 8080 al puerto 3001 del servidor (donde corre el backend que sirve el frontend)
+
+**Mantener abierto** durante toda tu sesión de trabajo.
+
+---
+
+## 📋 Resumen de Túneles SSH
+
+```bash
+# Túnel 1: Acceso a N8N UI
+ssh -L 5679:localhost:5678 root@137.184.12.234
+# Acceder: http://localhost:5679
+
+# Túnel 2: Acceso a Aplicación Web de Finanzas
+ssh -L 8080:localhost:3001 root@137.184.12.234
+# Acceder: http://localhost:8080
+
+# Túnel 3: Túnel Inverso (para testing N8N → Backend Local)
+ssh -R 80:localhost:3001 localhost.run
+# N8N puede enviar requests al backend local via URL generada
+```
+
+---
+
+**Última actualización**: 2025-10-31
+
+
