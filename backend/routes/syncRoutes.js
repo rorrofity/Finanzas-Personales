@@ -222,7 +222,7 @@ router.post('/sync-save', async (req, res) => {
         }
         
         // Verificar duplicado por email_id en metadata
-        const duplicateCheck = await client.query(
+        const duplicateByEmailId = await client.query(
           `SELECT id FROM transactions 
            WHERE user_id = $1 
            AND metadata->>'email_id' = $2
@@ -230,9 +230,27 @@ router.post('/sync-save', async (req, res) => {
           [userId, txn.email_id]
         );
         
-        if (duplicateCheck.rows.length > 0) {
+        if (duplicateByEmailId.rows.length > 0) {
           skipped++;
-          console.log(`⏭️  Duplicada: ${txn.descripcion} (${txn.email_id})`);
+          console.log(`⏭️  Duplicada por email_id: ${txn.descripcion} (${txn.email_id})`);
+          continue;
+        }
+        
+        // Verificar duplicado por firma (fecha + descripcion + monto)
+        // Esto previene duplicados con importaciones manuales (CSV/Excel)
+        const duplicateBySignature = await client.query(
+          `SELECT id FROM transactions 
+           WHERE user_id = $1 
+           AND fecha = $2 
+           AND descripcion = $3 
+           AND monto = $4
+           LIMIT 1`,
+          [userId, txn.fecha, txn.descripcion, txn.monto]
+        );
+        
+        if (duplicateBySignature.rows.length > 0) {
+          skipped++;
+          console.log(`⏭️  Duplicada por firma: ${txn.descripcion} - $${txn.monto} (${txn.fecha})`);
           continue;
         }
         
