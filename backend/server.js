@@ -31,6 +31,11 @@ app.use(cors({
     // Permitir requests sin origin (como Postman, curl, etc)
     if (!origin) return callback(null, true);
     
+    // Permitir túneles SSH (localhost:8080, localhost:8081, etc)
+    if (origin && origin.match(/^http:\/\/localhost:\d+$/)) {
+      return callback(null, true);
+    }
+    
     // En desarrollo, permitir localhost.run y lhr.life (túneles)
     if (process.env.NODE_ENV !== 'production') {
       if (origin.includes('localhost.run') || origin.includes('.lhr.life')) {
