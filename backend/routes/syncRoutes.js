@@ -6,6 +6,52 @@ const { auth } = require('../middleware/auth');
 const { pool } = require('../config/database');
 
 /**
+ * Calcula el período de facturación basándose en la fecha de transacción.
+ * Regla: Transacciones del 22 de un mes al 21 del siguiente se facturan el mes posterior.
+ * 
+ * Ejemplos:
+ * - 22 oct → 21 nov = Factura en Diciembre
+ * - 22 nov → 21 dic = Factura en Enero
+ * 
+ * @param {Date|string} fecha - Fecha de la transacción (YYYY-MM-DD)
+ * @returns {{year: number, month: number}} - Año y mes de facturación
+ */
+function calculateBillingPeriod(fecha) {
+  // Parsear fecha manualmente para evitar problemas de zona horaria
+  let year, month, day;
+  
+  if (typeof fecha === 'string') {
+    [year, month, day] = fecha.split('-').map(Number);
+  } else {
+    // Si es Date, convertir a componentes
+    const date = new Date(fecha);
+    year = date.getFullYear();
+    month = date.getMonth() + 1;
+    day = date.getDate();
+  }
+  
+  let billingMonth, billingYear;
+  
+  if (day >= 22) {
+    // Del 22 en adelante → Se factura 2 meses después
+    billingMonth = month + 2;
+    billingYear = year;
+  } else {
+    // Del 1 al 21 → Se factura 1 mes después
+    billingMonth = month + 1;
+    billingYear = year;
+  }
+  
+  // Ajustar si el mes se pasa de 12
+  if (billingMonth > 12) {
+    billingYear += Math.floor((billingMonth - 1) / 12);
+    billingMonth = ((billingMonth - 1) % 12) + 1;
+  }
+  
+  return { year: billingYear, month: billingMonth };
+}
+
+/**
  * POST /api/transactions/sync-emails
  * Endpoint principal llamado por el frontend
  * Orquesta la sincronización completa con N8N
@@ -193,16 +239,22 @@ router.post('/sync-save', async (req, res) => {
         // Crear ID de importación
         const importId = uuidv4();
         
-        // Registrar en tabla imports
+        // Calcular período de facturación automáticamente
+        const billingPeriod = calculateBillingPeriod(txn.fecha);
+        console.log(`📅 Transacción ${txn.descripcion} - Fecha: ${txn.fecha}, Período facturación: ${billingPeriod.year}-${billingPeriod.month}`);
+        
+        // Registrar en tabla imports con período calculado
         await client.query(
           `INSERT INTO imports 
-           (id, user_id, provider, network, product_type, created_at)
-           VALUES ($1, $2, $3, $4, 'email_sync', NOW())`,
+           (id, user_id, provider, network, product_type, period_year, period_month, created_at)
+           VALUES ($1, $2, $3, $4, 'email_sync', $5, $6, NOW())`,
           [
             importId, 
             userId, 
             txn.banco || 'email', // banco_chile, santander, bci, etc.
-            txn.tarjeta_ultimos_4 ? `****${txn.tarjeta_ultimos_4}` : 'unknown' // ****3076
+            txn.tipo_tarjeta || 'unknown', // visa, mastercard
+            billingPeriod.year,
+            billingPeriod.month
           ]
         );
         
