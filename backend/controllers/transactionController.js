@@ -593,9 +593,16 @@ const importTransactions = async (req, res) => {
 
     const processedTransactions = transactions.map(record => {
       try {
-        const fecha = record.fecha instanceof Date ? 
+        let fecha = record.fecha instanceof Date ? 
           record.fecha : 
           new Date(record.fecha);
+
+        // Si el usuario especificó período, ajustar la fecha al año/mes indicado
+        if (periodYear && periodMonth) {
+          const originalDay = fecha.getDate();
+          fecha = new Date(periodYear, periodMonth - 1, originalDay);
+          console.log(`Fecha ajustada a período ${periodYear}-${periodMonth}: día ${originalDay}`);
+        }
 
         const monto = typeof record.monto === 'number' ? 
           record.monto : 
