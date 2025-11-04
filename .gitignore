@@ -41,3 +41,7 @@ Thumbs.db
 # Dependency lock files
 package-lock.json
 yarn.lock
+
+# Upload history for analysis
+uploads_history/
+uploads/

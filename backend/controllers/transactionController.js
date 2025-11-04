@@ -464,6 +464,19 @@ const importTransactions = async (req, res) => {
 
     console.log('Archivo recibido:', req.file);
 
+    // Guardar copia del archivo para análisis posterior
+    const fs = require('fs');
+    const path = require('path');
+    const uploadsDir = path.join(__dirname, '../../uploads_history');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const savedFileName = `${timestamp}_${req.file.originalname}`;
+    const savedFilePath = path.join(uploadsDir, savedFileName);
+    fs.copyFileSync(req.file.path, savedFilePath);
+    console.log(`📁 Archivo guardado para análisis: ${savedFilePath}`);
+
     // Validar metadata de importación
     const providerRaw = (req.body?.provider || '').toLowerCase().trim();
     const networkRaw = (req.body?.network || '').toLowerCase().trim();
