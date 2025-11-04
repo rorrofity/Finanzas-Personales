@@ -305,19 +305,11 @@ async function processExcelFile(filePath, userId, originalFilename) {
       totalRowsProcessed++;
 
       if (!row) {
-        console.log(`Fila ${i}: Vacía`);
         invalidRows++;
         continue;
       }
 
-      // Log de la fila actual para diagnóstico
-      console.log(`\nProcesando fila ${i}:`);
-      console.log('Fecha:', row[columnMap.fecha]);
-      console.log('Descripción:', row[columnMap.descripcion]);
-      console.log('Monto:', row[columnMap.monto]);
-
       if (!row[columnMap.fecha] || !row[columnMap.descripcion] || !row[columnMap.monto]) {
-        console.log('Fila descartada: Faltan campos requeridos');
         invalidRows++;
         continue;
       }
@@ -364,13 +356,6 @@ async function processExcelFile(filePath, userId, originalFilename) {
 
         // Solo verificar duplicados dentro del archivo
         if (existingTransactionsInFile.has(transactionKey)) {
-          console.log('\n=== DUPLICADO ENCONTRADO ===');
-          console.log('Fila:', i);
-          console.log('Fecha:', currentFechaStr);
-          console.log('Descripción:', descripcion);
-          console.log('Monto:', monto);
-          console.log('Clave de transacción:', transactionKey);
-          console.log('===========================\n');
           skippedDuplicates++;
           continue;
         }
@@ -432,12 +417,6 @@ async function processExcelFile(filePath, userId, originalFilename) {
       const transactionKey = `${baseKey}-${count}`;
       const exists = existingTransactionsInDB.has(transactionKey);
       if (exists) {
-        console.log('\n=== DUPLICADO ENCONTRADO ===');
-        console.log('Fecha:', t.fecha.toISOString().split('T')[0]);
-        console.log('Descripción:', t.descripcion);
-        console.log('Monto:', t.monto);
-        console.log('Clave de transacción:', transactionKey);
-        console.log('===========================\n');
         dbDuplicates++;
       }
       return !exists;
