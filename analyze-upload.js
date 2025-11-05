@@ -184,7 +184,28 @@ async function analyzeLastUpload() {
       console.log('   ✅ No hay transacciones faltantes en BD\n');
     }
     
-    console.log('=' . repeat(80));
+    console.log('================================================================================');
+    console.log('\n📌 RESUMEN:\n');
+    
+    const extrasCount = Array.from(dbMap.entries()).reduce((sum, [key, descs]) => {
+      const excelDescs = excelMap.get(key) || [];
+      return sum + Math.max(0, descs.length - excelDescs.length);
+    }, 0);
+    
+    const missingCount = Array.from(excelMap.entries()).reduce((sum, [key, descs]) => {
+      const dbDescs = dbMap.get(key) || [];
+      return sum + Math.max(0, descs.length - dbDescs.length);
+    }, 0);
+    
+    if (extrasCount === 0 && missingCount === 0) {
+      console.log('   ✅ ¡PERFECTO! BD y Excel coinciden exactamente');
+    } else {
+      console.log(`   ⚠️  ${extrasCount} transacciones extras en BD`);
+      console.log(`   ⚠️  ${missingCount} transacciones faltantes en BD`);
+      console.log(`\n   💡 Diferencia en monto: $${diff.toLocaleString('es-CL')}`);
+    }
+    
+    console.log('\n================================================================================\n');
     
     process.exit(0);
   } catch (error) {
