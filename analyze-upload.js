@@ -62,31 +62,30 @@ async function analyzeLastUpload() {
     
     // Mapeo de columnas
     const headers = rawData[headerRow].map(h => String(h).toLowerCase().trim());
-    console.log('Encabezados detectados:', headers);
     
     const fechaCol = headers.findIndex(h => h.includes('fecha'));
     const descripcionCol = headers.findIndex(h => h.includes('descripción') || h.includes('descripcion') || h.includes('comercio') || h.includes('glosa'));
-    let montoCol = headers.findIndex(h => h.includes('monto') || h.includes('cargo') || h.includes('importe'));
     
-    // Buscar columna de monto por contenido si no se encuentra por nombre
-    if (montoCol === -1) {
-      // Buscar en las siguientes 3 filas después del header
-      for (let testRow = headerRow + 1; testRow < Math.min(headerRow + 4, rawData.length); testRow++) {
-        const row = rawData[testRow];
-        for (let col = 0; col < row.length; col++) {
-          const val = String(row[col]).trim();
-          // Buscar patrón de número con comas (ej: "2,162" o "219,983")
-          if (/^\-?\d{1,3}(,\d{3})*$/.test(val) && parseInt(val.replace(/,/g, '')) > 100) {
+    // SIEMPRE buscar columna de monto por contenido (más confiable que header)
+    let montoCol = -1;
+    for (let testRow = headerRow + 1; testRow < Math.min(headerRow + 5, rawData.length); testRow++) {
+      const row = rawData[testRow];
+      for (let col = 0; col < row.length; col++) {
+        const val = String(row[col]).trim();
+        // Buscar patrón de número con comas (ej: "2,162" o "219,983" o "-4,638")
+        if (/^\-?\d{1,3}(,\d{3})*$/.test(val)) {
+          const numVal = parseInt(val.replace(/,/g, '').replace(/-/g, ''));
+          if (numVal > 100) { // Montos mayores a $100 para evitar cuotas
             montoCol = col;
-            console.log(`Columna de monto detectada por contenido en índice: ${col}`);
+            console.log(`Columna de monto detectada automáticamente en índice: ${col} (valor ejemplo: ${val})`);
             break;
           }
         }
-        if (montoCol !== -1) break;
       }
+      if (montoCol !== -1) break;
     }
     
-    console.log(`Índices de columnas: fecha=${fechaCol}, descripcion=${descripcionCol}, monto=${montoCol}\n`);
+    console.log(`Índices finales: fecha=${fechaCol}, descripcion=${descripcionCol}, monto=${montoCol}\n`);
     
     // Procesar filas
     for (let i = headerRow + 1; i < rawData.length; i++) {
