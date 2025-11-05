@@ -62,9 +62,31 @@ async function analyzeLastUpload() {
     
     // Mapeo de columnas
     const headers = rawData[headerRow].map(h => String(h).toLowerCase().trim());
+    console.log('Encabezados detectados:', headers);
+    
     const fechaCol = headers.findIndex(h => h.includes('fecha'));
     const descripcionCol = headers.findIndex(h => h.includes('descripción') || h.includes('descripcion') || h.includes('comercio') || h.includes('glosa'));
-    const montoCol = headers.findIndex(h => h.includes('monto') || h.includes('cargo') || h.includes('importe'));
+    let montoCol = headers.findIndex(h => h.includes('monto') || h.includes('cargo') || h.includes('importe'));
+    
+    // Buscar columna de monto por contenido si no se encuentra por nombre
+    if (montoCol === -1) {
+      // Buscar en las siguientes 3 filas después del header
+      for (let testRow = headerRow + 1; testRow < Math.min(headerRow + 4, rawData.length); testRow++) {
+        const row = rawData[testRow];
+        for (let col = 0; col < row.length; col++) {
+          const val = String(row[col]).trim();
+          // Buscar patrón de número con comas (ej: "2,162" o "219,983")
+          if (/^\-?\d{1,3}(,\d{3})*$/.test(val) && parseInt(val.replace(/,/g, '')) > 100) {
+            montoCol = col;
+            console.log(`Columna de monto detectada por contenido en índice: ${col}`);
+            break;
+          }
+        }
+        if (montoCol !== -1) break;
+      }
+    }
+    
+    console.log(`Índices de columnas: fecha=${fechaCol}, descripcion=${descripcionCol}, monto=${montoCol}\n`);
     
     // Procesar filas
     for (let i = headerRow + 1; i < rawData.length; i++) {
@@ -81,11 +103,16 @@ async function analyzeLastUpload() {
         fecha = fechaStr;
       }
       
-      // Parsear monto
-      let monto = String(row[montoCol]).replace(/[^\d.-]/g, '');
-      monto = parseFloat(monto);
+      // Parsear monto (eliminar comas y otros caracteres, mantener punto y signo negativo)
+      let montoStr = String(row[montoCol]).trim();
+      // Remover puntos como separadores de miles, mantener comas como separadores de miles
+      montoStr = montoStr.replace(/\./g, '').replace(/,/g, '');
+      let monto = parseFloat(montoStr);
       
-      if (isNaN(monto) || monto <= 0) continue; // Solo gastos
+      if (isNaN(monto) || monto === 0) continue; // Saltar montos inválidos o cero
+      
+      // Solo incluir gastos (positivos)
+      if (monto < 0) continue;
       
       const descripcion = String(row[descripcionCol] || '').trim();
       
