@@ -1,10 +1,10 @@
-import api from './api';
+import axios from '../config/axios';
 
 /**
  * Obtiene el conteo de transacciones sospechosas pendientes
  */
 export const getSuspiciousCount = async () => {
-  const response = await api.get('/suspicious/count');
+  const response = await axios.get('/api/suspicious/count');
   return response.data.count;
 };
 
@@ -12,7 +12,7 @@ export const getSuspiciousCount = async () => {
  * Obtiene todas las transacciones sospechosas pendientes
  */
 export const getSuspiciousTransactions = async () => {
-  const response = await api.get('/suspicious');
+  const response = await axios.get('/api/suspicious');
   return response.data.suspicious;
 };
 
@@ -23,7 +23,7 @@ export const getSuspiciousTransactions = async () => {
  * @param {string} transactionIdToDelete - ID de la transacción a eliminar (requerido si action='delete')
  */
 export const resolveSuspicious = async (suspiciousId, action, transactionIdToDelete = null) => {
-  const response = await api.post(`/suspicious/${suspiciousId}/resolve`, {
+  const response = await axios.post(`/api/suspicious/${suspiciousId}/resolve`, {
     action,
     transactionIdToDelete
   });
