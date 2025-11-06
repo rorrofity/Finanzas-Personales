@@ -715,6 +715,25 @@ const importTransactions = async (req, res) => {
     const transactionModel = new Transaction(db);
     const importResult = await transactionModel.importFromCSV(req.user.id, transactionsForInsert, importId);
 
+    // Detectar posibles duplicados sospechosos en las transacciones recién insertadas
+    if (importResult.insertedTransactions && importResult.insertedTransactions.length > 0) {
+      const { detectSuspiciousDuplicates, flagAsSuspicious } = require('../utils/suspiciousDetector');
+      
+      for (const insertedTx of importResult.insertedTransactions) {
+        try {
+          const suspects = await detectSuspiciousDuplicates(insertedTx.id, req.user.id);
+          if (suspects.length > 0) {
+            // Marcar solo con el primer sospechoso encontrado
+            await flagAsSuspicious(insertedTx.id, suspects[0].id);
+            console.log(`⚠️  Duplicado sospechoso: ${insertedTx.id} similar a ${suspects[0].id}`);
+          }
+        } catch (error) {
+          console.error('Error detectando duplicados sospechosos:', error);
+          // No abortamos el import por esto
+        }
+      }
+    }
+
     // Actualizar métricas de importación si se creó el registro
     if (importId) {
       try {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -16,6 +16,7 @@ import {
   Avatar,
   Menu,
   MenuItem,
+  Badge,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -24,8 +25,10 @@ import {
   Person as PersonIcon,
   Category as CategoryIcon,
   ChevronLeft as ChevronLeftIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { getSuspiciousCount } from '../services/suspiciousService';
 
 const drawerWidth = 240;
 
@@ -35,6 +38,24 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [suspiciousCount, setSuspiciousCount] = useState(0);
+
+  // Cargar conteo de transacciones sospechosas
+  useEffect(() => {
+    const loadSuspiciousCount = async () => {
+      try {
+        const count = await getSuspiciousCount();
+        setSuspiciousCount(count);
+      } catch (error) {
+        console.error('Error cargando conteo de sospechosos:', error);
+      }
+    };
+
+    loadSuspiciousCount();
+    // Actualizar cada 30 segundos
+    const interval = setInterval(loadSuspiciousCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDrawerToggle = () => {
     setOpen(!open);
@@ -61,6 +82,11 @@ const DashboardLayout = () => {
     { text: 'Cuenta Corriente', icon: <ReceiptIcon />, path: '/checking' },
     { text: 'Transacciones Proyectadas', icon: <ReceiptIcon />, path: '/projected-transactions' },
     { text: 'Categorías', icon: <CategoryIcon />, path: '/categories' },
+    { 
+      text: 'Revisar Duplicados', 
+      icon: <Badge badgeContent={suspiciousCount} color="warning"><WarningIcon /></Badge>, 
+      path: '/review-duplicates' 
+    },
     { text: 'Perfil', icon: <PersonIcon />, path: '/profile' },
   ];
 

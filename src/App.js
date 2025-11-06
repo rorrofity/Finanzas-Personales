@@ -21,6 +21,7 @@ import ProjectedTransactions from './pages/ProjectedTransactions';
 import TransactionsIntl from './pages/TransactionsIntl';
 import Installments from './pages/Installments';
 import Checking from './pages/Checking';
+import ReviewDuplicates from './pages/ReviewDuplicates';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -56,6 +57,7 @@ function App() {
               <Route path="checking" element={<Checking />} />
               <Route path="projected-transactions" element={<ProjectedTransactions />} />
               <Route path="categories" element={<Categories />} />
+              <Route path="review-duplicates" element={<ReviewDuplicates />} />
               <Route path="profile" element={<Profile />} />
             </Route>
           </Routes>
