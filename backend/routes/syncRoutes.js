@@ -76,10 +76,10 @@ router.post('/sync-emails', auth, async (req, res) => {
       });
     }
     
-    // Determinar URL de N8N según ambiente
-    const n8nUrl = process.env.NODE_ENV === 'production'
-      ? 'http://localhost:5678/webhook/sync-bank-emails'
-      : 'http://localhost:5678/webhook/sync-bank-emails';
+    // Determinar URL de N8N
+    // En producción: N8N corre en el mismo servidor (localhost:5678)
+    // En desarrollo: Usar N8N_WEBHOOK_URL del .env o túnel SSH
+    const n8nUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/sync-bank-emails';
     
     // Llamar a N8N
     let n8nResponse;

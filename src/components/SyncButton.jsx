@@ -59,7 +59,7 @@ const SyncButton = ({
     }, 500);
     
     try {
-      const response = await axios.post('/api/transactions/sync-emails');
+      const response = await axios.post('/api/sync/sync-emails');
       
       clearInterval(progressInterval);
       setProgress(100);
