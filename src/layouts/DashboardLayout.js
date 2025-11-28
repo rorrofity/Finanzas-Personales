@@ -26,6 +26,7 @@ import {
   Category as CategoryIcon,
   ChevronLeft as ChevronLeftIcon,
   Warning as WarningIcon,
+  MonetizationOn as HealthIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { getSuspiciousCount } from '../services/suspiciousService';
@@ -76,6 +77,7 @@ const DashboardLayout = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+    { text: '💰 Salud Financiera', icon: <HealthIcon color="primary" />, path: '/financial-health' },
     { text: 'Transacciones No Facturadas (TC)', icon: <ReceiptIcon />, path: '/transactions' },
     { text: 'Transacciones No Facturadas Internacionales (TC)', icon: <ReceiptIcon />, path: '/transactions-intl' },
     { text: 'Compras en Cuotas (TC)', icon: <ReceiptIcon />, path: '/installments' },

@@ -22,6 +22,7 @@ import TransactionsIntl from './pages/TransactionsIntl';
 import Installments from './pages/Installments';
 import Checking from './pages/Checking';
 import ReviewDuplicates from './pages/ReviewDuplicates';
+import FinancialHealth from './pages/FinancialHealth';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -51,6 +52,7 @@ function App() {
               }
             >
               <Route index element={<Dashboard />} />
+              <Route path="financial-health" element={<FinancialHealth />} />
               <Route path="transactions" element={<Transactions />} />
               <Route path="transactions-intl" element={<TransactionsIntl />} />
               <Route path="installments" element={<Installments />} />

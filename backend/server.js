@@ -18,6 +18,7 @@ const intlUnbilledRoutes = require('./routes/intlUnbilledRoutes');
 const checkingRoutes = require('./routes/checkingRoutes');
 const syncRoutes = require('./routes/syncRoutes');
 const suspiciousRoutes = require('./routes/suspiciousRoutes');
+const financialHealthRoutes = require('./routes/financialHealthRoutes');
 
 // Initialize Express app
 const app = express();
@@ -104,6 +105,7 @@ app.use('/api/intl-unbilled', intlUnbilledRoutes);
 app.use('/api/checking', checkingRoutes);
 app.use('/api/sync', syncRoutes); // Cambiar a /api/sync para evitar conflicto con auth middleware
 app.use('/api/suspicious', suspiciousRoutes);
+app.use('/api/financial-health', financialHealthRoutes);
 
 // Serve static files from React build (only in production)
 if (process.env.NODE_ENV === 'production') {
