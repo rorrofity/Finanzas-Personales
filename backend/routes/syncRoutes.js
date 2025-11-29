@@ -181,9 +181,10 @@ router.post('/sync-save', async (req, res) => {
     });
   }
   
-  let imported = 0;
+  let importedCount = 0;
+  const importedEmailIds = [];
   let skipped = 0;
-  let errors = [];
+  const errors = [];
   
   const client = await pool.connect();
   
@@ -307,7 +308,8 @@ router.post('/sync-save', async (req, res) => {
           ]
         );
         
-        imported++;
+        importedCount++;
+        importedEmailIds.push(txn.email_id);
         console.log(`✅ Importada: ${txn.descripcion} - $${txn.monto}`);
         
       } catch (txnError) {
@@ -321,13 +323,14 @@ router.post('/sync-save', async (req, res) => {
     
     await client.query('COMMIT');
     
-    console.log(`📊 Resultado final: ${imported} importadas, ${skipped} duplicadas, ${errors.length} errores`);
+    console.log(`📊 Resultado final: ${importedCount} importadas, ${skipped} duplicadas, ${errors.length} errores`);
     
     res.json({
       success: true,
-      imported: imported,
+      imported: importedCount,
       skipped: skipped,
-      errors: errors
+      errors: errors,
+      processedEmailIds: importedEmailIds
     });
     
   } catch (error) {
