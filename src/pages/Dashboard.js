@@ -38,6 +38,7 @@ import {
 import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
 import SyncButton from '../components/SyncButton';
+import BillingPeriodConfig from '../components/BillingPeriodConfig';
 import { usePeriod } from '../contexts/PeriodContext';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
@@ -558,18 +559,25 @@ const Dashboard = () => {
       
       {/* Título principal del Dashboard con botón de sincronización */}
       <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
-        <Typography 
-          variant="h3" 
-          component="h1" 
-          sx={{ 
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 700,
-            color: theme.palette.primary.main,
-            letterSpacing: '-0.5px'
-          }}
-        >
-          Dashboard Financiero
-        </Typography>
+        <Box display="flex" alignItems="center">
+          <Typography 
+            variant="h3" 
+            component="h1" 
+            sx={{ 
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 700,
+              color: theme.palette.primary.main,
+              letterSpacing: '-0.5px'
+            }}
+          >
+            Dashboard Financiero
+          </Typography>
+          <BillingPeriodConfig 
+            year={year} 
+            month={month} 
+            onRecalculated={() => fetchDashboardData()}
+          />
+        </Box>
         
         <SyncButton 
           onSyncComplete={() => {
