@@ -17,7 +17,7 @@ class Transaction {
     }
   }
 
-  async importFromCSV(userId, transactionData, importId = null) {
+  async importFromCSV(userId, transactionData, importId = null, billingYear = null, billingMonth = null) {
     let insertedCount = 0;
     let skippedCount = 0;
     const results = [];
@@ -95,7 +95,32 @@ class Transaction {
           const categoryResult = await this.query(categoryQuery, [userId, transaction.categoria]);
           const categoryId = categoryResult.rows[0]?.id || null;
 
-          // Insertar la nueva transacción
+          // Calcular billing period si no se proporciona explícitamente
+          // Regla: día >= 22 → factura 2 meses después; día < 22 → 1 mes después
+          let txBillingYear = billingYear;
+          let txBillingMonth = billingMonth;
+          
+          if (!txBillingYear || !txBillingMonth) {
+            const day = fecha.getDate();
+            const month = fecha.getMonth() + 1;
+            const year = fecha.getFullYear();
+            
+            if (day >= 22) {
+              txBillingMonth = month + 2;
+              txBillingYear = year;
+            } else {
+              txBillingMonth = month + 1;
+              txBillingYear = year;
+            }
+            
+            // Ajustar si el mes se pasa de 12
+            if (txBillingMonth > 12) {
+              txBillingYear += Math.floor((txBillingMonth - 1) / 12);
+              txBillingMonth = ((txBillingMonth - 1) % 12) + 1;
+            }
+          }
+
+          // Insertar la nueva transacción con período de facturación
           const insertQuery = `
             INSERT INTO transactions (
               user_id, 
@@ -105,8 +130,10 @@ class Transaction {
               descripcion, 
               tipo,
               cuotas,
-              import_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              import_id,
+              billing_year,
+              billing_month
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
           `;
 
@@ -118,7 +145,9 @@ class Transaction {
             transaction.descripcion,
             transaction.tipo || 'gasto',
             transaction.cuotas || '01',
-            importId
+            importId,
+            txBillingYear,
+            txBillingMonth
           ];
 
           const result = await this.query(insertQuery, values);
@@ -173,6 +202,7 @@ class Transaction {
       const direction = orderDirection.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
       // Construir la consulta con ordenamiento dinámico
+      // Filtrar por billing_year/billing_month (período de pago) en lugar de fecha de transacción
       const query = `
         SELECT 
           t.*, 
@@ -183,7 +213,7 @@ class Transaction {
         LEFT JOIN categories c ON t.category_id = c.id
         LEFT JOIN imports i ON t.import_id = i.id
         WHERE t.user_id = $1
-        ${periodYear && periodMonth ? 'AND (COALESCE(i.period_year, EXTRACT(YEAR FROM t.fecha)) = $2 AND COALESCE(i.period_month, EXTRACT(MONTH FROM t.fecha)) = $3)' : (startDate && endDate ? 'AND t.fecha >= $2 AND t.fecha <= $3' : '')}
+        ${periodYear && periodMonth ? 'AND (COALESCE(t.billing_year, EXTRACT(YEAR FROM t.fecha)) = $2 AND COALESCE(t.billing_month, EXTRACT(MONTH FROM t.fecha)) = $3)' : (startDate && endDate ? 'AND t.fecha >= $2 AND t.fecha <= $3' : '')}
         ORDER BY ${field === 'category_name' ? 'c.name' : (field === 'provider' ? 'i.provider' : (field === 'network' ? 'i.network' : 't.' + field))} ${direction}, t.created_at DESC
       `;
       

@@ -278,11 +278,12 @@ router.post('/sync-save', async (req, res) => {
         );
         
         // Insertar transacción con campos parseados de N8N
+        // billing_year y billing_month indican cuándo se PAGA (no cuándo se hizo la compra)
         await client.query(
           `INSERT INTO transactions 
            (id, user_id, fecha, descripcion, monto, tipo, 
-            categoria, cuotas, import_id, metadata, created_at, updated_at)
-           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+            categoria, cuotas, import_id, billing_year, billing_month, metadata, created_at, updated_at)
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
           [
             userId,
             txn.fecha, // Ya viene en formato YYYY-MM-DD desde N8N
@@ -292,6 +293,8 @@ router.post('/sync-save', async (req, res) => {
             'Sin categorizar', // categoría por defecto (usuario categoriza después)
             txn.cuotas || 1, // Cuotas (viene de N8N, default 1)
             importId,
+            billingPeriod.year, // Año en que se pagará
+            billingPeriod.month, // Mes en que se pagará
             JSON.stringify({
               email_id: txn.email_id, // ID único del email para prevenir duplicados
               subject: txn.subject || '', // Subject del email

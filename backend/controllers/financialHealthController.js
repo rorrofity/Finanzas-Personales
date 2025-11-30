@@ -97,7 +97,7 @@ const getSummary = async (req, res) => {
       console.warn('Error obteniendo saldo cuenta corriente:', e.message);
     }
 
-    // 2. Obtener transacciones TC no facturadas (mes actual, se pagan el siguiente)
+    // 2. Obtener transacciones TC que se pagan el mes siguiente (billing_year/billing_month)
     let visaUnbilled = 0, mcUnbilled = 0, visaPagos = 0, mcPagos = 0;
     try {
       const txRes = await db.query(`
@@ -108,11 +108,11 @@ const getSummary = async (req, res) => {
         FROM transactions t
         LEFT JOIN imports i ON t.import_id = i.id
         WHERE t.user_id = $1 
-          AND EXTRACT(YEAR FROM t.fecha) = $2 
-          AND EXTRACT(MONTH FROM t.fecha) = $3
+          AND COALESCE(t.billing_year, EXTRACT(YEAR FROM t.fecha)) = $2 
+          AND COALESCE(t.billing_month, EXTRACT(MONTH FROM t.fecha)) = $3
           AND t.tipo IN ('gasto', 'pago')
         GROUP BY LOWER(COALESCE(i.network, 'unknown')), t.tipo
-      `, [userId, currentYear, currentMonth]);
+      `, [userId, targetYear, targetMonth]);
       
       for (const row of txRes.rows) {
         const amount = Number(row.total) || 0;

@@ -713,7 +713,8 @@ const importTransactions = async (req, res) => {
     }
 
     const transactionModel = new Transaction(db);
-    const importResult = await transactionModel.importFromCSV(req.user.id, transactionsForInsert, importId);
+    // Pasar período de facturación seleccionado por el usuario (si lo eligió)
+    const importResult = await transactionModel.importFromCSV(req.user.id, transactionsForInsert, importId, periodYear, periodMonth);
 
     // Detectar posibles duplicados sospechosos en las transacciones recién insertadas
     if (importResult.insertedTransactions && importResult.insertedTransactions.length > 0) {
