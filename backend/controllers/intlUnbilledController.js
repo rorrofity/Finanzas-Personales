@@ -291,4 +291,54 @@ async function importFile(req, res) {
   }
 }
 
-module.exports = { listByMonth, summaryByMonth, bulkImport, create, update, remove, importFile };
+// === DUPLICADOS SOSPECHOSOS ===
+
+async function getSuspiciousDuplicates(req, res) {
+  try {
+    const duplicates = await model.getPendingSuspicious(req.user.id);
+    res.json(duplicates);
+  } catch (e) {
+    console.error('intl getSuspiciousDuplicates error', e);
+    res.status(500).json({ error: 'Error al obtener duplicados sospechosos' });
+  }
+}
+
+async function countSuspiciousDuplicates(req, res) {
+  try {
+    const count = await model.countPendingSuspicious(req.user.id);
+    res.json({ count });
+  } catch (e) {
+    console.error('intl countSuspiciousDuplicates error', e);
+    res.status(500).json({ error: 'Error al contar duplicados sospechosos' });
+  }
+}
+
+async function resolveSuspiciousDuplicate(req, res) {
+  try {
+    const { id } = req.params;
+    const { action, intlIdToDelete } = req.body;
+    
+    if (!['delete', 'keep_both'].includes(action)) {
+      return res.status(400).json({ error: 'Acción inválida. Use "delete" o "keep_both"' });
+    }
+    
+    const result = await model.resolveSuspicious(id, action, req.user.id, intlIdToDelete);
+    res.json(result);
+  } catch (e) {
+    console.error('intl resolveSuspiciousDuplicate error', e);
+    res.status(400).json({ error: e.message || 'Error al resolver duplicado' });
+  }
+}
+
+module.exports = { 
+  listByMonth, 
+  summaryByMonth, 
+  bulkImport, 
+  create, 
+  update, 
+  remove, 
+  importFile,
+  getSuspiciousDuplicates,
+  countSuspiciousDuplicates,
+  resolveSuspiciousDuplicate
+};

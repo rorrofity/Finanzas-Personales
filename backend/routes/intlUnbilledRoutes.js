@@ -10,7 +10,10 @@ const {
   create,
   update,
   remove,
-  importFile
+  importFile,
+  getSuspiciousDuplicates,
+  resolveSuspiciousDuplicate,
+  countSuspiciousDuplicates
 } = require('../controllers/intlUnbilledController');
 
 const router = express.Router();
@@ -76,5 +79,10 @@ router.post('/import-file', handleUpload, importFile);
 router.post('/', create);
 router.put('/:id', update);
 router.delete('/:id', remove);
+
+// Duplicados sospechosos
+router.get('/suspicious', getSuspiciousDuplicates);
+router.get('/suspicious/count', countSuspiciousDuplicates);
+router.post('/suspicious/:id/resolve', resolveSuspiciousDuplicate);
 
 module.exports = router;
