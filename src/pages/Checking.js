@@ -32,19 +32,16 @@ import {
   LinearProgress,
 } from '@mui/material';
 import { Add, Edit, Delete, FileUpload, CheckCircle, Close } from '@mui/icons-material';
-// This page is fixed to the current month; no MonthPicker needed
+import MonthPicker from '../components/MonthPicker';
+import { usePeriod } from '../contexts/PeriodContext';
 import axios from 'axios';
 
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
 export default function Checking() {
-  // Derive current year/month in America/Santiago
-  const now = new Date();
-  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit' });
-  const parts = fmt.formatToParts(now).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
-  const year = Number(parts.year);
-  const month = Number(parts.month);
+  const { year, month } = usePeriod();
   const [balance, setBalance] = useState(0);
+  const [globalBalance, setGlobalBalance] = useState(0); // Saldo histórico calculado
   const [summary, setSummary] = useState({ abonos: 0, cargos: 0, neto: 0, saldo_actual: 0, initial_balance: 0 });
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
@@ -70,22 +67,18 @@ export default function Checking() {
   const load = async () => {
     try {
       setLoading(true);
-      const [bRes, sRes, lRes, cRes] = await Promise.all([
+      const [bRes, sRes, gRes, lRes, cRes] = await Promise.all([
         axios.get('/api/checking/balance', { params: { year, month } }),
         axios.get('/api/checking/summary', { params: { year, month } }),
-        axios.get('/api/checking', { params: { page, pageSize } }),
+        axios.get('/api/checking/global-balance'),
+        axios.get('/api/checking', { params: { year, month } }),
         axios.get('/api/categories'),
       ]);
       setBalance(Number(bRes.data?.initial_balance || 0));
       setSummary(sRes.data || { abonos: 0, cargos: 0, neto: 0, saldo_actual: 0, initial_balance: 0 });
-      if (Array.isArray(lRes.data)) {
-        // Compat: monthly mode
-        setRows(lRes.data);
-        setTotal(lRes.data.length);
-      } else {
-        setRows(lRes.data?.items || []);
-        setTotal(lRes.data?.total || 0);
-      }
+      setGlobalBalance(Number(gRes.data?.saldo_actual || 0));
+      setRows(Array.isArray(lRes.data) ? lRes.data : (lRes.data?.items || []));
+      setTotal(Array.isArray(lRes.data) ? lRes.data.length : (lRes.data?.total || 0));
       setCategories(cRes.data || []);
     } catch (e) {
       console.error(e);
@@ -94,7 +87,7 @@ export default function Checking() {
     }
   };
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { load(); }, [year, month, page]);
 
   const filteredRows = useMemo(() => {
     return rows.filter(r => {
@@ -214,15 +207,16 @@ export default function Checking() {
 
   return (
     <Box>
+      <MonthPicker />
       <Typography variant="h4" sx={{ mb: 2 }}>Cuenta Corriente</Typography>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={12} md={3}>
-          <Card>
+          <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
             <CardContent>
-              <Typography variant="subtitle2" color="text.secondary">Saldo inicial</Typography>
-              <Typography variant="h5">{currency(summary.initial_balance)}</Typography>
-              <Button variant="outlined" size="small" startIcon={<Edit />} sx={{ mt: 1 }} onClick={openEditBalance}>Editar saldo inicial</Button>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Saldo Actual (Global)</Typography>
+              <Typography variant="h4" fontWeight="bold">{currency(globalBalance)}</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>Saldo histórico calculado</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -247,9 +241,9 @@ export default function Checking() {
         <Grid item xs={12} md={3}>
           <Card>
             <CardContent>
-              <Typography variant="subtitle2">Saldo actual</Typography>
-              <Typography variant="h5">{currency(summary.saldo_actual)}</Typography>
-              <Typography variant="caption">Saldo inicial + Saldo neto del mes</Typography>
+              <Typography variant="subtitle2">Saldo inicial del mes</Typography>
+              <Typography variant="h5">{currency(summary.initial_balance)}</Typography>
+              <Button variant="outlined" size="small" startIcon={<Edit />} sx={{ mt: 1 }} onClick={openEditBalance}>Editar</Button>
             </CardContent>
           </Card>
         </Grid>

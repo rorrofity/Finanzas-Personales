@@ -56,6 +56,13 @@ async function summary(req, res) {
   } catch (e) { res.status(400).json({ error: e.message || 'Error al resumen' }); }
 }
 
+async function globalBalance(req, res) {
+  try {
+    const result = await model.globalBalance(req.user.id);
+    res.json(result);
+  } catch (e) { res.status(400).json({ error: e.message || 'Error al obtener saldo global' }); }
+}
+
 function ensureMovementValid(body) {
   const { fecha, descripcion, tipo, amount } = body;
   if (!fecha) throw new Error('Fecha requerida');
@@ -220,4 +227,4 @@ async function importFile(req, res) {
   }
 }
 
-module.exports = { getBalance, setBalance, list, summary, create, update, remove, importFile };
+module.exports = { getBalance, setBalance, list, summary, globalBalance, create, update, remove, importFile };

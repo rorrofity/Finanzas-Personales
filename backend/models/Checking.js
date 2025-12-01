@@ -48,6 +48,38 @@ class Checking {
     return { initial_balance: Number(initial), abonos, cargos, neto, saldo_actual };
   }
 
+  /**
+   * Calcula el saldo global histórico
+   * Saldo inicial global + todos los abonos - todos los cargos
+   */
+  async globalBalance(userId) {
+    // Obtener el saldo inicial más antiguo (si existe)
+    const initialRes = await this.query(
+      `SELECT initial_balance FROM checking_balances WHERE user_id = $1 ORDER BY year ASC, month ASC LIMIT 1`,
+      [userId]
+    );
+    const initialBalance = Number(initialRes.rows[0]?.initial_balance || 0);
+    
+    // Sumar todos los movimientos
+    const movRes = await this.query(
+      `SELECT 
+        COALESCE(SUM(CASE WHEN tipo='abono' THEN amount ELSE 0 END),0) AS total_abonos,
+        COALESCE(SUM(CASE WHEN tipo='cargo' THEN amount ELSE 0 END),0) AS total_cargos
+      FROM checking_transactions WHERE user_id = $1`,
+      [userId]
+    );
+    
+    const totalAbonos = Number(movRes.rows[0].total_abonos || 0);
+    const totalCargos = Number(movRes.rows[0].total_cargos || 0);
+    
+    return {
+      initial_balance: initialBalance,
+      total_abonos: totalAbonos,
+      total_cargos: totalCargos,
+      saldo_actual: initialBalance + totalAbonos - totalCargos
+    };
+  }
+
   async create(userId, data) {
     const { year, month, fecha, descripcion, tipo, amount, category_id=null, notas=null } = data;
     const res = await this.query(`INSERT INTO checking_transactions(user_id,year,month,fecha,descripcion,tipo,amount,category_id,notas)
