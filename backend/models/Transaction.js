@@ -1,3 +1,5 @@
+const { detectSuspiciousDuplicates, flagAsSuspicious } = require('../utils/suspiciousDetector');
+
 class Transaction {
   constructor(db) {
     this.query = db.query;
@@ -151,6 +153,7 @@ class Transaction {
           ];
 
           const result = await this.query(insertQuery, values);
+          const insertedTx = result.rows[0];
           console.log('Insertando nueva transacción:', {
             fecha: fechaStr,
             descripcion: transaction.descripcion,
@@ -158,7 +161,23 @@ class Transaction {
             tipo: transaction.tipo || 'gasto'
           });
 
-          results.push(result.rows[0]);
+          // Detectar posibles duplicados (misma fecha + mismo monto pero descripción diferente)
+          try {
+            const suspiciousMatches = await detectSuspiciousDuplicates(insertedTx.id, userId);
+            if (suspiciousMatches.length > 0) {
+              console.log(`⚠️  Posible duplicado detectado para ${transaction.descripcion}:`, 
+                suspiciousMatches.map(m => m.descripcion));
+              // Marcar cada par como sospechoso
+              for (const match of suspiciousMatches) {
+                await flagAsSuspicious(insertedTx.id, match.id);
+              }
+            }
+          } catch (suspiciousError) {
+            console.error('Error detectando duplicados sospechosos:', suspiciousError);
+            // No interrumpir la importación por este error
+          }
+
+          results.push(insertedTx);
           insertedCount++;
         } catch (error) {
           console.error('Error procesando transacción:', error);
