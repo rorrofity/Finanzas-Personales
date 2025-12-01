@@ -271,15 +271,18 @@ router.post('/sync-save', async (req, res) => {
         
         if (isIntl) {
           // === TRANSACCIÓN INTERNACIONAL ===
-          // Verificar duplicado en intl_unbilled
+          // Normalizar descripción para comparación (minúsculas, sin espacios múltiples)
+          const descNorm = (txn.descripcion || '').toLowerCase().trim().replace(/\s+/g, ' ');
+          
+          // Verificar duplicado en intl_unbilled con descripción normalizada
           const duplicateIntl = await client.query(
             `SELECT id FROM intl_unbilled 
              WHERE user_id = $1 
              AND fecha = $2 
-             AND descripcion = $3 
+             AND REGEXP_REPLACE(LOWER(TRIM(descripcion)), '\\s+', ' ', 'g') = $3
              AND amount_usd = $4
              LIMIT 1`,
-            [userId, txn.fecha, txn.descripcion, txn.amount_usd]
+            [userId, txn.fecha, descNorm, txn.amount_usd]
           );
           
           if (duplicateIntl.rows.length > 0) {

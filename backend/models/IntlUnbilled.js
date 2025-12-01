@@ -49,9 +49,13 @@ class IntlUnbilled {
     if (!py || py < 2000 || py > 2100) throw new Error('periodYear inválido');
     if (!pm || pm < 1 || pm > 12) throw new Error('periodMonth inválido');
 
+    // Función para normalizar descripción (minúsculas, sin espacios extras)
+    const normalizeDesc = (desc) => (desc || '').toLowerCase().trim().replace(/\s+/g, ' ');
+    
     // Obtener transacciones existentes para verificar duplicados
+    // Normalizar descripcion eliminando espacios múltiples
     const existingRes = await this.query(
-      `SELECT fecha, LOWER(TRIM(descripcion)) as descripcion_norm, amount_usd 
+      `SELECT fecha, REGEXP_REPLACE(LOWER(TRIM(descripcion)), '\\s+', ' ', 'g') as descripcion_norm, amount_usd 
        FROM intl_unbilled WHERE user_id = $1`,
       [userId]
     );
@@ -67,14 +71,14 @@ class IntlUnbilled {
     for (const r of rows) {
       const fecha = r.fecha; // fecha original del movimiento
       const descripcion = (r.descripcion || '').slice(0, 255);
-      const descripcionNorm = descripcion.toLowerCase().trim();
+      const descripcionNorm = normalizeDesc(descripcion);
       const amount_usd = Number(r.amount_usd);
       const tipo = String(r.tipo || '').toLowerCase();
       const category_id = r.category_id || null;
       
       if (!fecha || !descripcion || Number.isNaN(amount_usd) || !['gasto','pago','desestimar'].includes(tipo)) continue;
       
-      // Verificar duplicado por firma (fecha + descripcion + amount_usd)
+      // Verificar duplicado por firma (fecha + descripcion normalizada + amount_usd)
       const signature = `${fecha}|${descripcionNorm}|${amount_usd}`;
       if (existingSet.has(signature)) {
         console.log(`⏭️  Intl duplicada CSV: ${descripcion} - US$${amount_usd} (${fecha})`);
