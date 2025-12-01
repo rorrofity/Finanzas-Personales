@@ -21,11 +21,13 @@ export const getSuspiciousTransactions = async () => {
  * @param {string} suspiciousId - ID del registro sospechoso
  * @param {string} action - 'delete' o 'keep_both'
  * @param {string} transactionIdToDelete - ID de la transacción a eliminar (requerido si action='delete')
+ * @param {string} type - 'national' o 'intl' para indicar el tipo de duplicado
  */
-export const resolveSuspicious = async (suspiciousId, action, transactionIdToDelete = null) => {
+export const resolveSuspicious = async (suspiciousId, action, transactionIdToDelete = null, type = 'national') => {
   const response = await axios.post(`/api/suspicious/${suspiciousId}/resolve`, {
     action,
-    transactionIdToDelete
+    transactionIdToDelete,
+    type
   });
   return response.data;
 };

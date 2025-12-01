@@ -46,13 +46,13 @@ const ReviewDuplicates = () => {
     loadSuspicious();
   }, []);
 
-  const handleResolve = async (suspiciousId, action, transactionIdToDelete = null) => {
+  const handleResolve = async (suspiciousId, action, transactionIdToDelete = null, type = 'national') => {
     try {
       setProcessing(suspiciousId);
       setError(null);
       setSuccess(null);
 
-      await resolveSuspicious(suspiciousId, action, transactionIdToDelete);
+      await resolveSuspicious(suspiciousId, action, transactionIdToDelete, type);
       
       setSuccess(
         action === 'delete' 
@@ -139,15 +139,22 @@ const ReviewDuplicates = () => {
         {suspicious.map((item, index) => (
           <Card key={item.suspicious_id} elevation={3}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
                 <WarningIcon sx={{ color: 'warning.main', mr: 1 }} />
                 <Typography variant="h6">
                   Posible duplicado #{index + 1}
                 </Typography>
+                {item.type === 'intl' && (
+                  <Chip 
+                    label="Internacional"
+                    size="small"
+                    color="info"
+                  />
+                )}
                 <Chip 
-                  label={`${formatDate(item.fecha1)} • ${formatAmount(item.monto1)}`}
+                  label={`${formatDate(item.fecha1)} • ${formatAmount(item.monto1)}${item.amount_usd1 ? ` (US$${item.amount_usd1})` : ''}`}
                   size="small"
-                  sx={{ ml: 2 }}
+                  sx={{ ml: 1 }}
                 />
               </Box>
 
@@ -178,7 +185,7 @@ const ReviewDuplicates = () => {
                       fullWidth
                       sx={{ mt: 2 }}
                       disabled={processing === item.suspicious_id}
-                      onClick={() => handleResolve(item.suspicious_id, 'delete', item.transaction1_id)}
+                      onClick={() => handleResolve(item.suspicious_id, 'delete', item.transaction1_id, item.type)}
                     >
                       Eliminar esta
                     </Button>
@@ -220,7 +227,7 @@ const ReviewDuplicates = () => {
                       fullWidth
                       sx={{ mt: 2 }}
                       disabled={processing === item.suspicious_id}
-                      onClick={() => handleResolve(item.suspicious_id, 'delete', item.transaction2_id)}
+                      onClick={() => handleResolve(item.suspicious_id, 'delete', item.transaction2_id, item.type)}
                     >
                       Eliminar esta
                     </Button>
@@ -236,7 +243,7 @@ const ReviewDuplicates = () => {
                   color="success"
                   startIcon={<CheckCircleIcon />}
                   disabled={processing === item.suspicious_id}
-                  onClick={() => handleResolve(item.suspicious_id, 'keep_both')}
+                  onClick={() => handleResolve(item.suspicious_id, 'keep_both', null, item.type)}
                 >
                   {processing === item.suspicious_id ? (
                     <>
