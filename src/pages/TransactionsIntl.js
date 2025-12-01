@@ -102,7 +102,7 @@ const TransactionsIntl = () => {
     fd.append('periodMonth', String(month));
     try {
       setUploadProgress(0);
-      await axios.post('/api/intl-unbilled/import-file', fd, {
+      const response = await axios.post('/api/intl-unbilled/import-file', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: (ev) => {
           if (ev.total) setUploadProgress(Math.round((ev.loaded * 100) / ev.total));
@@ -113,8 +113,17 @@ const TransactionsIntl = () => {
       setRate('');
       setUploadProgress(0);
       await fetchRows();
+      
+      // Mostrar feedback del resultado
+      const { inserted = 0, skipped = 0 } = response.data || {};
+      const message = inserted > 0 
+        ? `✅ ${inserted} transacción(es) importada(s)${skipped > 0 ? `, ${skipped} omitida(s) (duplicadas)` : ''}`
+        : skipped > 0 
+          ? `⏭️ ${skipped} transacción(es) omitida(s) (ya existían)`
+          : 'No se encontraron transacciones para importar';
+      setSnackbar({ open: true, message, severity: inserted > 0 ? 'success' : 'info' });
     } catch (e) {
-      alert(e?.response?.data?.error || e?.response?.data?.message || 'Error al importar');
+      setSnackbar({ open: true, message: e?.response?.data?.error || 'Error al importar', severity: 'error' });
     }
   };
 
