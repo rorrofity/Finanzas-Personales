@@ -49,27 +49,54 @@ class IntlUnbilled {
     if (!py || py < 2000 || py > 2100) throw new Error('periodYear inválido');
     if (!pm || pm < 1 || pm > 12) throw new Error('periodMonth inválido');
 
+    // Obtener transacciones existentes para verificar duplicados
+    const existingRes = await this.query(
+      `SELECT fecha, LOWER(TRIM(descripcion)) as descripcion_norm, amount_usd 
+       FROM intl_unbilled WHERE user_id = $1`,
+      [userId]
+    );
+    const existingSet = new Set(
+      existingRes.rows.map(r => `${r.fecha}|${r.descripcion_norm}|${r.amount_usd}`)
+    );
+
     const values = [];
     const params = [];
     let p = 1;
+    let skipped = 0;
+    
     for (const r of rows) {
       const fecha = r.fecha; // fecha original del movimiento
       const descripcion = (r.descripcion || '').slice(0, 255);
+      const descripcionNorm = descripcion.toLowerCase().trim();
       const amount_usd = Number(r.amount_usd);
       const tipo = String(r.tipo || '').toLowerCase();
       const category_id = r.category_id || null;
+      
       if (!fecha || !descripcion || Number.isNaN(amount_usd) || !['gasto','pago','desestimar'].includes(tipo)) continue;
+      
+      // Verificar duplicado por firma (fecha + descripcion + amount_usd)
+      const signature = `${fecha}|${descripcionNorm}|${amount_usd}`;
+      if (existingSet.has(signature)) {
+        console.log(`⏭️  Intl duplicada CSV: ${descripcion} - US$${amount_usd} (${fecha})`);
+        skipped++;
+        continue;
+      }
+      
+      // Agregar a existingSet para evitar duplicados dentro del mismo archivo
+      existingSet.add(signature);
+      
       const amount_clp = Math.round(amount_usd * rate);
       params.push(userId, b, fecha, descripcion, amount_usd, rate, amount_clp, tipo, category_id, fecha, py, pm);
       values.push(`($${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++})`);
     }
-    if (!values.length) return { inserted: 0 };
+    
+    if (!values.length) return { inserted: 0, skipped };
 
     const sql = `INSERT INTO intl_unbilled (
         user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, category_id, original_fecha, period_year, period_month
       ) VALUES ${values.join(',')}`;
     await this.query(sql, params);
-    return { inserted: values.length };
+    return { inserted: values.length, skipped };
   }
 
   async create(userId, data) {
