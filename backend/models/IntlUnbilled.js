@@ -49,6 +49,14 @@ class IntlUnbilled {
     if (!py || py < 2000 || py > 2100) throw new Error('periodYear inválido');
     if (!pm || pm < 1 || pm > 12) throw new Error('periodMonth inválido');
 
+    // Función para normalizar fecha a formato YYYY-MM-DD
+    const normalizeDate = (d) => {
+      if (!d) return null;
+      if (typeof d === 'string') return d.slice(0, 10); // Ya es string ISO
+      if (d instanceof Date) return d.toISOString().slice(0, 10);
+      return String(d).slice(0, 10);
+    };
+    
     // Obtener transacciones existentes para verificar duplicados por fecha + amount_usd
     const existingRes = await this.query(
       `SELECT id, fecha, amount_usd FROM intl_unbilled WHERE user_id = $1`,
@@ -56,33 +64,33 @@ class IntlUnbilled {
     );
     const existingMap = new Map();
     for (const row of existingRes.rows) {
-      const key = `${row.fecha}|${row.amount_usd}`;
+      const fechaNorm = normalizeDate(row.fecha);
+      const key = `${fechaNorm}|${row.amount_usd}`;
       if (!existingMap.has(key)) existingMap.set(key, []);
       existingMap.get(key).push(row.id);
     }
 
     let insertedCount = 0;
     let skippedCount = 0;
-    let suspiciousCount = 0;
     
     for (const r of rows) {
-      const fecha = r.fecha;
+      const fechaRaw = r.fecha;
+      const fechaNorm = normalizeDate(fechaRaw);
       const descripcion = (r.descripcion || '').slice(0, 255);
       const amount_usd = Number(r.amount_usd);
       const tipo = String(r.tipo || '').toLowerCase();
       const category_id = r.category_id || null;
       
-      if (!fecha || !descripcion || Number.isNaN(amount_usd) || !['gasto','pago','desestimar'].includes(tipo)) continue;
+      if (!fechaNorm || !descripcion || Number.isNaN(amount_usd) || !['gasto','pago','desestimar'].includes(tipo)) continue;
       
-      const key = `${fecha}|${amount_usd}`;
+      const key = `${fechaNorm}|${amount_usd}`;
       const existingIds = existingMap.get(key);
       
       if (existingIds && existingIds.length > 0) {
         // Ya existe una transacción con misma fecha + amount_usd
-        // Marcar como duplicado sospechoso SIN insertar
-        console.log(`⏭️  Posible duplicado intl detectado: ${descripcion} - US$${amount_usd} (${fecha})`);
+        // NO insertar
+        console.log(`⏭️  Duplicado intl detectado: ${descripcion} - US$${amount_usd} (${fechaNorm})`);
         skippedCount++;
-        suspiciousCount++;
         continue;
       }
       
@@ -92,7 +100,7 @@ class IntlUnbilled {
         `INSERT INTO intl_unbilled (
           user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, category_id, original_fecha, period_year, period_month
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $3, $10, $11) RETURNING id`,
-        [userId, b, fecha, descripcion, amount_usd, rate, amount_clp, tipo, category_id, py, pm]
+        [userId, b, fechaNorm, descripcion, amount_usd, rate, amount_clp, tipo, category_id, py, pm]
       );
       
       // Agregar al mapa para detectar duplicados dentro del mismo archivo
@@ -103,7 +111,7 @@ class IntlUnbilled {
       console.log(`✅ Intl importada: ${descripcion} - US$${amount_usd}`);
     }
     
-    return { inserted: insertedCount, skipped: skippedCount, suspiciousCount };
+    return { inserted: insertedCount, skipped: skippedCount };
   }
 
   async create(userId, data) {
