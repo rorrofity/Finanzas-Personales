@@ -49,6 +49,20 @@ class Checking {
     return r.rows;
   }
 
+  /**
+   * Lista transacciones de los últimos N meses (rolling window)
+   */
+  async listRecentMonths(userId, months = 6) {
+    const r = await this.query(
+      `SELECT * FROM checking_transactions 
+       WHERE user_id = $1 
+         AND fecha >= (CURRENT_DATE - INTERVAL '${months} months')::date
+       ORDER BY fecha DESC, created_at DESC`,
+      [userId]
+    );
+    return r.rows;
+  }
+
   async listAll(userId) {
     const r = await this.query(`SELECT * FROM checking_transactions WHERE user_id=$1 ORDER BY fecha DESC, created_at DESC`, [userId]);
     return r.rows;
@@ -64,6 +78,16 @@ class Checking {
 
   async countAll(userId) {
     const r = await this.query(`SELECT COUNT(*)::int AS cnt FROM checking_transactions WHERE user_id=$1`, [userId]);
+    return r.rows[0]?.cnt || 0;
+  }
+
+  async countRecentMonths(userId, months = 6) {
+    const r = await this.query(
+      `SELECT COUNT(*)::int AS cnt FROM checking_transactions 
+       WHERE user_id = $1 
+         AND fecha >= (CURRENT_DATE - INTERVAL '${months} months')::date`,
+      [userId]
+    );
     return r.rows[0]?.cnt || 0;
   }
 

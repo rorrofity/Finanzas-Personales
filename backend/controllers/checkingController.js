@@ -32,18 +32,25 @@ async function setBalance(req, res) {
 
 async function list(req, res) {
   try {
-    const { year, month, page, pageSize } = req.query;
+    const { year, month, recent } = req.query;
+    
+    // Si se pide recent=true, traer últimos 6 meses
+    if (recent === 'true') {
+      const rows = await model.listRecentMonths(req.user.id, 6);
+      const total = rows.length;
+      return res.json({ items: rows, total });
+    }
+    
+    // Si se especifica año/mes, filtrar por ese período
     if (year && month) {
       const { y, m } = ensureValidPeriod(year, month);
       const rows = await model.list(req.user.id, y, m);
       return res.json(rows);
     }
-    // Full history with pagination
-    const p = Number.isFinite(parseInt(page, 10)) ? parseInt(page, 10) : 0;
-    const ps = Number.isFinite(parseInt(pageSize, 10)) ? parseInt(pageSize, 10) : 10;
-    const total = await model.countAll(req.user.id);
-    const rows = await model.listPaged(req.user.id, ps, p * ps);
-    return res.json({ items: rows, total });
+    
+    // Default: últimos 6 meses
+    const rows = await model.listRecentMonths(req.user.id, 6);
+    return res.json({ items: rows, total: rows.length });
   } catch (e) { res.status(400).json({ error: e.message || 'Error al listar movimientos' }); }
 }
 

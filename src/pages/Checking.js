@@ -32,27 +32,19 @@ import {
   LinearProgress,
 } from '@mui/material';
 import { Add, Edit, Delete, FileUpload, CheckCircle, Close } from '@mui/icons-material';
-import MonthPicker from '../components/MonthPicker';
-import { usePeriod } from '../contexts/PeriodContext';
 import axios from 'axios';
 
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
 export default function Checking() {
-  const { year, month } = usePeriod();
-  const [balance, setBalance] = useState(0);
-  const [globalBalance, setGlobalBalance] = useState(0); // Saldo histórico calculado
-  const [summary, setSummary] = useState({ abonos: 0, cargos: 0, neto: 0, saldo_actual: 0, initial_balance: 0 });
+  const [globalBalance, setGlobalBalance] = useState(0);
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
-  const pageSize = 10;
+  const pageSize = 20; // Más filas por página
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-
-  const [openBalance, setOpenBalance] = useState(false);
-  const [balanceInput, setBalanceInput] = useState('0');
 
   const [openMove, setOpenMove] = useState(false);
   const [moveForm, setMoveForm] = useState({ id: null, fecha: '', descripcion: '', tipo: 'abono', amount: '', category_id: '', notas: '' });
@@ -67,18 +59,15 @@ export default function Checking() {
   const load = async () => {
     try {
       setLoading(true);
-      const [bRes, sRes, gRes, lRes, cRes] = await Promise.all([
-        axios.get('/api/checking/balance', { params: { year, month } }),
-        axios.get('/api/checking/summary', { params: { year, month } }),
+      const [gRes, lRes, cRes] = await Promise.all([
         axios.get('/api/checking/global-balance'),
-        axios.get('/api/checking', { params: { year, month } }),
+        axios.get('/api/checking', { params: { recent: 'true' } }),
         axios.get('/api/categories'),
       ]);
-      setBalance(Number(bRes.data?.initial_balance || 0));
-      setSummary(sRes.data || { abonos: 0, cargos: 0, neto: 0, saldo_actual: 0, initial_balance: 0 });
       setGlobalBalance(Number(gRes.data?.saldo_actual || 0));
-      setRows(Array.isArray(lRes.data) ? lRes.data : (lRes.data?.items || []));
-      setTotal(Array.isArray(lRes.data) ? lRes.data.length : (lRes.data?.total || 0));
+      const items = lRes.data?.items || [];
+      setRows(items);
+      setTotal(items.length);
       setCategories(cRes.data || []);
     } catch (e) {
       console.error(e);
@@ -87,7 +76,7 @@ export default function Checking() {
     }
   };
 
-  useEffect(() => { load(); }, [year, month, page]);
+  useEffect(() => { load(); }, []);
 
   const filteredRows = useMemo(() => {
     return rows.filter(r => {
@@ -96,19 +85,6 @@ export default function Checking() {
       return true;
     });
   }, [rows, filter]);
-
-  const openEditBalance = () => { setBalanceInput(String(balance)); setOpenBalance(true); };
-  const saveBalance = async () => {
-    try {
-      const amount = Number(balanceInput);
-      await axios.put('/api/checking/balance', { year, month, amount });
-      setOpenBalance(false);
-      setSnackbar({ open: true, message: 'Saldo inicial guardado', severity: 'success' });
-      await load();
-    } catch (e) {
-      setSnackbar({ open: true, message: e?.response?.data?.error || 'Error al guardar saldo', severity: 'error' });
-    }
-  };
 
   const openNewMove = () => {
     // Fecha hoy en America/Santiago
@@ -126,6 +102,10 @@ export default function Checking() {
   const closeMove = () => setOpenMove(false);
   const saveMove = async () => {
     try {
+      // Derivar año/mes de la fecha
+      const d = new Date(moveForm.fecha);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
       const payload = { year, month, ...moveForm, amount: Number(moveForm.amount), category_id: moveForm.category_id || null };
       if (moveForm.id) {
         await axios.put(`/api/checking/${moveForm.id}`, payload);
@@ -205,45 +185,42 @@ export default function Checking() {
     }
   };
 
+  // Calcular totales de los últimos 6 meses
+  const totals = useMemo(() => {
+    const abonos = rows.filter(r => r.tipo === 'abono').reduce((sum, r) => sum + Number(r.amount), 0);
+    const cargos = rows.filter(r => r.tipo === 'cargo').reduce((sum, r) => sum + Number(r.amount), 0);
+    return { abonos, cargos };
+  }, [rows]);
+
   return (
     <Box>
-      <MonthPicker />
       <Typography variant="h4" sx={{ mb: 2 }}>Cuenta Corriente</Typography>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={4}>
           <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
             <CardContent>
-              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Saldo Actual (Global)</Typography>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Saldo Actual</Typography>
               <Typography variant="h4" fontWeight="bold">{currency(globalBalance)}</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>Saldo histórico calculado</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>Según última cartola importada</Typography>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="subtitle2" color="success.main">Abonos del mes</Typography>
-              <Typography variant="h5" color="success.main">{currency(summary.abonos)}</Typography>
-              <Typography variant="caption">Sumatoria de ingresos del mes</Typography>
+              <Typography variant="subtitle2" color="success.main">Total Abonos (6 meses)</Typography>
+              <Typography variant="h5" color="success.main">{currency(totals.abonos)}</Typography>
+              <Typography variant="caption">{rows.filter(r => r.tipo === 'abono').length} transacciones</Typography>
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="subtitle2" color="error.main">Cargos del mes</Typography>
-              <Typography variant="h5" color="error.main">{currency(summary.cargos)}</Typography>
-              <Typography variant="caption">Sumatoria de gastos del mes</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2">Saldo inicial del mes</Typography>
-              <Typography variant="h5">{currency(summary.initial_balance)}</Typography>
-              <Button variant="outlined" size="small" startIcon={<Edit />} sx={{ mt: 1 }} onClick={openEditBalance}>Editar</Button>
+              <Typography variant="subtitle2" color="error.main">Total Cargos (6 meses)</Typography>
+              <Typography variant="h5" color="error.main">{currency(totals.cargos)}</Typography>
+              <Typography variant="caption">{rows.filter(r => r.tipo === 'cargo').length} transacciones</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -341,18 +318,6 @@ export default function Checking() {
           showLastButton
         />
       </Box>
-
-      {/* Editar saldo inicial */}
-      <Dialog open={openBalance} onClose={()=>setOpenBalance(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Editar saldo inicial</DialogTitle>
-        <DialogContent>
-          <TextField fullWidth label="Monto" type="number" inputProps={{ min: 0 }} value={balanceInput} onChange={(e)=>setBalanceInput(e.target.value)} sx={{ mt: 1 }} />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={()=>setOpenBalance(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={saveBalance}>Guardar</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Crear/editar movimiento */}
       <Dialog open={openMove} onClose={closeMove} fullWidth maxWidth="sm">
