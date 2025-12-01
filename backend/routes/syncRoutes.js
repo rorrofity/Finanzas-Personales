@@ -127,8 +127,31 @@ router.post('/sync-emails', auth, async (req, res) => {
       });
     }
     
-    // Extraer resultado
-    const result = n8nResponse.data || {};
+    // Extraer resultado - N8N puede devolver en varios formatos
+    let result = n8nResponse.data || {};
+    
+    // Si es un array (formato de webhook con múltiples outputs), extraer el primer item
+    if (Array.isArray(result)) {
+      // Buscar el primer item que tenga datos de importación
+      for (const item of result.flat(2)) {
+        if (item && (item.imported !== undefined || item.success !== undefined)) {
+          result = item;
+          break;
+        }
+        if (item && item.json && (item.json.imported !== undefined || item.json.success !== undefined)) {
+          result = item.json;
+          break;
+        }
+      }
+    }
+    
+    // Si result tiene una propiedad json, usar esa
+    if (result.json && typeof result.json === 'object') {
+      result = result.json;
+    }
+    
+    console.log('📦 Resultado parseado de N8N:', JSON.stringify(result));
+    
     const imported = result.imported || 0;
     const skipped = result.skipped || 0;
     const errors = result.errors || [];
