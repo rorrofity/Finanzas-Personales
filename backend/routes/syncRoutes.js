@@ -224,16 +224,37 @@ router.post('/sync-save', async (req, res) => {
       throw new Error(`Usuario ${userId} no encontrado`);
     }
     
+    // Obtener tipo de cambio para transacciones internacionales (si hay alguna)
+    let exchangeRate = null;
+    const hasIntlTransactions = transactions.some(t => t.is_international);
+    if (hasIntlTransactions) {
+      exchangeRate = await getExchangeRate();
+      console.log(`💱 Tipo de cambio USD/CLP: ${exchangeRate}`);
+    }
+    
     for (const txn of transactions) {
       try {
-        // Validar datos mínimos de la transacción (campos requeridos en la tabla)
-        if (!txn.fecha || !txn.descripcion || txn.monto === null || txn.monto === undefined || !txn.tipo) {
-          errors.push({
-            transaction: txn.descripcion || 'Sin descripción',
-            error: 'Datos incompletos: se requiere fecha, descripcion, monto y tipo',
-            received: { fecha: txn.fecha, descripcion: txn.descripcion, monto: txn.monto, tipo: txn.tipo }
-          });
-          continue;
+        const isIntl = txn.is_international === true;
+        
+        // Validar datos mínimos según tipo de transacción
+        if (isIntl) {
+          if (!txn.fecha || !txn.descripcion || txn.amount_usd === null || txn.amount_usd === undefined) {
+            errors.push({
+              transaction: txn.descripcion || 'Sin descripción',
+              error: 'Datos incompletos para intl: se requiere fecha, descripcion, amount_usd',
+              received: { fecha: txn.fecha, descripcion: txn.descripcion, amount_usd: txn.amount_usd }
+            });
+            continue;
+          }
+        } else {
+          if (!txn.fecha || !txn.descripcion || txn.monto === null || txn.monto === undefined || !txn.tipo) {
+            errors.push({
+              transaction: txn.descripcion || 'Sin descripción',
+              error: 'Datos incompletos: se requiere fecha, descripcion, monto y tipo',
+              received: { fecha: txn.fecha, descripcion: txn.descripcion, monto: txn.monto, tipo: txn.tipo }
+            });
+            continue;
+          }
         }
         
         // Validar que email_id existe para prevenir duplicados
@@ -245,102 +266,151 @@ router.post('/sync-save', async (req, res) => {
           continue;
         }
         
-        // Verificar duplicado por email_id en metadata
-        const duplicateByEmailId = await client.query(
-          `SELECT id FROM transactions 
-           WHERE user_id = $1 
-           AND metadata->>'email_id' = $2
-           LIMIT 1`,
-          [userId, txn.email_id]
-        );
-        
-        if (duplicateByEmailId.rows.length > 0) {
-          skipped++;
-          // Agregar a processedEmailIds para marcar como leído aunque sea duplicada
-          importedEmailIds.push(txn.email_id);
-          console.log(`⏭️  Duplicada por email_id: ${txn.descripcion} (${txn.email_id})`);
-          continue;
-        }
-        
-        // Verificar duplicado por firma (fecha + descripcion + monto)
-        // Esto previene duplicados con importaciones manuales (CSV/Excel)
-        const duplicateBySignature = await client.query(
-          `SELECT id FROM transactions 
-           WHERE user_id = $1 
-           AND fecha = $2 
-           AND descripcion = $3 
-           AND monto = $4
-           LIMIT 1`,
-          [userId, txn.fecha, txn.descripcion, txn.monto]
-        );
-        
-        if (duplicateBySignature.rows.length > 0) {
-          skipped++;
-          // Agregar a processedEmailIds para marcar como leído aunque sea duplicada
-          if (txn.email_id) importedEmailIds.push(txn.email_id);
-          console.log(`⏭️  Duplicada por firma: ${txn.descripcion} - $${txn.monto} (${txn.fecha})`);
-          continue;
-        }
-        
-        // Crear ID de importación
-        const importId = uuidv4();
-        
         // Calcular período de facturación automáticamente
         const billingPeriod = calculateBillingPeriod(txn.fecha);
-        console.log(`📅 Transacción ${txn.descripcion} - Fecha: ${txn.fecha}, Período facturación: ${billingPeriod.year}-${billingPeriod.month}`);
         
-        // Registrar en tabla imports con período calculado
-        await client.query(
-          `INSERT INTO imports 
-           (id, user_id, provider, network, product_type, period_year, period_month, created_at)
-           VALUES ($1, $2, $3, $4, 'email_sync', $5, $6, NOW())`,
-          [
-            importId, 
-            userId, 
-            txn.banco || 'email', // banco_chile, santander, bci, etc.
-            txn.tipo_tarjeta || 'unknown', // visa, mastercard
-            billingPeriod.year,
-            billingPeriod.month
-          ]
-        );
-        
-        // Insertar transacción con campos parseados de N8N
-        // billing_year y billing_month indican cuándo se PAGA (no cuándo se hizo la compra)
-        await client.query(
-          `INSERT INTO transactions 
-           (id, user_id, fecha, descripcion, monto, tipo, 
-            categoria, cuotas, import_id, billing_year, billing_month, metadata, created_at, updated_at)
-           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
-          [
-            userId,
-            txn.fecha, // Ya viene en formato YYYY-MM-DD desde N8N
-            txn.descripcion, // Descripción del comercio parseada
-            txn.monto, // Monto numérico parseado
-            txn.tipo, // 'gasto' (viene de N8N)
-            'Sin categorizar', // categoría por defecto (usuario categoriza después)
-            txn.cuotas || 1, // Cuotas (viene de N8N, default 1)
-            importId,
-            billingPeriod.year, // Año en que se pagará
-            billingPeriod.month, // Mes en que se pagará
-            JSON.stringify({
-              email_id: txn.email_id, // ID único del email para prevenir duplicados
-              subject: txn.subject || '', // Subject del email
-              from: txn.from || '', // Remitente
-              banco: txn.banco || 'desconocido', // banco_chile
-              tipo_transaccion: txn.tipo_transaccion || '', // compra_tc
-              tarjeta_ultimos_4: txn.tarjeta_ultimos_4 || '', // 3076
-              tipo_tarjeta: txn.tipo_tarjeta || '', // visa/mastercard
-              hora: txn.hora || '', // HH:MM
-              snippet: txn.snippet || '', // Texto del email para referencia
-              source: 'email_sync',
-              parsed_at: new Date().toISOString()
-            })
-          ]
-        );
-        
-        importedCount++;
-        importedEmailIds.push(txn.email_id);
-        console.log(`✅ Importada: ${txn.descripcion} - $${txn.monto}`);
+        if (isIntl) {
+          // === TRANSACCIÓN INTERNACIONAL ===
+          // Verificar duplicado en intl_unbilled
+          const duplicateIntl = await client.query(
+            `SELECT id FROM intl_unbilled 
+             WHERE user_id = $1 
+             AND fecha = $2 
+             AND descripcion = $3 
+             AND amount_usd = $4
+             LIMIT 1`,
+            [userId, txn.fecha, txn.descripcion, txn.amount_usd]
+          );
+          
+          if (duplicateIntl.rows.length > 0) {
+            skipped++;
+            importedEmailIds.push(txn.email_id);
+            console.log(`⏭️  Intl duplicada: ${txn.descripcion} - US$${txn.amount_usd}`);
+            continue;
+          }
+          
+          // Calcular monto en CLP
+          const amountCLP = Math.round(txn.amount_usd * exchangeRate);
+          const brand = txn.tipo_tarjeta || 'visa';
+          
+          console.log(`💳 Intl: ${txn.descripcion} - US$${txn.amount_usd} = $${amountCLP} CLP (${brand}), Período: ${billingPeriod.year}-${billingPeriod.month}`);
+          
+          // Insertar en intl_unbilled
+          await client.query(
+            `INSERT INTO intl_unbilled 
+             (user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, original_fecha, period_year, period_month)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $3, $9, $10)`,
+            [
+              userId,
+              brand,
+              txn.fecha,
+              txn.descripcion,
+              txn.amount_usd,
+              exchangeRate,
+              amountCLP,
+              txn.tipo || 'gasto',
+              billingPeriod.year,
+              billingPeriod.month
+            ]
+          );
+          
+          importedCount++;
+          importedEmailIds.push(txn.email_id);
+          console.log(`✅ Intl importada: ${txn.descripcion} - US$${txn.amount_usd}`);
+          
+        } else {
+          // === TRANSACCIÓN NACIONAL ===
+          // Verificar duplicado por email_id en metadata
+          const duplicateByEmailId = await client.query(
+            `SELECT id FROM transactions 
+             WHERE user_id = $1 
+             AND metadata->>'email_id' = $2
+             LIMIT 1`,
+            [userId, txn.email_id]
+          );
+          
+          if (duplicateByEmailId.rows.length > 0) {
+            skipped++;
+            importedEmailIds.push(txn.email_id);
+            console.log(`⏭️  Duplicada por email_id: ${txn.descripcion} (${txn.email_id})`);
+            continue;
+          }
+          
+          // Verificar duplicado por firma (fecha + descripcion + monto)
+          const duplicateBySignature = await client.query(
+            `SELECT id FROM transactions 
+             WHERE user_id = $1 
+             AND fecha = $2 
+             AND descripcion = $3 
+             AND monto = $4
+             LIMIT 1`,
+            [userId, txn.fecha, txn.descripcion, txn.monto]
+          );
+          
+          if (duplicateBySignature.rows.length > 0) {
+            skipped++;
+            if (txn.email_id) importedEmailIds.push(txn.email_id);
+            console.log(`⏭️  Duplicada por firma: ${txn.descripcion} - $${txn.monto} (${txn.fecha})`);
+            continue;
+          }
+          
+          // Crear ID de importación
+          const importId = uuidv4();
+          
+          console.log(`📅 Transacción ${txn.descripcion} - Fecha: ${txn.fecha}, Período facturación: ${billingPeriod.year}-${billingPeriod.month}`);
+          
+          // Registrar en tabla imports con período calculado
+          await client.query(
+            `INSERT INTO imports 
+             (id, user_id, provider, network, product_type, period_year, period_month, created_at)
+             VALUES ($1, $2, $3, $4, 'email_sync', $5, $6, NOW())`,
+            [
+              importId, 
+              userId, 
+              txn.banco || 'email',
+              txn.tipo_tarjeta || 'unknown',
+              billingPeriod.year,
+              billingPeriod.month
+            ]
+          );
+          
+          // Insertar transacción nacional
+          await client.query(
+            `INSERT INTO transactions 
+             (id, user_id, fecha, descripcion, monto, tipo, 
+              categoria, cuotas, import_id, billing_year, billing_month, metadata, created_at, updated_at)
+             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
+            [
+              userId,
+              txn.fecha,
+              txn.descripcion,
+              txn.monto,
+              txn.tipo,
+              'Sin categorizar',
+              txn.cuotas || 1,
+              importId,
+              billingPeriod.year,
+              billingPeriod.month,
+              JSON.stringify({
+                email_id: txn.email_id,
+                subject: txn.subject || '',
+                from: txn.from || '',
+                banco: txn.banco || 'desconocido',
+                tipo_transaccion: txn.tipo_transaccion || '',
+                tarjeta_ultimos_4: txn.tarjeta_ultimos_4 || '',
+                tipo_tarjeta: txn.tipo_tarjeta || '',
+                hora: txn.hora || '',
+                snippet: txn.snippet || '',
+                source: 'email_sync',
+                parsed_at: new Date().toISOString()
+              })
+            ]
+          );
+          
+          importedCount++;
+          importedEmailIds.push(txn.email_id);
+          console.log(`✅ Importada: ${txn.descripcion} - $${txn.monto}`);
+        }
         
       } catch (txnError) {
         console.error(`❌ Error guardando transacción:`, txnError);
