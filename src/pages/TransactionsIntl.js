@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   FormControl,
   InputLabel,
@@ -29,7 +30,13 @@ import {
   Switch,
   FormControlLabel
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { 
+  Edit as EditIcon, 
+  Delete as DeleteIcon,
+  CheckCircle as CheckCircleIcon,
+  Close as CloseIcon,
+  FileUpload as FileUploadIcon
+} from '@mui/icons-material';
 import MonthPicker from '../components/MonthPicker';
 import SyncButton from '../components/SyncButton';
 import { usePeriod } from '../contexts/PeriodContext';
@@ -52,6 +59,7 @@ const TransactionsIntl = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [categoriesList, setCategoriesList] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [importResult, setImportResult] = useState({ open: false, data: null });
   const [selectedIds, setSelectedIds] = useState([]);
   const [openEdit, setOpenEdit] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -114,16 +122,27 @@ const TransactionsIntl = () => {
       setUploadProgress(0);
       await fetchRows();
       
-      // Mostrar feedback del resultado
+      // Mostrar diálogo con resultado
       const { inserted = 0, skipped = 0 } = response.data || {};
       const message = inserted > 0 
-        ? `✅ ${inserted} transacción(es) importada(s)${skipped > 0 ? `, ${skipped} omitida(s) (duplicadas)` : ''}`
+        ? 'Transacciones importadas correctamente'
         : skipped > 0 
-          ? `⏭️ ${skipped} transacción(es) omitida(s) (ya existían)`
+          ? 'No se encontraron transacciones nuevas'
           : 'No se encontraron transacciones para importar';
-      setSnackbar({ open: true, message, severity: inserted > 0 ? 'success' : 'info' });
+      setImportResult({ 
+        open: true, 
+        data: { imported: inserted, skipped, message, isError: false }
+      });
     } catch (e) {
-      setSnackbar({ open: true, message: e?.response?.data?.error || 'Error al importar', severity: 'error' });
+      setImportResult({ 
+        open: true, 
+        data: { 
+          imported: 0, 
+          skipped: 0, 
+          message: e?.response?.data?.error || 'Error al importar archivo', 
+          isError: true 
+        }
+      });
     }
   };
 
@@ -429,6 +448,71 @@ const TransactionsIntl = () => {
           <Button onClick={handleCloseEdit}>Cancelar</Button>
           <Button variant="contained" onClick={submitEdit}>Guardar</Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de resultado de importación */}
+      <Dialog
+        open={importResult.open}
+        onClose={() => setImportResult({ open: false, data: null })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center" gap={1}>
+              {importResult.data?.isError ? (
+                <>
+                  <FileUploadIcon color="error" />
+                  <Typography variant="h6">Error en Importación</Typography>
+                </>
+              ) : importResult.data?.imported > 0 ? (
+                <>
+                  <CheckCircleIcon color="success" />
+                  <Typography variant="h6">Importación Exitosa</Typography>
+                </>
+              ) : (
+                <>
+                  <FileUploadIcon color="primary" />
+                  <Typography variant="h6">Importación Completada</Typography>
+                </>
+              )}
+            </Box>
+            <IconButton
+              edge="end"
+              color="inherit"
+              onClick={() => setImportResult({ open: false, data: null })}
+              aria-label="close"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            {importResult.data?.message}
+          </DialogContentText>
+          
+          {importResult.data && !importResult.data.isError && (
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                ✅ <strong>{importResult.data.imported}</strong> transacciones nuevas importadas
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                ⏭️ <strong>{importResult.data.skipped}</strong> transacciones duplicadas (omitidas)
+              </Typography>
+            </Box>
+          )}
+          
+          <Button
+            onClick={() => setImportResult({ open: false, data: null })}
+            variant="contained"
+            fullWidth
+            sx={{ mt: 3 }}
+          >
+            Cerrar
+          </Button>
+        </DialogContent>
       </Dialog>
 
       <Snackbar 
