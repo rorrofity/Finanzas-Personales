@@ -146,6 +146,7 @@ async function importFile(req, res) {
           if (cell.includes('descripci') && !colMap.descripcion) colMap.descripcion = j;
           if (cell.includes('cargo') && !colMap.cargos) colMap.cargos = j;
           if (cell.includes('abono') && !colMap.abonos) colMap.abonos = j;
+          if (cell.includes('saldo') && !colMap.saldo) colMap.saldo = j;
         }
         break;
       }
@@ -159,8 +160,9 @@ async function importFile(req, res) {
 
     console.log(`[checking] Header row: ${headerRowIdx}, colMap:`, colMap);
 
-    // Extraer transacciones
+    // Extraer transacciones y saldo actual
     const transactions = [];
+    let saldoActual = null; // Saldo de la primera transacción (más reciente)
     
     for (let i = headerRowIdx + 1; i < data.length; i++) {
       const row = data[i];
@@ -187,6 +189,13 @@ async function importFile(req, res) {
       
       const cargos = Number(row[colMap.cargos]) || 0;
       const abonos = Number(row[colMap.abonos]) || 0;
+      const saldo = colMap.saldo !== undefined ? Number(row[colMap.saldo]) || 0 : null;
+      
+      // Tomar el saldo de la primera transacción (la más reciente)
+      if (saldoActual === null && saldo !== null && saldo > 0) {
+        saldoActual = saldo;
+        console.log(`[checking] Saldo actual extraído de cartola: $${saldo}`);
+      }
       
       // Si tiene cargo, es tipo 'cargo'. Si tiene abono, es tipo 'abono'
       if (cargos > 0) {
@@ -210,15 +219,23 @@ async function importFile(req, res) {
       return res.status(400).json({ error: 'No se encontraron transacciones válidas en el archivo' });
     }
 
-    console.log(`[checking] Parsed ${transactions.length} transactions`);
+    console.log(`[checking] Parsed ${transactions.length} transactions, saldo actual: $${saldoActual}`);
 
     // Importar con detección de duplicados
     const result = await model.bulkImport(req.user.id, transactions);
     
+    // Guardar saldo conocido si se extrajo
+    if (saldoActual !== null && transactions.length > 0) {
+      const fechaMasReciente = transactions[0].fecha; // Primera transacción = más reciente
+      await model.setKnownBalance(req.user.id, saldoActual, fechaMasReciente);
+      console.log(`[checking] Saldo conocido guardado: $${saldoActual} al ${fechaMasReciente}`);
+    }
+    
     res.json({
       inserted: result.inserted,
       skipped: result.skipped,
-      total: transactions.length
+      total: transactions.length,
+      saldoActual: saldoActual
     });
 
   } catch (e) {

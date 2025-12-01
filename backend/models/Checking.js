@@ -12,6 +12,38 @@ class Checking {
     return { initial_balance: amount };
   }
 
+  /**
+   * Obtener saldo actual conocido (de la última cartola)
+   */
+  async getKnownBalance(userId) {
+    const r = await this.query(
+      `SELECT known_balance, balance_date FROM checking_balances WHERE user_id=$1 AND known_balance IS NOT NULL ORDER BY balance_date DESC LIMIT 1`,
+      [userId]
+    );
+    return r.rows[0] || null;
+  }
+
+  /**
+   * Guardar saldo conocido de cartola
+   */
+  async setKnownBalance(userId, amount, balanceDate) {
+    // Derivar año/mes de la fecha
+    const d = new Date(balanceDate);
+    const year = d.getFullYear();
+    const month = d.getMonth() + 1;
+    
+    await this.query(
+      `INSERT INTO checking_balances(user_id, year, month, initial_balance, known_balance, balance_date) 
+       VALUES($1, $2, $3, 0, $4, $5)
+       ON CONFLICT(user_id, year, month) DO UPDATE SET 
+         known_balance = EXCLUDED.known_balance, 
+         balance_date = EXCLUDED.balance_date,
+         updated_at = CURRENT_TIMESTAMP`,
+      [userId, year, month, amount, balanceDate]
+    );
+    return { known_balance: amount, balance_date: balanceDate };
+  }
+
   async list(userId, year, month) {
     const r = await this.query(`SELECT * FROM checking_transactions WHERE user_id=$1 AND year=$2 AND month=$3 ORDER BY fecha DESC, created_at DESC`, [userId, year, month]);
     return r.rows;
@@ -49,18 +81,52 @@ class Checking {
   }
 
   /**
-   * Calcula el saldo global histórico
-   * Saldo inicial global + todos los abonos - todos los cargos
+   * Obtiene el saldo actual de la cuenta corriente
+   * Prioriza: saldo conocido de cartola > cálculo manual
    */
   async globalBalance(userId) {
-    // Obtener el saldo inicial más antiguo (si existe)
+    // Primero buscar saldo conocido de cartola (más confiable)
+    const knownRes = await this.query(
+      `SELECT known_balance, balance_date FROM checking_balances 
+       WHERE user_id = $1 AND known_balance IS NOT NULL 
+       ORDER BY balance_date DESC LIMIT 1`,
+      [userId]
+    );
+    
+    if (knownRes.rows.length > 0) {
+      const knownBalance = Number(knownRes.rows[0].known_balance);
+      const balanceDate = knownRes.rows[0].balance_date;
+      
+      // Sumar movimientos POSTERIORES a la fecha del saldo conocido
+      const movRes = await this.query(
+        `SELECT 
+          COALESCE(SUM(CASE WHEN tipo='abono' THEN amount ELSE 0 END),0) AS total_abonos,
+          COALESCE(SUM(CASE WHEN tipo='cargo' THEN amount ELSE 0 END),0) AS total_cargos
+        FROM checking_transactions 
+        WHERE user_id = $1 AND fecha > $2`,
+        [userId, balanceDate]
+      );
+      
+      const abonosPosteriores = Number(movRes.rows[0].total_abonos || 0);
+      const cargosPosteriores = Number(movRes.rows[0].total_cargos || 0);
+      
+      return {
+        known_balance: knownBalance,
+        balance_date: balanceDate,
+        abonos_posteriores: abonosPosteriores,
+        cargos_posteriores: cargosPosteriores,
+        saldo_actual: knownBalance + abonosPosteriores - cargosPosteriores,
+        source: 'cartola'
+      };
+    }
+    
+    // Fallback: calcular desde saldo inicial + movimientos
     const initialRes = await this.query(
       `SELECT initial_balance FROM checking_balances WHERE user_id = $1 ORDER BY year ASC, month ASC LIMIT 1`,
       [userId]
     );
     const initialBalance = Number(initialRes.rows[0]?.initial_balance || 0);
     
-    // Sumar todos los movimientos
     const movRes = await this.query(
       `SELECT 
         COALESCE(SUM(CASE WHEN tipo='abono' THEN amount ELSE 0 END),0) AS total_abonos,
@@ -76,7 +142,8 @@ class Checking {
       initial_balance: initialBalance,
       total_abonos: totalAbonos,
       total_cargos: totalCargos,
-      saldo_actual: initialBalance + totalAbonos - totalCargos
+      saldo_actual: initialBalance + totalAbonos - totalCargos,
+      source: 'calculated'
     };
   }
 
