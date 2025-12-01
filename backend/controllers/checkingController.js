@@ -1,5 +1,6 @@
 const Checking = require('../models/Checking');
 const db = require('../config/database');
+const XLSX = require('xlsx');
 
 const model = new Checking(db);
 
@@ -100,4 +101,123 @@ async function remove(req, res) {
   } catch (e) { res.status(400).json({ error: e.message || 'Error al eliminar movimiento' }); }
 }
 
-module.exports = { getBalance, setBalance, list, summary, create, update, remove };
+/**
+ * Importar cartola Banco de Chile desde archivo Excel
+ * Formato esperado:
+ * - Encabezados en fila 23: Fecha, Descripción, Canal, Cargos, Abonos, Saldo
+ * - Datos desde fila 24
+ */
+async function importFile(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se recibió archivo' });
+    }
+
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+    console.log(`[checking] Sheet '${sheetName}' rows: ${data.length}`);
+
+    // Buscar fila de encabezados (contiene "Fecha", "Descripción", "Cargos", "Abonos")
+    let headerRowIdx = -1;
+    let colMap = {};
+    
+    for (let i = 0; i < Math.min(data.length, 50); i++) {
+      const row = data[i];
+      const rowStr = row.map(c => String(c).toLowerCase()).join('|');
+      
+      if (rowStr.includes('fecha') && rowStr.includes('descripci') && 
+          (rowStr.includes('cargo') || rowStr.includes('abono'))) {
+        headerRowIdx = i;
+        
+        // Mapear columnas
+        for (let j = 0; j < row.length; j++) {
+          const cell = String(row[j]).toLowerCase();
+          if (cell.includes('fecha') && !colMap.fecha) colMap.fecha = j;
+          if (cell.includes('descripci') && !colMap.descripcion) colMap.descripcion = j;
+          if (cell.includes('cargo') && !colMap.cargos) colMap.cargos = j;
+          if (cell.includes('abono') && !colMap.abonos) colMap.abonos = j;
+        }
+        break;
+      }
+    }
+
+    if (headerRowIdx === -1) {
+      return res.status(400).json({ 
+        error: 'No se encontró la fila de encabezados. Asegúrate de que el archivo tenga columnas: Fecha, Descripción, Cargos, Abonos' 
+      });
+    }
+
+    console.log(`[checking] Header row: ${headerRowIdx}, colMap:`, colMap);
+
+    // Extraer transacciones
+    const transactions = [];
+    
+    for (let i = headerRowIdx + 1; i < data.length; i++) {
+      const row = data[i];
+      
+      // Obtener fecha
+      let fecha = row[colMap.fecha];
+      if (!fecha) continue;
+      
+      // Convertir fecha DD/MM/YYYY a YYYY-MM-DD
+      if (typeof fecha === 'string' && fecha.includes('/')) {
+        const parts = fecha.split('/');
+        if (parts.length === 3) {
+          fecha = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+      } else if (fecha instanceof Date) {
+        fecha = fecha.toISOString().slice(0, 10);
+      }
+      
+      // Validar que la fecha sea válida
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) continue;
+      
+      const descripcion = String(row[colMap.descripcion] || '').trim();
+      if (!descripcion || descripcion.length < 2) continue;
+      
+      const cargos = Number(row[colMap.cargos]) || 0;
+      const abonos = Number(row[colMap.abonos]) || 0;
+      
+      // Si tiene cargo, es tipo 'cargo'. Si tiene abono, es tipo 'abono'
+      if (cargos > 0) {
+        transactions.push({
+          fecha,
+          descripcion,
+          tipo: 'cargo',
+          amount: cargos
+        });
+      } else if (abonos > 0) {
+        transactions.push({
+          fecha,
+          descripcion,
+          tipo: 'abono',
+          amount: abonos
+        });
+      }
+    }
+
+    if (transactions.length === 0) {
+      return res.status(400).json({ error: 'No se encontraron transacciones válidas en el archivo' });
+    }
+
+    console.log(`[checking] Parsed ${transactions.length} transactions`);
+
+    // Importar con detección de duplicados
+    const result = await model.bulkImport(req.user.id, transactions);
+    
+    res.json({
+      inserted: result.inserted,
+      skipped: result.skipped,
+      total: transactions.length
+    });
+
+  } catch (e) {
+    console.error('Error importando cartola:', e);
+    res.status(500).json({ error: e.message || 'Error al importar archivo' });
+  }
+}
+
+module.exports = { getBalance, setBalance, list, summary, create, update, remove, importFile };

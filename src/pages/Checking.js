@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   Grid,
   IconButton,
@@ -28,8 +29,9 @@ import {
   Snackbar,
   Alert,
   Pagination,
+  LinearProgress,
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add, Edit, Delete, FileUpload, CheckCircle, Close } from '@mui/icons-material';
 // This page is fixed to the current month; no MonthPicker needed
 import axios from 'axios';
 
@@ -58,6 +60,12 @@ export default function Checking() {
   const [openMove, setOpenMove] = useState(false);
   const [moveForm, setMoveForm] = useState({ id: null, fecha: '', descripcion: '', tipo: 'abono', amount: '', category_id: '', notas: '' });
   const [filter, setFilter] = useState({ tipo: 'todos', category_id: '' });
+  
+  // Estados para importación
+  const [openImport, setOpenImport] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState({ open: false, data: null });
 
   const load = async () => {
     try {
@@ -149,6 +157,61 @@ export default function Checking() {
     }
   };
 
+  // Funciones de importación
+  const onFileChange = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const allowed = ['.xls', '.xlsx'];
+    const ok = allowed.some(ext => f.name.toLowerCase().endsWith(ext));
+    if (!ok) {
+      setSnackbar({ open: true, message: 'Formato no soportado. Usa .xls o .xlsx', severity: 'error' });
+      return;
+    }
+    setSelectedFile(f);
+  };
+
+  const onImport = async () => {
+    if (!selectedFile) return;
+    
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+    
+    try {
+      setImporting(true);
+      const response = await axios.post('/api/checking/import-file', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      setOpenImport(false);
+      setSelectedFile(null);
+      await load();
+      
+      const { inserted = 0, skipped = 0 } = response.data || {};
+      const message = inserted > 0 
+        ? 'Transacciones importadas correctamente'
+        : skipped > 0 
+          ? 'No se encontraron transacciones nuevas'
+          : 'No se encontraron transacciones para importar';
+      
+      setImportResult({ 
+        open: true, 
+        data: { inserted, skipped, message, isError: false }
+      });
+    } catch (e) {
+      setImportResult({ 
+        open: true, 
+        data: { 
+          inserted: 0, 
+          skipped: 0, 
+          message: e?.response?.data?.error || 'Error al importar archivo', 
+          isError: true 
+        }
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 2 }}>Cuenta Corriente</Typography>
@@ -225,6 +288,7 @@ export default function Checking() {
           {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
         </TextField>
         <Box sx={{ flex: 1 }} />
+        <Button variant="outlined" startIcon={<FileUpload />} onClick={() => setOpenImport(true)}>Importar cartola</Button>
         <Button variant="contained" startIcon={<Add />} onClick={openNewMove}>Nuevo movimiento</Button>
       </Stack>
 
@@ -348,6 +412,102 @@ export default function Checking() {
           <Button onClick={closeMove}>Cancelar</Button>
           <Button variant="contained" onClick={saveMove}>Guardar</Button>
         </DialogActions>
+      </Dialog>
+
+{/* Diálogo importar cartola */}
+      <Dialog open={openImport} onClose={() => { setOpenImport(false); setSelectedFile(null); }} maxWidth="sm" fullWidth>
+        <DialogTitle>Importar Cartola Banco de Chile</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Selecciona el archivo Excel (.xls o .xlsx) descargado desde tu cuenta corriente del Banco de Chile.
+            Las transacciones duplicadas serán omitidas automáticamente.
+          </DialogContentText>
+          <Button
+            variant="outlined"
+            component="label"
+            fullWidth
+            sx={{ mb: 2 }}
+          >
+            {selectedFile ? selectedFile.name : 'Seleccionar archivo'}
+            <input type="file" hidden accept=".xls,.xlsx" onChange={onFileChange} />
+          </Button>
+          {importing && <LinearProgress sx={{ mb: 2 }} />}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setOpenImport(false); setSelectedFile(null); }}>Cancelar</Button>
+          <Button 
+            variant="contained" 
+            onClick={onImport} 
+            disabled={!selectedFile || importing}
+          >
+            {importing ? 'Importando...' : 'Importar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo resultado de importación */}
+      <Dialog
+        open={importResult.open}
+        onClose={() => setImportResult({ open: false, data: null })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center" gap={1}>
+              {importResult.data?.isError ? (
+                <>
+                  <FileUpload color="error" />
+                  <Typography variant="h6">Error en Importación</Typography>
+                </>
+              ) : importResult.data?.inserted > 0 ? (
+                <>
+                  <CheckCircle color="success" />
+                  <Typography variant="h6">Importación Exitosa</Typography>
+                </>
+              ) : (
+                <>
+                  <FileUpload color="primary" />
+                  <Typography variant="h6">Importación Completada</Typography>
+                </>
+              )}
+            </Box>
+            <IconButton
+              edge="end"
+              color="inherit"
+              onClick={() => setImportResult({ open: false, data: null })}
+              aria-label="close"
+            >
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            {importResult.data?.message}
+          </DialogContentText>
+          
+          {importResult.data && !importResult.data.isError && (
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                ✅ <strong>{importResult.data.inserted}</strong> transacciones nuevas importadas
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                ⏭️ <strong>{importResult.data.skipped}</strong> transacciones duplicadas (omitidas)
+              </Typography>
+            </Box>
+          )}
+          
+          <Button
+            onClick={() => setImportResult({ open: false, data: null })}
+            variant="contained"
+            fullWidth
+            sx={{ mt: 3 }}
+          >
+            Cerrar
+          </Button>
+        </DialogContent>
       </Dialog>
 
       <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={()=>setSnackbar(prev=>({ ...prev, open:false }))}>

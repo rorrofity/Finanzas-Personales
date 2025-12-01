@@ -72,6 +72,80 @@ class Checking {
   async delete(userId, id) {
     await this.query(`DELETE FROM checking_transactions WHERE id=$1 AND user_id=$2`, [id, userId]);
   }
+
+  /**
+   * Importación masiva con detección de duplicados
+   * Duplicado = misma fecha + monto + descripción normalizada
+   */
+  async bulkImport(userId, rows) {
+    // Función para normalizar descripción (quitar espacios extras, lowercase)
+    const normalizeDesc = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    // Función para normalizar fecha a YYYY-MM-DD
+    const normalizeDate = (d) => {
+      if (!d) return null;
+      if (typeof d === 'string') return d.slice(0, 10);
+      if (d instanceof Date) return d.toISOString().slice(0, 10);
+      return String(d).slice(0, 10);
+    };
+
+    // Obtener transacciones existentes del usuario
+    const existingRes = await this.query(
+      `SELECT fecha, amount, descripcion FROM checking_transactions WHERE user_id = $1`,
+      [userId]
+    );
+    
+    // Crear mapa de existentes: key = fecha|monto|descripcion_normalizada
+    const existingSet = new Set();
+    for (const row of existingRes.rows) {
+      const key = `${normalizeDate(row.fecha)}|${row.amount}|${normalizeDesc(row.descripcion)}`;
+      existingSet.add(key);
+    }
+
+    let insertedCount = 0;
+    let skippedCount = 0;
+
+    for (const r of rows) {
+      const fechaNorm = normalizeDate(r.fecha);
+      const descNorm = normalizeDesc(r.descripcion);
+      const amount = Math.abs(Number(r.amount));
+      const tipo = r.tipo; // 'abono' o 'cargo'
+      
+      if (!fechaNorm || !descNorm || !amount || !tipo) {
+        skippedCount++;
+        continue;
+      }
+
+      // Crear key para verificar duplicado
+      const key = `${fechaNorm}|${amount}|${descNorm}`;
+      
+      if (existingSet.has(key)) {
+        // Ya existe, omitir
+        console.log(`⏭️  Duplicado checking: ${r.descripcion} - $${amount} (${fechaNorm})`);
+        skippedCount++;
+        continue;
+      }
+
+      // Derivar año y mes de la fecha
+      const d = new Date(fechaNorm);
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+
+      // Insertar
+      await this.query(
+        `INSERT INTO checking_transactions (user_id, year, month, fecha, descripcion, tipo, amount)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [userId, year, month, fechaNorm, r.descripcion.slice(0, 60), tipo, amount]
+      );
+
+      // Agregar al set para evitar duplicados dentro del mismo archivo
+      existingSet.add(key);
+      insertedCount++;
+      console.log(`✅ Checking importada: ${r.descripcion} - $${amount} (${tipo})`);
+    }
+
+    return { inserted: insertedCount, skipped: skippedCount };
+  }
 }
 
 module.exports = Checking;
