@@ -177,30 +177,24 @@ const getSummary = async (req, res) => {
       console.warn('Error obteniendo transacciones internacionales:', e.message);
     }
 
-    // 5. Obtener gastos/ingresos proyectados del mes siguiente
+    // 5. Obtener gastos/ingresos proyectados del mes
     let projectedExpenses = 0, projectedIncome = 0;
     const expenseDetails = [];
     const incomeDetails = [];
     
     try {
+      // Usar la tabla projected_occurrences directamente (ya materializada)
       const projRes = await db.query(`
         SELECT 
-          pt.nombre,
-          pt.tipo,
-          COALESCE(po.monto_override, pt.monto) as monto
-        FROM projected_templates pt
-        LEFT JOIN projected_occurrences po ON po.template_id = pt.id 
-          AND po.year = $2 AND po.month = $3
-        WHERE pt.user_id = $1
-          AND (
-            (pt.repeat_monthly = true AND (
-              pt.start_year < $2 OR 
-              (pt.start_year = $2 AND pt.start_month <= $3)
-            ))
-            OR 
-            (pt.repeat_monthly = false AND pt.start_year = $2 AND pt.start_month = $3)
-          )
-          AND COALESCE(po.is_deleted, false) = false
+          COALESCE(po.nombre, pt.nombre) as nombre,
+          COALESCE(po.tipo, pt.tipo) as tipo,
+          COALESCE(po.monto, pt.monto) as monto
+        FROM projected_occurrences po
+        JOIN projected_templates pt ON pt.id = po.template_id
+        WHERE po.user_id = $1
+          AND po.year = $2 
+          AND po.month = $3
+          AND po.active = true
       `, [userId, targetYear, targetMonth]);
       
       for (const row of projRes.rows) {
