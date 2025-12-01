@@ -256,6 +256,8 @@ router.post('/sync-save', async (req, res) => {
         
         if (duplicateByEmailId.rows.length > 0) {
           skipped++;
+          // Agregar a processedEmailIds para marcar como leído aunque sea duplicada
+          importedEmailIds.push(txn.email_id);
           console.log(`⏭️  Duplicada por email_id: ${txn.descripcion} (${txn.email_id})`);
           continue;
         }
@@ -274,6 +276,8 @@ router.post('/sync-save', async (req, res) => {
         
         if (duplicateBySignature.rows.length > 0) {
           skipped++;
+          // Agregar a processedEmailIds para marcar como leído aunque sea duplicada
+          if (txn.email_id) importedEmailIds.push(txn.email_id);
           console.log(`⏭️  Duplicada por firma: ${txn.descripcion} - $${txn.monto} (${txn.fecha})`);
           continue;
         }
