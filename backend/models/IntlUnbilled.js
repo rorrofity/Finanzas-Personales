@@ -49,10 +49,21 @@ class IntlUnbilled {
     if (!py || py < 2000 || py > 2100) throw new Error('periodYear inválido');
     if (!pm || pm < 1 || pm > 12) throw new Error('periodMonth inválido');
 
-    const values = [];
-    const params = [];
-    let p = 1;
-    const insertedIds = [];
+    // Obtener transacciones existentes para verificar duplicados por fecha + amount_usd
+    const existingRes = await this.query(
+      `SELECT id, fecha, amount_usd FROM intl_unbilled WHERE user_id = $1`,
+      [userId]
+    );
+    const existingMap = new Map();
+    for (const row of existingRes.rows) {
+      const key = `${row.fecha}|${row.amount_usd}`;
+      if (!existingMap.has(key)) existingMap.set(key, []);
+      existingMap.get(key).push(row.id);
+    }
+
+    let insertedCount = 0;
+    let skippedCount = 0;
+    let suspiciousCount = 0;
     
     for (const r of rows) {
       const fecha = r.fecha;
@@ -63,49 +74,36 @@ class IntlUnbilled {
       
       if (!fecha || !descripcion || Number.isNaN(amount_usd) || !['gasto','pago','desestimar'].includes(tipo)) continue;
       
+      const key = `${fecha}|${amount_usd}`;
+      const existingIds = existingMap.get(key);
+      
+      if (existingIds && existingIds.length > 0) {
+        // Ya existe una transacción con misma fecha + amount_usd
+        // Marcar como duplicado sospechoso SIN insertar
+        console.log(`⏭️  Posible duplicado intl detectado: ${descripcion} - US$${amount_usd} (${fecha})`);
+        skippedCount++;
+        suspiciousCount++;
+        continue;
+      }
+      
+      // No existe duplicado, insertar
       const amount_clp = Math.round(amount_usd * rate);
-      params.push(userId, b, fecha, descripcion, amount_usd, rate, amount_clp, tipo, category_id, fecha, py, pm);
-      values.push(`($${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++},$${p++})`);
-    }
-    
-    if (!values.length) return { inserted: 0, suspiciousCount: 0 };
-
-    // Insertar todas las transacciones y obtener IDs
-    const sql = `INSERT INTO intl_unbilled (
-        user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, category_id, original_fecha, period_year, period_month
-      ) VALUES ${values.join(',')} RETURNING id, fecha, amount_usd`;
-    const insertResult = await this.query(sql, params);
-    
-    // Detectar duplicados sospechosos (misma fecha + amount_usd)
-    let suspiciousCount = 0;
-    for (const inserted of insertResult.rows) {
-      const similar = await this.query(
-        `SELECT id FROM intl_unbilled 
-         WHERE user_id = $1 AND fecha = $2 AND amount_usd = $3 AND id != $4`,
-        [userId, inserted.fecha, inserted.amount_usd, inserted.id]
+      const insertResult = await this.query(
+        `INSERT INTO intl_unbilled (
+          user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, category_id, original_fecha, period_year, period_month
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $3, $10, $11) RETURNING id`,
+        [userId, b, fecha, descripcion, amount_usd, rate, amount_clp, tipo, category_id, py, pm]
       );
       
-      for (const match of similar.rows) {
-        // Verificar que no exista ya este par como sospechoso
-        const existing = await this.query(
-          `SELECT 1 FROM intl_suspicious_duplicates 
-           WHERE (intl_id = $1 AND similar_to_id = $2) OR (intl_id = $2 AND similar_to_id = $1)`,
-          [inserted.id, match.id]
-        );
-        
-        if (existing.rows.length === 0) {
-          await this.query(
-            `INSERT INTO intl_suspicious_duplicates (intl_id, similar_to_id, status)
-             VALUES ($1, $2, 'pending') ON CONFLICT DO NOTHING`,
-            [inserted.id, match.id]
-          );
-          suspiciousCount++;
-          console.log(`⚠️  Duplicado sospechoso intl: fecha=${inserted.fecha}, amount_usd=${inserted.amount_usd}`);
-        }
-      }
+      // Agregar al mapa para detectar duplicados dentro del mismo archivo
+      if (!existingMap.has(key)) existingMap.set(key, []);
+      existingMap.get(key).push(insertResult.rows[0].id);
+      
+      insertedCount++;
+      console.log(`✅ Intl importada: ${descripcion} - US$${amount_usd}`);
     }
     
-    return { inserted: insertResult.rows.length, suspiciousCount };
+    return { inserted: insertedCount, skipped: skippedCount, suspiciousCount };
   }
 
   async create(userId, data) {

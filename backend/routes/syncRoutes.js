@@ -271,18 +271,31 @@ router.post('/sync-save', async (req, res) => {
         
         if (isIntl) {
           // === TRANSACCIÓN INTERNACIONAL ===
-          // Calcular monto en CLP
+          // Verificar duplicado por fecha + amount_usd ANTES de insertar
+          const duplicateIntl = await client.query(
+            `SELECT id FROM intl_unbilled 
+             WHERE user_id = $1 AND fecha = $2 AND amount_usd = $3
+             LIMIT 1`,
+            [userId, txn.fecha, txn.amount_usd]
+          );
+          
+          if (duplicateIntl.rows.length > 0) {
+            skipped++;
+            importedEmailIds.push(txn.email_id);
+            console.log(`⏭️  Intl duplicada (fecha+amount_usd): ${txn.descripcion} - US$${txn.amount_usd} (${txn.fecha})`);
+            continue;
+          }
+          
+          // No existe duplicado, insertar
           const amountCLP = Math.round(txn.amount_usd * exchangeRate);
           const brand = txn.tipo_tarjeta || 'visa';
           
           console.log(`💳 Intl: ${txn.descripcion} - US$${txn.amount_usd} = $${amountCLP} CLP (${brand}), Período: ${billingPeriod.year}-${billingPeriod.month}`);
           
-          // Insertar en intl_unbilled y obtener ID
-          const insertResult = await client.query(
+          await client.query(
             `INSERT INTO intl_unbilled 
              (user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, original_fecha, period_year, period_month)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $3, $9, $10)
-             RETURNING id`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $3, $9, $10)`,
             [
               userId,
               brand,
@@ -296,33 +309,6 @@ router.post('/sync-save', async (req, res) => {
               billingPeriod.month
             ]
           );
-          
-          const insertedId = insertResult.rows[0].id;
-          
-          // Detectar duplicados sospechosos (misma fecha + amount_usd)
-          const similarTxns = await client.query(
-            `SELECT id FROM intl_unbilled 
-             WHERE user_id = $1 AND fecha = $2 AND amount_usd = $3 AND id != $4`,
-            [userId, txn.fecha, txn.amount_usd, insertedId]
-          );
-          
-          for (const match of similarTxns.rows) {
-            // Verificar que no exista ya este par
-            const existing = await client.query(
-              `SELECT 1 FROM intl_suspicious_duplicates 
-               WHERE (intl_id = $1 AND similar_to_id = $2) OR (intl_id = $2 AND similar_to_id = $1)`,
-              [insertedId, match.id]
-            );
-            
-            if (existing.rows.length === 0) {
-              await client.query(
-                `INSERT INTO intl_suspicious_duplicates (intl_id, similar_to_id, status)
-                 VALUES ($1, $2, 'pending') ON CONFLICT DO NOTHING`,
-                [insertedId, match.id]
-              );
-              console.log(`⚠️  Duplicado sospechoso intl detectado: fecha=${txn.fecha}, US$${txn.amount_usd}`);
-            }
-          }
           
           importedCount++;
           importedEmailIds.push(txn.email_id);
