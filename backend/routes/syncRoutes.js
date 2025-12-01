@@ -429,4 +429,175 @@ router.get('/sync-status', auth, async (req, res) => {
   }
 });
 
+/**
+ * Obtiene el tipo de cambio USD → CLP
+ * Usa una API gratuita con fallback a un valor por defecto
+ */
+async function getExchangeRate() {
+  try {
+    // Intentar obtener de API gratuita
+    const response = await axios.get('https://api.exchangerate-api.com/v4/latest/USD', {
+      timeout: 5000
+    });
+    return response.data.rates.CLP || 980; // Fallback si no hay CLP
+  } catch (error) {
+    console.warn('Error obteniendo tipo de cambio, usando valor por defecto:', error.message);
+    return 980; // Valor aproximado como fallback
+  }
+}
+
+/**
+ * POST /api/sync/sync-save-intl
+ * Endpoint para guardar transacciones internacionales desde N8N
+ * Guarda en la tabla intl_unbilled con conversión a CLP
+ */
+router.post('/sync-save-intl', async (req, res) => {
+  console.log('📧 Recibiendo transacciones INTERNACIONALES desde N8N');
+  console.log('Body:', JSON.stringify(req.body, null, 2));
+  
+  const { userId, transactions } = req.body;
+  
+  if (!userId || !transactions || !Array.isArray(transactions)) {
+    console.error('❌ Datos inválidos recibidos');
+    return res.status(400).json({
+      success: false,
+      message: 'Datos inválidos: se requiere userId y transactions[]',
+      imported: 0,
+      skipped: 0,
+      errors: ['Estructura de datos inválida']
+    });
+  }
+  
+  let importedCount = 0;
+  const importedEmailIds = [];
+  let skipped = 0;
+  const errors = [];
+  
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Verificar que el usuario existe
+    const userCheck = await client.query(
+      'SELECT id FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userCheck.rows.length === 0) {
+      throw new Error(`Usuario ${userId} no encontrado`);
+    }
+    
+    // Obtener tipo de cambio actual
+    const exchangeRate = await getExchangeRate();
+    console.log(`💱 Tipo de cambio USD/CLP: ${exchangeRate}`);
+    
+    for (const txn of transactions) {
+      try {
+        // Validar datos mínimos
+        if (!txn.fecha || !txn.descripcion || txn.amount_usd === null || txn.amount_usd === undefined) {
+          errors.push({
+            transaction: txn.descripcion || 'Sin descripción',
+            error: 'Datos incompletos: se requiere fecha, descripcion, amount_usd'
+          });
+          continue;
+        }
+        
+        // Validar email_id para prevenir duplicados
+        if (!txn.email_id) {
+          errors.push({
+            transaction: txn.descripcion,
+            error: 'email_id requerido para prevenir duplicados'
+          });
+          continue;
+        }
+        
+        // Verificar duplicado por email_id
+        const duplicateCheck = await client.query(
+          `SELECT id FROM intl_unbilled 
+           WHERE user_id = $1 
+           AND fecha = $2 
+           AND descripcion = $3 
+           AND amount_usd = $4
+           LIMIT 1`,
+          [userId, txn.fecha, txn.descripcion, txn.amount_usd]
+        );
+        
+        if (duplicateCheck.rows.length > 0) {
+          skipped++;
+          importedEmailIds.push(txn.email_id);
+          console.log(`⏭️  Intl duplicada: ${txn.descripcion} - US$${txn.amount_usd}`);
+          continue;
+        }
+        
+        // Calcular período de facturación
+        const billingPeriod = calculateBillingPeriod(txn.fecha);
+        
+        // Calcular monto en CLP
+        const amountCLP = Math.round(txn.amount_usd * exchangeRate);
+        
+        // Determinar brand (visa/mastercard) por últimos 4 dígitos
+        const brand = txn.tipo_tarjeta || 'visa';
+        
+        console.log(`💳 Intl: ${txn.descripcion} - US$${txn.amount_usd} = $${amountCLP} CLP (${brand})`);
+        
+        // Insertar en intl_unbilled
+        await client.query(
+          `INSERT INTO intl_unbilled 
+           (user_id, brand, fecha, descripcion, amount_usd, exchange_rate, amount_clp, tipo, original_fecha, period_year, period_month)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $3, $9, $10)`,
+          [
+            userId,
+            brand,
+            txn.fecha,
+            txn.descripcion,
+            txn.amount_usd,
+            exchangeRate,
+            amountCLP,
+            txn.tipo || 'gasto',
+            billingPeriod.year,
+            billingPeriod.month
+          ]
+        );
+        
+        importedCount++;
+        importedEmailIds.push(txn.email_id);
+        
+      } catch (txnError) {
+        console.error(`❌ Error procesando transacción intl:`, txnError.message);
+        errors.push({
+          transaction: txn.descripcion,
+          error: txnError.message
+        });
+      }
+    }
+    
+    await client.query('COMMIT');
+    
+    console.log(`✅ Sync intl completado: ${importedCount} importadas, ${skipped} saltadas`);
+    
+    res.json({
+      success: true,
+      imported: importedCount,
+      skipped: skipped,
+      errors: errors,
+      processedEmailIds: importedEmailIds,
+      exchangeRate: exchangeRate
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Error en sync intl:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      imported: 0,
+      skipped: 0,
+      errors: [error.message]
+    });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
