@@ -48,7 +48,7 @@ import { usePeriod } from '../contexts/PeriodContext';
 
 const Transactions = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // < 900px shows card view
   const [transactions, setTransactions] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
   const [loading, setLoading] = useState(true);
