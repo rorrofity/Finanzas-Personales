@@ -13,6 +13,7 @@ import {
   Toolbar,
   Typography,
   useTheme,
+  useMediaQuery,
   Avatar,
   Menu,
   MenuItem,
@@ -37,7 +38,9 @@ const DashboardLayout = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [open, setOpen] = useState(true);
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
   const [suspiciousCount, setSuspiciousCount] = useState(0);
 
@@ -59,7 +62,11 @@ const DashboardLayout = () => {
   }, []);
 
   const handleDrawerToggle = () => {
-    setOpen(!open);
+    if (isMobile) {
+      setMobileOpen(!mobileOpen);
+    } else {
+      setDesktopOpen(!desktopOpen);
+    }
   };
 
   const handleProfileMenu = (event) => {
@@ -136,23 +143,59 @@ const DashboardLayout = () => {
           </Menu>
         </Toolbar>
       </AppBar>
+      {/* Drawer para móvil */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
+            width: drawerWidth,
+            backgroundColor: theme.palette.background.default,
+          },
+        }}
+      >
+        <Toolbar />
+        <Box sx={{ overflow: 'auto' }}>
+          <List>
+            {menuItems.map((item) => (
+              <ListItemButton
+                key={item.text}
+                onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                sx={{ minHeight: 48, px: 2.5 }}
+              >
+                <ListItemIcon sx={{ minWidth: 0, mr: 3, justifyContent: 'center' }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            ))}
+          </List>
+        </Box>
+      </Drawer>
+
+      {/* Drawer para escritorio */}
       <Drawer
         variant="permanent"
         sx={{
-          width: drawerWidth,
+          display: { xs: 'none', md: 'block' },
+          width: desktopOpen ? drawerWidth : theme.spacing(7),
           flexShrink: 0,
-          [`& .MuiDrawer-paper`]: {
-            width: drawerWidth,
+          '& .MuiDrawer-paper': {
+            width: desktopOpen ? drawerWidth : theme.spacing(7),
             boxSizing: 'border-box',
             backgroundColor: theme.palette.background.default,
             borderRight: `1px solid ${theme.palette.divider}`,
-            ...(!open && {
-              width: theme.spacing(7),
-              overflowX: 'hidden',
+            overflowX: 'hidden',
+            transition: theme.transitions.create('width', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.enteringScreen,
             }),
           },
         }}
-        open={open}
       >
         <Toolbar />
         <Box sx={{ overflow: 'auto' }}>
@@ -163,14 +206,14 @@ const DashboardLayout = () => {
                 onClick={() => navigate(item.path)}
                 sx={{
                   minHeight: 48,
-                  justifyContent: open ? 'initial' : 'center',
+                  justifyContent: desktopOpen ? 'initial' : 'center',
                   px: 2.5,
                 }}
               >
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: open ? 3 : 'auto',
+                    mr: desktopOpen ? 3 : 'auto',
                     justifyContent: 'center',
                   }}
                 >
@@ -178,7 +221,7 @@ const DashboardLayout = () => {
                 </ListItemIcon>
                 <ListItemText
                   primary={item.text}
-                  sx={{ opacity: open ? 1 : 0 }}
+                  sx={{ opacity: desktopOpen ? 1 : 0 }}
                 />
               </ListItemButton>
             ))}
@@ -189,9 +232,15 @@ const DashboardLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 1, sm: 2, md: 3 },
           backgroundColor: theme.palette.background.default,
           minHeight: '100vh',
+          width: { xs: '100%', md: `calc(100% - ${desktopOpen ? drawerWidth : theme.spacing(7)}px)` },
+          ml: { xs: 0, md: desktopOpen ? `${drawerWidth}px` : theme.spacing(7) },
+          transition: theme.transitions.create(['margin', 'width'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
         }}
       >
         <Toolbar />
