@@ -29,6 +29,11 @@ import {
   Chip,
   Switch,
   FormControlLabel,
+  Card,
+  CardContent,
+  Stack,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { 
   Delete as DeleteIcon, 
@@ -42,6 +47,8 @@ import SyncButton from '../components/SyncButton';
 import { usePeriod } from '../contexts/PeriodContext';
 
 const Transactions = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [transactions, setTransactions] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -515,7 +522,7 @@ const Transactions = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
       <MonthPicker />
       {showInfo && (
         <Alert
@@ -530,9 +537,11 @@ const Transactions = () => {
         </Alert>
       )}
       <Paper>
-        <Box p={2} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
-          <Typography variant="h6">Transacciones • {titleBrandLabel} ({filteredTransactions.length})</Typography>
-          <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
+        <Box p={{ xs: 1, sm: 2 }} display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} gap={1}>
+          <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="bold">
+            Transacciones • {titleBrandLabel} ({filteredTransactions.length})
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             <SyncButton 
               onSyncComplete={() => {
                 fetchTransactions();
@@ -540,31 +549,38 @@ const Transactions = () => {
               variant="outlined"
               size="small"
             />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => handleOpenDialog()}
-            >
-              Nueva Transacción
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setOpenImportDialog(true)}
-            >
-              Importar CSV
-            </Button>
-          </Box>
+            {!isMobile && (
+              <>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={() => handleOpenDialog()}
+                >
+                  Nueva
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={() => setOpenImportDialog(true)}
+                >
+                  Importar
+                </Button>
+              </>
+            )}
+          </Stack>
         </Box>
-        <Box p={2} display="flex" alignItems="center" gap={2} flexWrap="wrap">
+        <Box px={{ xs: 1, sm: 2 }} pb={1} display="flex" alignItems="center" gap={1} flexWrap="wrap">
           <FormControlLabel
             control={
               <Switch
+                size="small"
                 checked={hideDismissed}
                 onChange={(e) => setHideDismissed(e.target.checked)}
               />
             }
-            label="Ocultar desestimados en tabla"
+            label={<Typography variant="body2">Ocultar desest.</Typography>}
           />
           <TextField
             select
@@ -577,7 +593,7 @@ const Transactions = () => {
               setPage(0);
               try { sessionStorage.setItem(`tcFilterCard::transactions::${periodKey}`, v); } catch {}
             }}
-            sx={{ minWidth: 180 }}
+            sx={{ minWidth: { xs: 100, sm: 180 } }}
           >
             <MenuItem value="ALL">Todas</MenuItem>
             <MenuItem value="VISA">Visa</MenuItem>
@@ -594,141 +610,214 @@ const Transactions = () => {
           )}
         </Box>
 
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>
-                  <input
-                    type="checkbox"
-                    checked={selectedTransactions.length === transactions.length && transactions.length > 0}
-                    onChange={handleSelectAll}
-                  />
-                </TableCell>
-                <SortableTableCell field="fecha" label="Fecha" />
-                <SortableTableCell field="descripcion" label="Descripción" />
-                <SortableTableCell field="monto" label="Monto" />
-                <SortableTableCell field="category_name" label="Categoría" />
-                <SortableTableCell field="tipo" label="Tipo" />
-                <SortableTableCell field="provider" label="Banco" />
-                <SortableTableCell field="network" label="Tarjeta" />
-                <TableCell>Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredTransactions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} align="center">
-                    No hay transacciones este mes
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredTransactions
+        {/* Vista móvil: Cards */}
+        {isMobile ? (
+          <Box sx={{ p: 1 }}>
+            {filteredTransactions.length === 0 ? (
+              <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
+                No hay transacciones este mes
+              </Typography>
+            ) : (
+              <Stack spacing={1}>
+                {filteredTransactions
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          checked={selectedTransactions.includes(transaction.id)}
-                          onChange={() => handleSelectTransaction(transaction.id)}
-                        />
-                      </TableCell>
-                      <TableCell>{new Date(transaction.fecha).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        {transaction.descripcion}{' '}
-                        {transaction.tipo === 'desestimar' && (
-                          <Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {formatAmount(transaction.monto)}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          size="small"
-                          value={transaction.category_id || ''}
-                          onChange={(e) => handleCategoryChange(transaction.id, e.target.value)}
-                          displayEmpty
-                          sx={{
-                            minWidth: 120,
-                            '& .MuiSelect-select': {
-                              padding: '8px 14px',
-                            }
-                          }}
-                        >
-                          <MenuItem value="">
-                            <em>Sin categoría</em>
-                          </MenuItem>
-                          {categoriesList.map((category) => (
-                            <MenuItem key={category.id} value={category.id}>
-                              {category.name}
+                    <Card key={transaction.id} variant="outlined" sx={{ 
+                      borderLeft: transaction.category_id ? '4px solid #4caf50' : '4px solid #ff9800',
+                    }}>
+                      <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                          <Box flex={1}>
+                            <Typography variant="body2" fontWeight="bold" sx={{ 
+                              overflow: 'hidden', 
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                            }}>
+                              {transaction.descripcion}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(transaction.fecha).toLocaleDateString()} • {transaction.network || '-'}
+                            </Typography>
+                          </Box>
+                          <Typography variant="body1" fontWeight="bold" color="error.main" sx={{ ml: 1, whiteSpace: 'nowrap' }}>
+                            {formatAmount(transaction.monto)}
+                          </Typography>
+                        </Box>
+                        
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Select
+                            size="small"
+                            value={transaction.category_id || ''}
+                            onChange={(e) => handleCategoryChange(transaction.id, e.target.value)}
+                            displayEmpty
+                            sx={{ flex: 1, '& .MuiSelect-select': { py: 0.75 } }}
+                          >
+                            <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                            {categoriesList.map((category) => (
+                              <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>
+                            ))}
+                          </Select>
+                          <Select
+                            size="small"
+                            value={transaction.tipo}
+                            onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
+                            sx={{ minWidth: 90, '& .MuiSelect-select': { py: 0.75 } }}
+                          >
+                            <MenuItem value="gasto">Gasto</MenuItem>
+                            <MenuItem value="pago">Pago</MenuItem>
+                            <MenuItem value="desestimar">Desest.</MenuItem>
+                          </Select>
+                          <IconButton size="small" onClick={() => handleDeleteClick(transaction)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </Stack>
+            )}
+          </Box>
+        ) : (
+          /* Vista desktop: Tabla */
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      checked={selectedTransactions.length === transactions.length && transactions.length > 0}
+                      onChange={handleSelectAll}
+                    />
+                  </TableCell>
+                  <SortableTableCell field="fecha" label="Fecha" />
+                  <SortableTableCell field="descripcion" label="Descripción" />
+                  <SortableTableCell field="monto" label="Monto" />
+                  <SortableTableCell field="category_name" label="Categoría" />
+                  <SortableTableCell field="tipo" label="Tipo" />
+                  <SortableTableCell field="provider" label="Banco" />
+                  <SortableTableCell field="network" label="Tarjeta" />
+                  <TableCell>Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredTransactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} align="center">
+                      No hay transacciones este mes
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredTransactions
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedTransactions.includes(transaction.id)}
+                            onChange={() => handleSelectTransaction(transaction.id)}
+                          />
+                        </TableCell>
+                        <TableCell>{new Date(transaction.fecha).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {transaction.descripcion}{' '}
+                          {transaction.tipo === 'desestimar' && (
+                            <Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {formatAmount(transaction.monto)}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            size="small"
+                            value={transaction.category_id || ''}
+                            onChange={(e) => handleCategoryChange(transaction.id, e.target.value)}
+                            displayEmpty
+                            sx={{
+                              minWidth: 120,
+                              '& .MuiSelect-select': {
+                                padding: '8px 14px',
+                              }
+                            }}
+                          >
+                            <MenuItem value="">
+                              <em>Sin categoría</em>
                             </MenuItem>
-                          ))}
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          size="small"
-                          value={transaction.tipo}
-                          onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
-                          sx={{
-                            minWidth: 100,
-                            '& .MuiSelect-select': {
-                              padding: '8px 14px',
-                            }
-                          }}
-                        >
-                          <MenuItem value="gasto">Gasto</MenuItem>
-                          <MenuItem value="pago">Pago</MenuItem>
-                          <MenuItem value="desestimar">Desestimar</MenuItem>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const p = transaction.provider;
-                          if (!p) return '-';
-                          if (p === 'banco_chile') return 'Banco de Chile';
-                          if (p === 'banco_cencosud') return 'Banco Cencosud';
-                          return p;
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        {transaction.network ? (transaction.network.charAt(0).toUpperCase() + transaction.network.slice(1)) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Tooltip title="Editar">
-                          <IconButton
+                            {categoriesList.map((category) => (
+                              <MenuItem key={category.id} value={category.id}>
+                                {category.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
                             size="small"
-                            onClick={() => handleOpenDialog(transaction)}
+                            value={transaction.tipo}
+                            onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
+                            sx={{
+                              minWidth: 100,
+                              '& .MuiSelect-select': {
+                                padding: '8px 14px',
+                              }
+                            }}
                           >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Eliminar">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteClick(transaction)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                            <MenuItem value="gasto">Gasto</MenuItem>
+                            <MenuItem value="pago">Pago</MenuItem>
+                            <MenuItem value="desestimar">Desestimar</MenuItem>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const p = transaction.provider;
+                            if (!p) return '-';
+                            if (p === 'banco_chile') return 'Banco de Chile';
+                            if (p === 'banco_cencosud') return 'Banco Cencosud';
+                            return p;
+                          })()}
+                        </TableCell>
+                        <TableCell>
+                          {transaction.network ? (transaction.network.charAt(0).toUpperCase() + transaction.network.slice(1)) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title="Editar">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenDialog(transaction)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Eliminar">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteClick(transaction)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={isMobile ? [10, 25] : [5, 10, 25]}
           component="div"
           count={filteredTransactions.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage={isMobile ? "" : "Filas por página:"}
         />
       </Paper>
 
