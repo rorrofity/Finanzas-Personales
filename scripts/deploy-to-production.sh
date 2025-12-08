@@ -64,7 +64,7 @@ fi
 
 # 1. Push a GitHub
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📤 Paso 1/6: Push a GitHub"
+echo "📤 Paso 1/7: Push a GitHub"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 git push origin main
 echo -e "${GREEN}✓${NC} Push completado"
@@ -72,7 +72,7 @@ echo ""
 
 # 2. Pull en servidor
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📥 Paso 2/6: Pull en servidor"
+echo "📥 Paso 2/7: Pull en servidor"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ssh root@137.184.12.234 << 'ENDSSH'
 cd /var/www/finanzas-personales
@@ -84,7 +84,7 @@ echo ""
 
 # 3. Instalar dependencias
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📦 Paso 3/6: Instalar dependencias"
+echo "📦 Paso 3/7: Instalar dependencias"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ssh root@137.184.12.234 << 'ENDSSH'
 cd /var/www/finanzas-personales/backend
@@ -95,7 +95,7 @@ echo ""
 
 # 4. Build frontend
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🏗️  Paso 4/6: Build frontend"
+echo "🏗️  Paso 4/7: Build frontend"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ssh root@137.184.12.234 << 'ENDSSH'
 cd /var/www/finanzas-personales/frontend
@@ -107,7 +107,7 @@ echo ""
 
 # 5. Migraciones de base de datos
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🗄️  Paso 5/6: Migraciones de base de datos"
+echo "🗄️  Paso 5/7: Migraciones de base de datos"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 if [ "$FRESH_DB" = true ]; then
@@ -156,9 +156,26 @@ echo "✓ Migraciones completadas"
 ENDSSH
 echo ""
 
-# 6. Reiniciar backend
+# 6. Actualizar configuración de Caddy
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🔄 Paso 6/6: Reiniciar backend"
+echo "🛡️  Paso 6/7: Actualizar configuración de Caddy"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+ssh root@137.184.12.234 << 'ENDSSH'
+# Copiar Caddyfile seguro
+cp /var/www/finanzas-personales/Caddyfile.secure /tmp/Caddyfile
+
+# Copiar al contenedor
+docker cp /tmp/Caddyfile n8n-docker-caddy-caddy-1:/etc/caddy/Caddyfile
+
+# Recargar Caddy
+docker exec n8n-docker-caddy-caddy-1 caddy reload --config /etc/caddy/Caddyfile
+echo "✓ Caddy reloaded con nueva configuración"
+ENDSSH
+echo ""
+
+# 7. Reiniciar backend
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔄 Paso 7/7: Reiniciar backend"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ssh root@137.184.12.234 << 'ENDSSH'
 pm2 restart finanzas-backend

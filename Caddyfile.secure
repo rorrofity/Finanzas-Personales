@@ -1,17 +1,25 @@
 rocketflow.cl {
+    # Force modern TLS
+    protocols tls1.2 tls1.3
+    
     reverse_proxy n8n:5678 {
       flush_interval -1
     }
 }
 
 finanzas.rocketflow.cl {
-    # Headers de seguridad para mejorar confianza con Netskope
+    # Force modern TLS
+    protocols tls1.2 tls1.3
+
+    # Headers de seguridad para mejorar confianza con Netskope y compliance
     header {
-        # Strict Transport Security (HSTS)
+        # Strict Transport Security (HSTS) - 1 year
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         
-        # Content Security Policy
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://accounts.google.com https://www.googleapis.com; frame-src https://accounts.google.com"
+        # Content Security Policy (Strict)
+        # Note: Added unsafe-inline for styles as Material UI often needs it. 
+        # Added unsafe-inline for scripts carefully, but prefer to remove if possible later.
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://accounts.google.com https://www.googleapis.com; frame-src 'self' https://accounts.google.com; object-src 'none'; base-uri 'self';"
         
         # Prevent clickjacking
         X-Frame-Options "SAMEORIGIN"
@@ -25,11 +33,15 @@ finanzas.rocketflow.cl {
         # Referrer Policy
         Referrer-Policy "strict-origin-when-cross-origin"
         
-        # Permissions Policy
-        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        # Permissions Policy (Modern replacement for Feature-Policy)
+        Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=(), vr=()"
+        
+        # Feature Policy (Legacy support)
+        Feature-Policy "geolocation 'none'; microphone 'none'; camera 'none'"
         
         # Remove Server header (security by obscurity)
         -Server
+        -X-Powered-By
     }
     
     # Configurar encoding

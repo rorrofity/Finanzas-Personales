@@ -81,31 +81,13 @@ pm2 logs finanzas-backend --lines 20
 
 ---
 
-### **Paso 2: Editar Caddyfile**
+**Nota**: Este paso ahora está **automatizado** en el script `deploy-to-production.sh`, que usa el archivo `Caddyfile.secure` del repositorio.
 
-```bash
-# Copiar Caddyfile actual del contenedor
-docker exec n8n-docker-caddy-caddy-1 cat /etc/caddy/Caddyfile > /tmp/Caddyfile
-
-# Editar el archivo
-nano /tmp/Caddyfile
-```
-
-**Contenido del Caddyfile** (reemplaza todo):
+Si necesitas editarlo manualmente:
 
 ```caddyfile
-rocketflow.cl {
-    reverse_proxy n8n:5678 {
-      flush_interval -1
-    }
-}
-
-finanzas.rocketflow.cl {
-    reverse_proxy host.docker.internal:3001
-}
+# Ver contenido de Caddyfile.secure en el repositorio
 ```
-
-**Guardar:** `Ctrl+O` → Enter → `Ctrl+X`
 
 ---
 
@@ -260,8 +242,9 @@ pm2 restart finanzas-backend
 
 **Ubicación correcta**: `/var/www/finanzas-personales/.env` (raíz del proyecto)
 
-### SSL/HTTPS ✅
-Caddy maneja automáticamente los certificados SSL con Let's Encrypt. No necesitas configurar nada adicional.
+### SSL/HTTPS y Seguridad ✅
+Caddy maneja automáticamente los certificados SSL con Let's Encrypt.
+Además, se aplican headers de seguridad estrictos (HSTS, CSP, etc.) definidos en `Caddyfile.secure` para cumplir con requerimientos corporativos (Netskope).
 
 ### Permisos de Base de Datos ✅
 El usuario `finanzas_user` tiene todos los permisos necesarios sobre las tablas del schema public.

@@ -45,3 +45,5 @@ yarn.lock
 # Upload history for analysis
 uploads_history/
 uploads/
+server_pass
+
