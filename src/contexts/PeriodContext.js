@@ -70,12 +70,17 @@ export function PeriodProvider({ children }) {
     if (fromUrl) return fromUrl;
     const fromSession = computePeriodFromString(sessionPeriod);
     if (fromSession) return fromSession;
-    // Default to current month in America/Santiago
+    // Default to NEXT month in America/Santiago (billing cycle)
     const now = new Date();
     // Derive Santiago date parts using locale/timeZone
     const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit' });
     const parts = fmt.formatToParts(now).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
-    return { year: Number(parts.year), month: Number(parts.month) };
+    const currentYear = Number(parts.year);
+    const currentMonth = Number(parts.month);
+    // Calculate next month (handle December -> January of next year)
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+    const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+    return { year: nextYear, month: nextMonth };
   }, [urlPeriod, sessionPeriod]);
 
   const [year, setYear] = useState(initial.year);
