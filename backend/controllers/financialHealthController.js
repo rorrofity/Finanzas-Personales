@@ -62,10 +62,12 @@ const getSummary = async (req, res) => {
     const currentMonth = Number(parts.month);
     const currentDate = `${parts.year}-${parts.month}-${parts.day}`;
     
-    // Mes objetivo (siguiente mes)
-    let targetYear = currentYear;
-    let targetMonth = currentMonth + 1;
-    if (targetMonth > 12) {
+    // Accept year/month from query params, default to next month
+    let targetYear = req.query.year ? Number(req.query.year) : currentYear;
+    let targetMonth = req.query.month ? Number(req.query.month) : currentMonth + 1;
+    
+    // Handle month overflow if using defaults
+    if (!req.query.month && targetMonth > 12) {
       targetMonth = 1;
       targetYear++;
     }

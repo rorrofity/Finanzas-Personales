@@ -4,27 +4,33 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#2563EB', // blue-600
-      light: '#93C5FD',
-      dark: '#1D4ED8',
+      main: '#3B82F6', // blue-500 suave
+      light: '#DBEAFE',
+      dark: '#2563EB',
       contrastText: '#FFFFFF',
     },
     secondary: {
-      main: '#EF4444', // red-500
-      light: '#FCA5A5',
-      dark: '#DC2626',
+      main: '#64748B', // slate-500
+      light: '#CBD5E1',
+      dark: '#475569',
       contrastText: '#FFFFFF',
     },
     success: {
-      main: '#16A34A', // green-600
-      dark: '#15803D',
-      light: '#86EFAC',
+      main: '#10B981', // emerald-500 suave
+      dark: '#059669',
+      light: '#D1FAE5',
+      contrastText: '#FFFFFF',
+    },
+    warning: {
+      main: '#F59E0B', // amber-500
+      dark: '#D97706',
+      light: '#FEF3C7',
       contrastText: '#FFFFFF',
     },
     error: {
-      main: '#DC2626', // red-600
-      dark: '#B91C1C',
-      light: '#FCA5A5',
+      main: '#EF4444', // red-500 suave
+      dark: '#DC2626',
+      light: '#FEE2E2',
       contrastText: '#FFFFFF',
     },
     grey: {
@@ -40,13 +46,14 @@ const theme = createTheme({
       900: '#111827',
     },
     background: {
-      default: '#F0F2F5',
+      default: '#F8FAFC', // slate-50
       paper: '#FFFFFF',
     },
     text: {
-      primary: '#111827', // gray-900
-      secondary: '#6B7280', // gray-500
+      primary: '#1E293B', // slate-800
+      secondary: '#64748B', // slate-500
     },
+    divider: '#E2E8F0', // slate-200
   },
   typography: {
     fontFamily: 'Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',

@@ -1,62 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Container,
   Grid,
   Paper,
   Typography,
   Box,
-  Card,
-  CardContent,
   CircularProgress,
   Alert,
-  Chip,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   LinearProgress,
   IconButton,
   Tooltip,
-  useTheme
+  useTheme,
+  alpha
 } from '@mui/material';
 import {
-  AccountBalance as BankIcon,
-  CreditCard as CardIcon,
-  TrendingUp as IncomeIcon,
-  TrendingDown as ExpenseIcon,
   Warning as WarningIcon,
   CheckCircle as CheckIcon,
   Error as ErrorIcon,
   Info as InfoIcon,
   Refresh as RefreshIcon,
-  ArrowForward as ArrowIcon
+  TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  AccountBalanceWallet as WalletIcon
 } from '@mui/icons-material';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import axios from '../config/axios';
+import { usePeriod } from '../contexts/PeriodContext';
+import MonthPicker from '../components/MonthPicker';
+
+// Soft color palette for categories
+const CATEGORY_COLORS = [
+  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+  '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
+];
 
 const FinancialHealth = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
+  const [categoryData, setCategoryData] = useState([]);
   const theme = useTheme();
+  const { year, month, startISO, endISO } = usePeriod();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get('/api/financial-health/summary');
-      setData(response.data);
+      
+      // Fetch financial health summary
+      const healthRes = await axios.get('/api/financial-health/summary', {
+        params: { year, month }
+      });
+      setData(healthRes.data);
+      
+      // Fetch category breakdown for the pie chart
+      const catRes = await axios.get('/api/dashboard/categories', {
+        params: { startDate: startISO, endDate: endISO }
+      });
+      
+      // Transform for pie chart - top 6 categories
+      const categories = (catRes.data || [])
+        .filter(c => c.total > 0)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 6)
+        .map((c, i) => ({
+          name: c.categoria || 'Sin categoría',
+          value: c.total,
+          color: CATEGORY_COLORS[i % CATEGORY_COLORS.length]
+        }));
+      setCategoryData(categories);
+      
     } catch (err) {
       console.error('Error fetching financial health:', err);
-      setError(err.response?.data?.error || 'Error al cargar datos de salud financiera');
+      setError(err.response?.data?.error || 'Error al cargar datos');
     } finally {
       setLoading(false);
     }
-  };
+  }, [year, month, startISO, endISO]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('es-CL', {
@@ -101,52 +124,67 @@ const FinancialHealth = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, textAlign: 'center' }}>
+      <Box sx={{ py: 4, textAlign: 'center' }}>
         <CircularProgress size={60} />
         <Typography sx={{ mt: 2 }} variant="h6">
           Calculando tu salud financiera...
         </Typography>
-      </Container>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ py: 4, px: 2 }}>
         <Alert severity="error">{error}</Alert>
-      </Container>
+      </Box>
     );
   }
 
-  const { checking, creditCards, projected, summary, targetMonth, alerts } = data;
+  const { checking, creditCards, projected, summary, alerts } = data || {};
+  
+  // Calculate totals for flow section
+  const totalIncome = (projected?.income || 0);
+  const totalCommitments = (summary?.totalCommitments || 0);
+  const projectedResult = (summary?.projectedBalance || 0);
+  const commitmentPercent = totalIncome > 0 ? Math.min(100, Math.round((totalCommitments / totalIncome) * 100)) : 0;
+  
+  // Month name for display
+  const monthName = new Date(year, month - 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Box sx={{ py: { xs: 1, md: 1 } }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h4" fontWeight="bold">
-            💰 Salud Financiera
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Proyección para {targetMonth?.name}
-          </Typography>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'flex-start', sm: 'center' }, 
+        gap: 2,
+        mb: 2 
+      }}>
+        <Typography variant="h4" fontWeight={700} color="text.primary">
+          Salud Financiera
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <MonthPicker />
+          <Tooltip title="Actualizar">
+            <IconButton onClick={fetchData} size="small" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
-        <Tooltip title="Actualizar datos">
-          <IconButton onClick={fetchData} color="primary">
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
       </Box>
 
-      {/* Alertas */}
+      {/* Alerts Section */}
       {alerts && alerts.length > 0 && (
         <Box sx={{ mb: 3 }}>
-          {alerts.map((alert, idx) => (
+          {alerts.slice(0, 3).map((alert, idx) => (
             <Alert 
               key={idx} 
               severity={alert.type === 'critical' ? 'error' : alert.type === 'warning' ? 'warning' : 'info'}
-              sx={{ mb: 1 }}
+              sx={{ mb: 1, borderRadius: 2 }}
+              icon={alert.type === 'critical' ? <ErrorIcon /> : alert.type === 'warning' ? <WarningIcon /> : <InfoIcon />}
             >
               <strong>{alert.title}:</strong> {alert.message}
             </Alert>
@@ -154,362 +192,425 @@ const FinancialHealth = () => {
         </Box>
       )}
 
-      <Grid container spacing={3}>
-        {/* Health Score Card */}
-        <Grid item xs={12} md={4}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 3, 
-              height: '100%',
-              background: `linear-gradient(135deg, ${getHealthColor(summary?.healthStatus)}22 0%, ${getHealthColor(summary?.healthStatus)}11 100%)`,
-              border: `2px solid ${getHealthColor(summary?.healthStatus)}44`
-            }}
-          >
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h6" gutterBottom>
-                Indicador de Salud
-              </Typography>
-              
-              {/* Circular Progress */}
-              <Box sx={{ position: 'relative', display: 'inline-flex', my: 2 }}>
-                <CircularProgress
-                  variant="determinate"
-                  value={summary?.healthScore || 0}
-                  size={120}
-                  thickness={8}
-                  sx={{ color: getHealthColor(summary?.healthStatus) }}
-                />
-                <Box
-                  sx={{
-                    top: 0,
-                    left: 0,
-                    bottom: 0,
-                    right: 0,
-                    position: 'absolute',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column'
-                  }}
-                >
-                  <Typography variant="h4" fontWeight="bold">
-                    {summary?.healthScore || 0}%
-                  </Typography>
-                </Box>
-              </Box>
-              
-              <Chip 
-                icon={getHealthIcon(summary?.healthStatus)}
-                label={getHealthLabel(summary?.healthStatus)}
-                sx={{ 
-                  bgcolor: getHealthColor(summary?.healthStatus),
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '1rem',
-                  py: 2
-                }}
-              />
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Saldo Actual */}
-        <Grid item xs={12} md={8}>
-          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <BankIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-              <Typography variant="h6">
-                Saldo Actual (Cuenta Corriente)
-              </Typography>
-            </Box>
-            
-            <Typography variant="h3" fontWeight="bold" color="primary">
-              {formatCurrency(checking?.currentBalance)}
-            </Typography>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Tu dinero disponible hoy
-            </Typography>
-
-            <Divider sx={{ my: 2 }} />
-
-            {/* Resumen rápido */}
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Compromisos del mes
-                </Typography>
-                <Typography variant="h6" color="error.main">
-                  -{formatCurrency(summary?.totalCommitments)}
-                </Typography>
-              </Grid>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Saldo proyectado
-                </Typography>
-                <Typography 
-                  variant="h6" 
-                  color={summary?.projectedBalance >= 0 ? 'success.main' : 'error.main'}
-                >
-                  {formatCurrency(summary?.projectedBalance)}
-                </Typography>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
-
-        {/* Tarjetas de Crédito */}
-        <Grid item xs={12}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <CardIcon sx={{ mr: 1, color: theme.palette.secondary.main }} />
-              <Typography variant="h6">
-                Compromisos Tarjetas de Crédito
-              </Typography>
-              <Chip 
-                label={formatCurrency(creditCards?.combined)} 
-                color="error" 
-                sx={{ ml: 'auto' }}
-              />
-            </Box>
-
-            <Grid container spacing={3}>
-              {/* Visa */}
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined" sx={{ bgcolor: '#1A1F7111' }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Box 
-                        sx={{ 
-                          bgcolor: '#1A1F71', 
-                          color: 'white', 
-                          px: 2, 
-                          py: 0.5, 
-                          borderRadius: 1,
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        VISA
-                      </Box>
-                      <Typography variant="h6" sx={{ ml: 'auto' }}>
-                        {formatCurrency(creditCards?.visa?.total)}
-                      </Typography>
-                    </Box>
-                    
-                    <List dense>
-                      <ListItem>
-                        <ListItemText primary="No facturado nacional" />
-                        <Typography>{formatCurrency(creditCards?.visa?.unbilled)}</Typography>
-                      </ListItem>
-                      <ListItem>
-                        <ListItemText primary="Cuotas" />
-                        <Typography>{formatCurrency(creditCards?.visa?.installments)}</Typography>
-                      </ListItem>
-                      <ListItem>
-                        <ListItemText primary="Internacional" />
-                        <Typography>{formatCurrency(creditCards?.visa?.international)}</Typography>
-                      </ListItem>
-                      {creditCards?.visa?.payments > 0 && (
-                        <ListItem>
-                          <ListItemText primary="Pagos realizados" />
-                          <Typography color="success.main">-{formatCurrency(creditCards?.visa?.payments)}</Typography>
-                        </ListItem>
-                      )}
-                    </List>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Mastercard */}
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined" sx={{ bgcolor: '#EB001B11' }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Box 
-                        sx={{ 
-                          bgcolor: '#EB001B', 
-                          color: 'white', 
-                          px: 2, 
-                          py: 0.5, 
-                          borderRadius: 1,
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        MASTERCARD
-                      </Box>
-                      <Typography variant="h6" sx={{ ml: 'auto' }}>
-                        {formatCurrency(creditCards?.mastercard?.total)}
-                      </Typography>
-                    </Box>
-                    
-                    <List dense>
-                      <ListItem>
-                        <ListItemText primary="No facturado nacional" />
-                        <Typography>{formatCurrency(creditCards?.mastercard?.unbilled)}</Typography>
-                      </ListItem>
-                      <ListItem>
-                        <ListItemText primary="Cuotas" />
-                        <Typography>{formatCurrency(creditCards?.mastercard?.installments)}</Typography>
-                      </ListItem>
-                      <ListItem>
-                        <ListItemText primary="Internacional" />
-                        <Typography>{formatCurrency(creditCards?.mastercard?.international)}</Typography>
-                      </ListItem>
-                      {creditCards?.mastercard?.payments > 0 && (
-                        <ListItem>
-                          <ListItemText primary="Pagos realizados" />
-                          <Typography color="success.main">-{formatCurrency(creditCards?.mastercard?.payments)}</Typography>
-                        </ListItem>
-                      )}
-                    </List>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Paper>
-        </Grid>
-
-        {/* Gastos e Ingresos Proyectados */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <ExpenseIcon sx={{ mr: 1, color: theme.palette.error.main }} />
-              <Typography variant="h6">
-                Gastos Fijos Proyectados
-              </Typography>
-              <Chip 
-                label={formatCurrency(projected?.expenses)} 
-                color="error" 
-                size="small"
-                sx={{ ml: 'auto' }}
-              />
-            </Box>
-            
-            {projected?.details?.expenses?.length > 0 ? (
-              <List dense>
-                {projected.details.expenses.map((item, idx) => (
-                  <ListItem key={idx}>
-                    <ListItemIcon>
-                      <ArrowIcon fontSize="small" color="error" />
-                    </ListItemIcon>
-                    <ListItemText primary={item.name} />
-                    <Typography color="error.main">
-                      {formatCurrency(item.amount)}
-                    </Typography>
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                No hay gastos fijos configurados
-              </Typography>
-            )}
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper elevation={3} sx={{ p: 3, height: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <IncomeIcon sx={{ mr: 1, color: theme.palette.success.main }} />
-              <Typography variant="h6">
-                Ingresos Proyectados
-              </Typography>
-              <Chip 
-                label={formatCurrency(projected?.income)} 
-                color="success" 
-                size="small"
-                sx={{ ml: 'auto' }}
-              />
-            </Box>
-            
-            {projected?.details?.income?.length > 0 ? (
-              <List dense>
-                {projected.details.income.map((item, idx) => (
-                  <ListItem key={idx}>
-                    <ListItemIcon>
-                      <ArrowIcon fontSize="small" color="success" />
-                    </ListItemIcon>
-                    <ListItemText primary={item.name} />
-                    <Typography color="success.main">
-                      {formatCurrency(item.amount)}
-                    </Typography>
-                  </ListItem>
-                ))}
-              </List>
-            ) : (
-              <Typography color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                No hay ingresos proyectados configurados
-              </Typography>
-            )}
-          </Paper>
-        </Grid>
-
-        {/* Proyección Final */}
-        <Grid item xs={12}>
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 3, 
-              background: summary?.projectedBalance >= 0 
-                ? 'linear-gradient(135deg, #4caf5022 0%, #4caf5011 100%)'
-                : 'linear-gradient(135deg, #f4433622 0%, #f4433611 100%)'
-            }}
-          >
-            <Typography variant="h6" gutterBottom>
-              📊 Proyección para {targetMonth?.name}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        
+        {/* ===== RESUMEN DEL MES ===== */}
+        <Box>
+          <Paper elevation={0} sx={{ p: 2, border: `1px solid ${theme.palette.divider}` }}>
+            <Typography variant="overline" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+              Resumen del Mes
             </Typography>
             
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={3}>
-                <Typography variant="body2" color="text.secondary">Saldo actual</Typography>
-                <Typography variant="h6">{formatCurrency(checking?.currentBalance)}</Typography>
+              {/* Health Score */}
+              <Grid item xs={4} sm={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    {/* Background circle */}
+                    <CircularProgress
+                      variant="determinate"
+                      value={100}
+                      size={80}
+                      thickness={5}
+                      sx={{ color: theme.palette.grey[200] }}
+                    />
+                    {/* Foreground progress */}
+                    <CircularProgress
+                      variant="determinate"
+                      value={summary?.healthScore || 0}
+                      size={80}
+                      thickness={5}
+                      sx={{ 
+                        color: getHealthColor(summary?.healthStatus),
+                        position: 'absolute',
+                        left: 0,
+                        '& .MuiCircularProgress-circle': { strokeLinecap: 'round' }
+                      }}
+                    />
+                    <Box sx={{
+                      position: 'absolute',
+                      top: 0, left: 0, bottom: 0, right: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'column'
+                    }}>
+                      <Typography variant="h5" fontWeight={700} lineHeight={1}>
+                        {summary?.healthScore || 0}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 0.5, 
+                      px: 1, 
+                      py: 0.25, 
+                      borderRadius: 1,
+                      display: 'inline-block',
+                      bgcolor: alpha(getHealthColor(summary?.healthStatus), 0.15),
+                      color: getHealthColor(summary?.healthStatus),
+                      fontWeight: 600
+                    }}
+                  >
+                    {getHealthLabel(summary?.healthStatus)}
+                  </Typography>
+                </Box>
               </Grid>
-              <Grid item xs={12} md={3}>
-                <Typography variant="body2" color="text.secondary">+ Ingresos</Typography>
-                <Typography variant="h6" color="success.main">+{formatCurrency(projected?.income)}</Typography>
+              
+              {/* Available Today */}
+              <Grid item xs={4} sm={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <WalletIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.primary.main, mb: 0.5 }} />
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Disponible hoy
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700} color="primary.main" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+                    {formatCurrency(checking?.currentBalance)}
+                  </Typography>
+                </Box>
               </Grid>
-              <Grid item xs={12} md={3}>
-                <Typography variant="body2" color="text.secondary">- Compromisos</Typography>
-                <Typography variant="h6" color="error.main">-{formatCurrency(summary?.totalCommitments)}</Typography>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Typography variant="body2" color="text.secondary">= Saldo proyectado</Typography>
-                <Typography 
-                  variant="h4" 
-                  fontWeight="bold"
-                  color={summary?.projectedBalance >= 0 ? 'success.main' : 'error.main'}
-                >
-                  {formatCurrency(summary?.projectedBalance)}
-                </Typography>
+              
+              {/* Projected Balance */}
+              <Grid item xs={4} sm={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  {projectedResult >= 0 ? (
+                    <TrendingUpIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.success.main, mb: 0.5 }} />
+                  ) : (
+                    <TrendingDownIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.error.main, mb: 0.5 }} />
+                  )}
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Proyección fin de mes
+                  </Typography>
+                  <Typography 
+                    variant="h6" 
+                    fontWeight={700} 
+                    color={projectedResult >= 0 ? 'success.main' : 'error.main'}
+                    sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                  >
+                    {projectedResult >= 0 ? '+' : ''}{formatCurrency(projectedResult)}
+                  </Typography>
+                </Box>
               </Grid>
             </Grid>
+          </Paper>
+        </Box>
 
-            {/* Barra de progreso */}
-            <Box sx={{ mt: 3 }}>
+        {/* ===== FLUJO DEL MES ===== */}
+        <Box>
+          <Paper elevation={0} sx={{ p: 2, border: `1px solid ${theme.palette.divider}` }}>
+            <Typography variant="overline" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+              Flujo del Mes - {monthName}
+            </Typography>
+            
+            {(() => {
+              // Preparar compromisos: tarjetas + gastos fijos, ordenados por monto
+              const allCommitments = [
+                { name: 'Tarjetas de Crédito', amount: creditCards?.combined || 0 },
+                ...(projected?.details?.expenses || [])
+              ].sort((a, b) => b.amount - a.amount);
+              const maxItems = 4;
+              const displayedCommitments = allCommitments.slice(0, maxItems);
+              const remainingCount = allCommitments.length - maxItems;
+              const remainingAmount = allCommitments.slice(maxItems).reduce((sum, item) => sum + item.amount, 0);
+              
+              return (
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  {/* Ingresos */}
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.success.main, 0.08), height: '100%', minHeight: 180 }}>
+                      <Typography variant="body2" color="text.secondary" fontWeight={600}>INGRESOS</Typography>
+                      <Box sx={{ minHeight: 100 }}>
+                        {projected?.details?.income?.length > 0 ? (
+                          projected.details.income.map((item, idx) => (
+                            <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                              <Typography variant="body2" noWrap sx={{ maxWidth: '60%' }}>{item.name}</Typography>
+                              <Typography variant="body2" fontWeight={600}>{formatCurrency(item.amount)}</Typography>
+                            </Box>
+                          ))
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                            Sin ingresos configurados
+                          </Typography>
+                        )}
+                      </Box>
+                      <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, mt: 2, pt: 1 }}>
+                        <Typography variant="h6" fontWeight={700} color="success.main" textAlign="right">
+                          {formatCurrency(totalIncome)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  
+                  {/* Compromisos - Top 4 por monto */}
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.error.main, 0.08), height: '100%', minHeight: 180 }}>
+                      <Typography variant="body2" color="text.secondary" fontWeight={600}>COMPROMISOS</Typography>
+                      <Box sx={{ minHeight: 100 }}>
+                        {displayedCommitments.map((item, idx) => (
+                          <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                            <Typography variant="body2" noWrap sx={{ maxWidth: '55%' }}>{item.name}</Typography>
+                            <Typography variant="body2" fontWeight={600}>{formatCurrency(item.amount)}</Typography>
+                          </Box>
+                        ))}
+                        {remainingCount > 0 && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                            <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                              +{remainingCount} más
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">{formatCurrency(remainingAmount)}</Typography>
+                          </Box>
+                        )}
+                      </Box>
+                      <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, mt: 2, pt: 1 }}>
+                        <Typography variant="h6" fontWeight={700} color="error.main" textAlign="right">
+                          -{formatCurrency(totalCommitments)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Grid>
+                  
+                  {/* Resultado */}
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ 
+                      p: 2, 
+                      borderRadius: 2, 
+                      bgcolor: projectedResult >= 0 
+                        ? alpha(theme.palette.success.main, 0.08) 
+                        : alpha(theme.palette.error.main, 0.08),
+                      height: '100%',
+                      minHeight: 180,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center'
+                    }}>
+                      <Typography variant="body2" color="text.secondary" fontWeight={600} textAlign="center">
+                        RESULTADO PROYECTADO
+                      </Typography>
+                      <Typography 
+                        variant="h4" 
+                        fontWeight={700} 
+                        color={projectedResult >= 0 ? 'success.main' : 'error.main'}
+                        textAlign="center"
+                        sx={{ mt: 2 }}
+                      >
+                        {projectedResult >= 0 ? '+' : ''}{formatCurrency(projectedResult)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 1 }}>
+                        {projectedResult >= 0 ? 'A favor' : 'Déficit'}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              );
+            })()}
+            
+            {/* Progress bar */}
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Compromisos vs Ingresos
+                </Typography>
+                <Typography variant="body2" fontWeight={600} color={commitmentPercent > 80 ? 'error.main' : 'text.primary'}>
+                  {commitmentPercent}% comprometido
+                </Typography>
+              </Box>
               <LinearProgress 
                 variant="determinate" 
-                value={Math.min(100, Math.max(0, summary?.healthScore || 0))}
+                value={commitmentPercent}
                 sx={{ 
-                  height: 10, 
-                  borderRadius: 5,
-                  bgcolor: 'grey.200',
+                  height: 8, 
+                  borderRadius: 4,
+                  bgcolor: theme.palette.grey[200],
                   '& .MuiLinearProgress-bar': {
-                    bgcolor: getHealthColor(summary?.healthStatus)
+                    borderRadius: 4,
+                    bgcolor: commitmentPercent > 80 ? theme.palette.error.main : 
+                             commitmentPercent > 60 ? theme.palette.warning.main : 
+                             theme.palette.success.main
                   }
                 }}
               />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                <Typography variant="caption" color="error">Crítico</Typography>
-                <Typography variant="caption" color="warning.main">Precaución</Typography>
-                <Typography variant="caption" color="success.light">Saludable</Typography>
-                <Typography variant="caption" color="success.main">Excelente</Typography>
-              </Box>
             </Box>
           </Paper>
-        </Grid>
-      </Grid>
-    </Container>
+        </Box>
+
+        {/* ===== EN QUÉ GASTAMOS + TARJETAS ===== */}
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Paper elevation={0} sx={{ p: 2, border: `1px solid ${theme.palette.divider}`, height: '100%' }}>
+            <Typography variant="overline" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+              ¿En qué gastamos?
+            </Typography>
+            
+            {categoryData.length > 0 ? (
+              <Grid container spacing={2}>
+                <Grid item xs={5}>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip 
+                        formatter={(value) => formatCurrency(value)}
+                        contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Grid>
+                <Grid item xs={7}>
+                  {categoryData.map((cat, idx) => {
+                    const total = categoryData.reduce((sum, c) => sum + c.value, 0);
+                    const percent = total > 0 ? Math.round((cat.value / total) * 100) : 0;
+                    return (
+                      <Box key={idx} sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: cat.color, mr: 1 }} />
+                        <Typography variant="body2" sx={{ flex: 1 }} noWrap>{cat.name}</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>{percent}%</Typography>
+                        <Typography variant="body2" fontWeight={600}>{formatCurrency(cat.value)}</Typography>
+                      </Box>
+                    );
+                  })}
+                </Grid>
+              </Grid>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography color="text.secondary">Sin gastos categorizados este mes</Typography>
+              </Box>
+            )}
+          </Paper>
+          </Box>
+
+          {/* Tarjetas de Crédito */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Paper elevation={0} sx={{ p: 2, border: `1px solid ${theme.palette.divider}`, height: '100%' }}>
+            <Typography variant="overline" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+              Tarjetas de Crédito
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {/* Visa Card */}
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  border: `1px solid ${alpha('#1A1F71', 0.3)}`,
+                  bgcolor: alpha('#1A1F71', 0.03)
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                    <Box sx={{ 
+                      bgcolor: '#1A1F71', 
+                      color: 'white', 
+                      px: 1.5, 
+                      py: 0.25, 
+                      borderRadius: 1,
+                      fontSize: '0.75rem',
+                      fontWeight: 700
+                    }}>
+                      VISA
+                    </Box>
+                    <Typography variant="h6" fontWeight={700} sx={{ ml: 'auto' }}>
+                      {formatCurrency(creditCards?.visa?.total)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">No facturado</Typography>
+                    <Typography variant="body2">{formatCurrency(creditCards?.visa?.unbilled)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">Internacional</Typography>
+                    <Typography variant="body2">{formatCurrency(creditCards?.visa?.international)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">Cuotas</Typography>
+                    <Typography variant="body2">{formatCurrency(creditCards?.visa?.installments)}</Typography>
+                  </Box>
+                  {(creditCards?.visa?.payments || 0) > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Pagos</Typography>
+                      <Typography variant="body2" color="success.main">-{formatCurrency(creditCards?.visa?.payments)}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+              
+              {/* Mastercard */}
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  border: `1px solid ${alpha('#EB001B', 0.3)}`,
+                  bgcolor: alpha('#EB001B', 0.03)
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                    <Box sx={{ 
+                      bgcolor: '#EB001B', 
+                      color: 'white', 
+                      px: 1.5, 
+                      py: 0.25, 
+                      borderRadius: 1,
+                      fontSize: '0.75rem',
+                      fontWeight: 700
+                    }}>
+                      MASTERCARD
+                    </Box>
+                    <Typography variant="h6" fontWeight={700} sx={{ ml: 'auto' }}>
+                      {formatCurrency(creditCards?.mastercard?.total)}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">No facturado</Typography>
+                    <Typography variant="body2">{formatCurrency(creditCards?.mastercard?.unbilled)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">Internacional</Typography>
+                    <Typography variant="body2">{formatCurrency(creditCards?.mastercard?.international)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">Cuotas</Typography>
+                    <Typography variant="body2">{formatCurrency(creditCards?.mastercard?.installments)}</Typography>
+                  </Box>
+                  {(creditCards?.mastercard?.payments || 0) > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Pagos</Typography>
+                      <Typography variant="body2" color="success.main">-{formatCurrency(creditCards?.mastercard?.payments)}</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+              
+              {/* Combined Total */}
+              <Grid item xs={12}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  pt: 2,
+                  borderTop: `1px solid ${theme.palette.divider}`
+                }}>
+                  <Typography variant="body1" fontWeight={600}>Total Tarjetas</Typography>
+                  <Typography variant="h6" fontWeight={700} color="error.main">
+                    {formatCurrency(creditCards?.combined)}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+          </Box>
+        </Box>
+        
+      </Box>
+    </Box>
   );
 };
 

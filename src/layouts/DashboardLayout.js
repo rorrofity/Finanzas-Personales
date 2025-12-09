@@ -32,7 +32,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { getSuspiciousCount } from '../services/suspiciousService';
 
-const drawerWidth = 240;
+const drawerWidth = 200;
 
 const DashboardLayout = () => {
   const theme = useTheme();
@@ -232,15 +232,9 @@ const DashboardLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 1, sm: 2, md: 3 },
+          p: { xs: 1, sm: 2 },
           backgroundColor: theme.palette.background.default,
           minHeight: '100vh',
-          width: { xs: '100%', md: `calc(100% - ${desktopOpen ? drawerWidth : theme.spacing(7)}px)` },
-          ml: { xs: 0, md: desktopOpen ? `${drawerWidth}px` : theme.spacing(7) },
-          transition: theme.transitions.create(['margin', 'width'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
         }}
       >
         <Toolbar />

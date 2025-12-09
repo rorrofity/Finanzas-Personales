@@ -213,7 +213,68 @@ const getDashboardData = async (req, res) => {
     }
 };
 
+/**
+ * Get category breakdown for a period
+ */
+const getCategoryBreakdown = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { startDate, endDate, periodYear, periodMonth } = req.query;
+        
+        let query;
+        let params;
+        
+        if (periodYear && periodMonth) {
+            query = `
+                SELECT 
+                    COALESCE(c.name, 'Sin categoría') as categoria,
+                    SUM(ABS(t.monto)) as total,
+                    COUNT(*) as count
+                FROM transactions t
+                LEFT JOIN categories c ON t.category_id = c.id
+                LEFT JOIN imports i ON t.import_id = i.id
+                WHERE t.user_id = $1
+                  AND t.tipo = 'gasto'
+                  AND i.period_year = $2
+                  AND i.period_month = $3
+                GROUP BY c.id, c.name
+                ORDER BY total DESC
+            `;
+            params = [userId, parseInt(periodYear), parseInt(periodMonth)];
+        } else if (startDate && endDate) {
+            query = `
+                SELECT 
+                    COALESCE(c.name, 'Sin categoría') as categoria,
+                    SUM(ABS(t.monto)) as total,
+                    COUNT(*) as count
+                FROM transactions t
+                LEFT JOIN categories c ON t.category_id = c.id
+                WHERE t.user_id = $1
+                  AND t.tipo = 'gasto'
+                  AND t.fecha >= $2::date
+                  AND t.fecha <= $3::date
+                GROUP BY c.id, c.name
+                ORDER BY total DESC
+            `;
+            params = [userId, startDate, endDate];
+        } else {
+            return res.json([]);
+        }
+        
+        const result = await db.query(query, params);
+        res.json(result.rows.map(r => ({
+            categoria: r.categoria,
+            total: Number(r.total),
+            count: Number(r.count)
+        })));
+    } catch (error) {
+        console.error('Error in getCategoryBreakdown:', error);
+        res.status(500).json({ error: 'Error al obtener categorías' });
+    }
+};
+
 module.exports = {
     getDashboardData,
-    getMonthlySummary
+    getMonthlySummary,
+    getCategoryBreakdown
 };
