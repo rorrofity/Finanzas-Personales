@@ -77,19 +77,13 @@ const getSummary = async (req, res) => {
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
 
-    // 1. Obtener saldo cuenta corriente actual
+    // 1. Obtener saldo cuenta corriente actual (usar known_balance que es el saldo real)
     let checkingBalance = 0;
     try {
       const checkingRes = await db.query(`
-        SELECT 
-          COALESCE(cb.initial_balance, 0) + 
-          COALESCE(SUM(CASE WHEN ct.tipo = 'abono' THEN ct.amount ELSE 0 END), 0) -
-          COALESCE(SUM(CASE WHEN ct.tipo = 'cargo' THEN ct.amount ELSE 0 END), 0) as saldo_actual
-        FROM checking_balances cb
-        LEFT JOIN checking_transactions ct ON ct.user_id = cb.user_id 
-          AND ct.year = cb.year AND ct.month = cb.month
-        WHERE cb.user_id = $1 AND cb.year = $2 AND cb.month = $3
-        GROUP BY cb.initial_balance
+        SELECT COALESCE(known_balance, initial_balance, 0) as saldo_actual
+        FROM checking_balances
+        WHERE user_id = $1 AND year = $2 AND month = $3
       `, [userId, currentYear, currentMonth]);
       
       if (checkingRes.rows.length > 0) {
@@ -130,7 +124,7 @@ const getSummary = async (req, res) => {
       console.warn('Error obteniendo transacciones TC:', e.message);
     }
 
-    // 3. Obtener cuotas del mes siguiente
+    // 3. Obtener cuotas del mes objetivo
     let visaInstallments = 0, mcInstallments = 0;
     try {
       const instRes = await db.query(`
@@ -142,7 +136,7 @@ const getSummary = async (req, res) => {
         WHERE ip.user_id = $1 
           AND io.year = $2 
           AND io.month = $3
-          AND io.status = 'pending'
+          AND io.active = true
         GROUP BY LOWER(COALESCE(ip.brand, 'unknown'))
       `, [userId, targetYear, targetMonth]);
       
@@ -155,20 +149,21 @@ const getSummary = async (req, res) => {
       console.warn('Error obteniendo cuotas:', e.message);
     }
 
-    // 4. Obtener transacciones internacionales del mes actual
+    // 4. Obtener transacciones internacionales del mes objetivo
+    // period_year/period_month ya representan el mes de facturación
     let visaIntl = 0, mcIntl = 0;
     try {
       const intlRes = await db.query(`
         SELECT 
           LOWER(brand) as brand,
-          SUM(monto_clp) as total
+          SUM(amount_clp) as total
         FROM intl_unbilled
         WHERE user_id = $1 
           AND period_year = $2 
           AND period_month = $3
           AND tipo = 'gasto'
         GROUP BY LOWER(brand)
-      `, [userId, currentYear, currentMonth]);
+      `, [userId, targetYear, targetMonth]);
       
       for (const row of intlRes.rows) {
         const amount = Number(row.total) || 0;
