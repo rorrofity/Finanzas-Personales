@@ -219,49 +219,52 @@ const getDashboardData = async (req, res) => {
 const getCategoryBreakdown = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { startDate, endDate, periodYear, periodMonth } = req.query;
+        const { startDate, endDate, periodYear, periodMonth, includeChecking } = req.query;
         
-        let query;
-        let params;
+        if (!periodYear || !periodMonth) {
+            return res.json([]);
+        }
         
-        if (periodYear && periodMonth) {
-            query = `
+        const year = parseInt(periodYear);
+        const month = parseInt(periodMonth);
+        
+        // Combinar transacciones TC (por periodo de facturación) + Cuenta Corriente (por mes)
+        const query = `
+            WITH combined AS (
+                -- Transacciones TC no facturadas (por periodo de facturación)
                 SELECT 
-                    COALESCE(c.name, 'Sin categoría') as categoria,
-                    SUM(ABS(t.monto)) as total,
-                    COUNT(*) as count
+                    t.category_id,
+                    ABS(t.monto) as amount
                 FROM transactions t
-                LEFT JOIN categories c ON t.category_id = c.id
                 LEFT JOIN imports i ON t.import_id = i.id
                 WHERE t.user_id = $1
                   AND t.tipo = 'gasto'
                   AND i.period_year = $2
                   AND i.period_month = $3
-                GROUP BY c.id, c.name
-                ORDER BY total DESC
-            `;
-            params = [userId, parseInt(periodYear), parseInt(periodMonth)];
-        } else if (startDate && endDate) {
-            query = `
+                
+                UNION ALL
+                
+                -- Transacciones cuenta corriente (cargos del mes)
                 SELECT 
-                    COALESCE(c.name, 'Sin categoría') as categoria,
-                    SUM(ABS(t.monto)) as total,
-                    COUNT(*) as count
-                FROM transactions t
-                LEFT JOIN categories c ON t.category_id = c.id
-                WHERE t.user_id = $1
-                  AND t.tipo = 'gasto'
-                  AND t.fecha >= $2::date
-                  AND t.fecha <= $3::date
-                GROUP BY c.id, c.name
-                ORDER BY total DESC
-            `;
-            params = [userId, startDate, endDate];
-        } else {
-            return res.json([]);
-        }
+                    ct.category_id,
+                    ct.amount
+                FROM checking_transactions ct
+                WHERE ct.user_id = $1
+                  AND ct.year = $2
+                  AND ct.month = $3
+                  AND ct.tipo = 'cargo'
+            )
+            SELECT 
+                COALESCE(c.name, 'Sin categoría') as categoria,
+                SUM(combined.amount) as total,
+                COUNT(*) as count
+            FROM combined
+            LEFT JOIN categories c ON combined.category_id = c.id
+            GROUP BY c.id, c.name
+            ORDER BY total DESC
+        `;
         
-        const result = await db.query(query, params);
+        const result = await db.query(query, [userId, year, month]);
         res.json(result.rows.map(r => ({
             categoria: r.categoria,
             total: Number(r.total),

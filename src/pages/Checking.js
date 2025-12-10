@@ -130,6 +130,19 @@ export default function Checking() {
     }
   };
 
+  // Actualizar categoría inline
+  const handleCategoryChange = async (transactionId, newCategoryId) => {
+    try {
+      await axios.put(`/api/checking/${transactionId}`, { category_id: newCategoryId || null });
+      // Actualizar localmente sin recargar
+      setRows(prev => prev.map(r => 
+        r.id === transactionId ? { ...r, category_id: newCategoryId || null } : r
+      ));
+    } catch (e) {
+      setSnackbar({ open: true, message: 'Error al actualizar categoría', severity: 'error' });
+    }
+  };
+
   // Funciones de importación
   const onFileChange = (e) => {
     const f = e.target.files?.[0];
@@ -289,7 +302,23 @@ export default function Checking() {
                   <TableCell>{r.descripcion}</TableCell>
                   <TableCell sx={{ textTransform:'capitalize' }}>{r.tipo}</TableCell>
                   <TableCell align="right">{currency(r.amount)}</TableCell>
-                  <TableCell>{r.category_id || '-'}</TableCell>
+                  <TableCell>
+                    <Select
+                      size="small"
+                      value={r.category_id || ''}
+                      onChange={(e) => handleCategoryChange(r.id, e.target.value)}
+                      displayEmpty
+                      sx={{ 
+                        minWidth: 120, 
+                        '& .MuiSelect-select': { py: 0.5, fontSize: '0.875rem' },
+                        bgcolor: r.category_id ? 'transparent' : 'warning.light',
+                        borderRadius: 1
+                      }}
+                    >
+                      <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                      {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+                    </Select>
+                  </TableCell>
                   <TableCell>{r.notas || ''}</TableCell>
                   <TableCell align="right">
                     <Tooltip title="Editar">

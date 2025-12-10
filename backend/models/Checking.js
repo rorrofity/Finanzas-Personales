@@ -180,15 +180,27 @@ class Checking {
 
   async update(userId, id, data) {
     const { fecha, descripcion, tipo, amount, category_id, notas } = data;
+    // Para category_id: si se pasa explícitamente (incluso null), usarlo; si no se pasa, mantener el actual
+    const catValue = 'category_id' in data ? category_id : undefined;
     const res = await this.query(`UPDATE checking_transactions SET
       fecha = COALESCE($1, fecha),
       descripcion = COALESCE($2, descripcion),
       tipo = COALESCE($3, tipo),
       amount = COALESCE($4, amount),
-      category_id = COALESCE($5, category_id),
+      category_id = CASE WHEN $9 THEN $5 ELSE category_id END,
       notas = COALESCE($6, notas),
       updated_at = CURRENT_TIMESTAMP
-      WHERE id=$7 AND user_id=$8 RETURNING *`, [fecha||null, descripcion||null, tipo||null, amount===undefined?null:amount, category_id===undefined?null:category_id, notas||null, id, userId]);
+      WHERE id=$7 AND user_id=$8 RETURNING *`, [
+        fecha||null, 
+        descripcion||null, 
+        tipo||null, 
+        amount===undefined?null:amount, 
+        catValue===undefined?null:catValue, 
+        notas||null, 
+        id, 
+        userId,
+        catValue !== undefined  // $9: flag to indicate if category_id should be updated
+      ]);
     return res.rows[0];
   }
 
