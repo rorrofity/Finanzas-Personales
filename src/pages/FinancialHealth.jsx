@@ -147,6 +147,7 @@ const FinancialHealth = () => {
   const totalIncome = (projected?.income || 0);
   const totalCommitments = (summary?.totalCommitments || 0);
   const projectedResult = (summary?.projectedBalance || 0);
+  const netBalance = totalIncome - totalCommitments; // Neteo del mes (sin considerar saldo inicial)
   const commitmentPercent = totalIncome > 0 ? Math.min(100, Math.round((totalCommitments / totalIncome) * 100)) : 0;
   
   // Month name for display
@@ -385,20 +386,32 @@ const FinancialHealth = () => {
                       justifyContent: 'center',
                       alignItems: 'center'
                     }}>
-                      <Typography variant="body2" color="text.secondary" fontWeight={600} textAlign="center">
+                      {/* Neteo del mes (sin saldo inicial) */}
+                      <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                        NETEO DEL MES
+                      </Typography>
+                      <Typography 
+                        variant="h6" 
+                        fontWeight={600} 
+                        color={netBalance >= 0 ? 'success.main' : 'error.main'}
+                        sx={{ mb: 1.5 }}
+                      >
+                        {netBalance >= 0 ? '+' : ''}{formatCurrency(netBalance)}
+                      </Typography>
+                      
+                      {/* Resultado proyectado (con saldo inicial) */}
+                      <Typography variant="caption" color="text.secondary" fontWeight={500}>
                         RESULTADO PROYECTADO
                       </Typography>
                       <Typography 
-                        variant="h4" 
+                        variant="h5" 
                         fontWeight={700} 
                         color={projectedResult >= 0 ? 'success.main' : 'error.main'}
-                        textAlign="center"
-                        sx={{ mt: 2 }}
                       >
                         {projectedResult >= 0 ? '+' : ''}{formatCurrency(projectedResult)}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 1 }}>
-                        {projectedResult >= 0 ? 'A favor' : 'Déficit'}
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                        (incluye saldo inicial)
                       </Typography>
                     </Box>
                   </Grid>
