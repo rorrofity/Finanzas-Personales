@@ -52,9 +52,9 @@ const FinancialHealth = () => {
       });
       setData(healthRes.data);
       
-      // Fetch category breakdown for the pie chart
+      // Fetch category breakdown for the pie chart (use period, not date range)
       const catRes = await axios.get('/api/dashboard/categories', {
-        params: { startDate: startISO, endDate: endISO }
+        params: { periodYear: year, periodMonth: month }
       });
       
       // Transform for pie chart - top 6 categories
@@ -535,12 +535,12 @@ const FinancialHealth = () => {
                     <Typography variant="body2" color="text.secondary">Cuotas</Typography>
                     <Typography variant="body2">{formatCurrency(creditCards?.visa?.installments)}</Typography>
                   </Box>
-                  {(creditCards?.visa?.payments || 0) > 0 && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" color="text.secondary">Pagos</Typography>
-                      <Typography variant="body2" color="success.main">-{formatCurrency(creditCards?.visa?.payments)}</Typography>
-                    </Box>
-                  )}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Pagos</Typography>
+                    <Typography variant="body2" color={(creditCards?.visa?.payments || 0) > 0 ? 'success.main' : 'text.secondary'}>
+                      {(creditCards?.visa?.payments || 0) > 0 ? `-${formatCurrency(creditCards?.visa?.payments)}` : '$0'}
+                    </Typography>
+                  </Box>
                 </Box>
               </Grid>
               
@@ -580,12 +580,12 @@ const FinancialHealth = () => {
                     <Typography variant="body2" color="text.secondary">Cuotas</Typography>
                     <Typography variant="body2">{formatCurrency(creditCards?.mastercard?.installments)}</Typography>
                   </Box>
-                  {(creditCards?.mastercard?.payments || 0) > 0 && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <Typography variant="body2" color="text.secondary">Pagos</Typography>
-                      <Typography variant="body2" color="success.main">-{formatCurrency(creditCards?.mastercard?.payments)}</Typography>
-                    </Box>
-                  )}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">Pagos</Typography>
+                    <Typography variant="body2" color={(creditCards?.mastercard?.payments || 0) > 0 ? 'success.main' : 'text.secondary'}>
+                      {(creditCards?.mastercard?.payments || 0) > 0 ? `-${formatCurrency(creditCards?.mastercard?.payments)}` : '$0'}
+                    </Typography>
+                  </Box>
                 </Box>
               </Grid>
               
