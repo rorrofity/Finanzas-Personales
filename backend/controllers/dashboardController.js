@@ -266,7 +266,7 @@ const getCategoryBreakdown = async (req, res) => {
                     -- Gastos fijos proyectados
                     SELECT 
                         pt.category_id,
-                        COALESCE(po.monto, pt.amount) as amount,
+                        COALESCE(po.monto, pt.monto) as amount,
                         'proyectado' as source
                     FROM projected_templates pt
                     LEFT JOIN projected_occurrences po 
@@ -274,8 +274,7 @@ const getCategoryBreakdown = async (req, res) => {
                         AND po.year = $2 
                         AND po.month = $3
                     WHERE pt.user_id = $1
-                      AND pt.type = 'expense'
-                      AND pt.is_active = true
+                      AND pt.tipo = 'gasto'
                 )
                 SELECT 
                     COALESCE(c.name, 'Sin categoría') as categoria,
