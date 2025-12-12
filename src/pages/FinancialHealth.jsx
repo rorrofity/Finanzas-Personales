@@ -52,9 +52,9 @@ const FinancialHealth = () => {
       });
       setData(healthRes.data);
       
-      // Fetch category breakdown for the pie chart (use period, not date range)
+      // Fetch category breakdown for pie chart (mode=projected: TC + intl + gastos fijos)
       const catRes = await axios.get('/api/dashboard/categories', {
-        params: { periodYear: year, periodMonth: month }
+        params: { periodYear: year, periodMonth: month, mode: 'projected' }
       });
       
       // Transform for pie chart - top 6 categories

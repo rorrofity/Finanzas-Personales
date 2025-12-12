@@ -215,11 +215,13 @@ const getDashboardData = async (req, res) => {
 
 /**
  * Get category breakdown for a period
+ * mode=projected: TC nacional + internacional + gastos proyectados (para Salud Financiera)
+ * mode=monthly: TC + cuenta corriente del mes (para Dashboard histórico)
  */
 const getCategoryBreakdown = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { startDate, endDate, periodYear, periodMonth, includeChecking } = req.query;
+        const { periodYear, periodMonth, mode = 'projected' } = req.query;
         
         if (!periodYear || !periodMonth) {
             return res.json([]);
@@ -228,41 +230,114 @@ const getCategoryBreakdown = async (req, res) => {
         const year = parseInt(periodYear);
         const month = parseInt(periodMonth);
         
-        // Combinar transacciones TC (por periodo de facturación) + Cuenta Corriente (por mes)
-        const query = `
-            WITH combined AS (
-                -- Transacciones TC no facturadas (por periodo de facturación)
+        let query;
+        
+        if (mode === 'projected') {
+            // Para Salud Financiera: TC nacional + internacional + gastos proyectados
+            query = `
+                WITH combined AS (
+                    -- TC no facturado nacional (por periodo de facturación)
+                    SELECT 
+                        t.category_id,
+                        ABS(t.monto) as amount,
+                        'tc_nacional' as source
+                    FROM transactions t
+                    LEFT JOIN imports i ON t.import_id = i.id
+                    WHERE t.user_id = $1
+                      AND t.tipo = 'gasto'
+                      AND i.period_year = $2
+                      AND i.period_month = $3
+                    
+                    UNION ALL
+                    
+                    -- TC no facturado internacional (por periodo)
+                    SELECT 
+                        iu.category_id,
+                        iu.amount_clp as amount,
+                        'tc_internacional' as source
+                    FROM intl_unbilled iu
+                    WHERE iu.user_id = $1
+                      AND iu.period_year = $2
+                      AND iu.period_month = $3
+                      AND iu.tipo = 'gasto'
+                    
+                    UNION ALL
+                    
+                    -- Gastos fijos proyectados
+                    SELECT 
+                        pt.category_id,
+                        COALESCE(po.amount, pt.amount) as amount,
+                        'proyectado' as source
+                    FROM projected_templates pt
+                    LEFT JOIN projected_occurrences po 
+                        ON po.template_id = pt.id 
+                        AND po.year = $2 
+                        AND po.month = $3
+                    WHERE pt.user_id = $1
+                      AND pt.type = 'expense'
+                      AND pt.is_active = true
+                )
                 SELECT 
-                    t.category_id,
-                    ABS(t.monto) as amount
-                FROM transactions t
-                LEFT JOIN imports i ON t.import_id = i.id
-                WHERE t.user_id = $1
-                  AND t.tipo = 'gasto'
-                  AND i.period_year = $2
-                  AND i.period_month = $3
-                
-                UNION ALL
-                
-                -- Transacciones cuenta corriente (cargos del mes)
+                    COALESCE(c.name, 'Sin categoría') as categoria,
+                    SUM(combined.amount) as total,
+                    COUNT(*) as count
+                FROM combined
+                LEFT JOIN categories c ON combined.category_id = c.id
+                GROUP BY c.id, c.name
+                ORDER BY total DESC
+            `;
+        } else {
+            // Para Dashboard: TC + cuenta corriente del mes (por fecha de transacción)
+            query = `
+                WITH combined AS (
+                    -- TC no facturado (por periodo de facturación)
+                    SELECT 
+                        t.category_id,
+                        ABS(t.monto) as amount,
+                        'tc_nacional' as source
+                    FROM transactions t
+                    LEFT JOIN imports i ON t.import_id = i.id
+                    WHERE t.user_id = $1
+                      AND t.tipo = 'gasto'
+                      AND i.period_year = $2
+                      AND i.period_month = $3
+                    
+                    UNION ALL
+                    
+                    -- TC internacional
+                    SELECT 
+                        iu.category_id,
+                        iu.amount_clp as amount,
+                        'tc_internacional' as source
+                    FROM intl_unbilled iu
+                    WHERE iu.user_id = $1
+                      AND iu.period_year = $2
+                      AND iu.period_month = $3
+                      AND iu.tipo = 'gasto'
+                    
+                    UNION ALL
+                    
+                    -- Cuenta corriente (cargos del mes)
+                    SELECT 
+                        ct.category_id,
+                        ct.amount,
+                        'cuenta_corriente' as source
+                    FROM checking_transactions ct
+                    WHERE ct.user_id = $1
+                      AND ct.year = $2
+                      AND ct.month = $3
+                      AND ct.tipo = 'cargo'
+                )
                 SELECT 
-                    ct.category_id,
-                    ct.amount
-                FROM checking_transactions ct
-                WHERE ct.user_id = $1
-                  AND ct.year = $2
-                  AND ct.month = $3
-                  AND ct.tipo = 'cargo'
-            )
-            SELECT 
-                COALESCE(c.name, 'Sin categoría') as categoria,
-                SUM(combined.amount) as total,
-                COUNT(*) as count
-            FROM combined
-            LEFT JOIN categories c ON combined.category_id = c.id
-            GROUP BY c.id, c.name
-            ORDER BY total DESC
-        `;
+                    COALESCE(c.name, 'Sin categoría') as categoria,
+                    SUM(combined.amount) as total,
+                    COUNT(*) as count
+                FROM combined
+                LEFT JOIN categories c ON combined.category_id = c.id
+                GROUP BY c.id, c.name
+                ORDER BY total DESC
+            `;
+        }
         
         const result = await db.query(query, [userId, year, month]);
         res.json(result.rows.map(r => ({
@@ -276,8 +351,87 @@ const getCategoryBreakdown = async (req, res) => {
     }
 };
 
+/**
+ * Get monthly expense history for the last N months
+ * Returns total expenses per month (TC nacional + internacional + cuenta corriente)
+ */
+const getMonthlyHistory = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { months = 6 } = req.query;
+        const numMonths = Math.min(parseInt(months) || 6, 12);
+        
+        // Generate list of last N months
+        const now = new Date();
+        const monthsList = [];
+        for (let i = 0; i < numMonths; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            monthsList.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+        }
+        
+        const results = [];
+        
+        for (const { year, month } of monthsList) {
+            const query = `
+                SELECT 
+                    COALESCE(SUM(amount), 0) as total,
+                    COUNT(*) as count
+                FROM (
+                    -- TC nacional
+                    SELECT ABS(t.monto) as amount
+                    FROM transactions t
+                    LEFT JOIN imports i ON t.import_id = i.id
+                    WHERE t.user_id = $1
+                      AND t.tipo = 'gasto'
+                      AND i.period_year = $2
+                      AND i.period_month = $3
+                    
+                    UNION ALL
+                    
+                    -- TC internacional
+                    SELECT iu.amount_clp as amount
+                    FROM intl_unbilled iu
+                    WHERE iu.user_id = $1
+                      AND iu.period_year = $2
+                      AND iu.period_month = $3
+                      AND iu.tipo = 'gasto'
+                    
+                    UNION ALL
+                    
+                    -- Cuenta corriente (cargos)
+                    SELECT ct.amount
+                    FROM checking_transactions ct
+                    WHERE ct.user_id = $1
+                      AND ct.year = $2
+                      AND ct.month = $3
+                      AND ct.tipo = 'cargo'
+                ) combined
+            `;
+            
+            const result = await db.query(query, [userId, year, month]);
+            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            results.push({
+                year,
+                month,
+                monthName: monthNames[month - 1],
+                label: `${monthNames[month - 1]} ${year}`,
+                total: Number(result.rows[0]?.total || 0),
+                count: Number(result.rows[0]?.count || 0)
+            });
+        }
+        
+        // Return in chronological order (oldest first)
+        res.json(results.reverse());
+    } catch (error) {
+        console.error('Error in getMonthlyHistory:', error);
+        res.status(500).json({ error: 'Error al obtener histórico mensual' });
+    }
+};
+
 module.exports = {
     getDashboardData,
     getMonthlySummary,
-    getCategoryBreakdown
+    getCategoryBreakdown,
+    getMonthlyHistory
 };

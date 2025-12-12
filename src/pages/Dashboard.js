@@ -72,6 +72,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [monthlyHistory, setMonthlyHistory] = useState([]);
+  const [categoryBreakdown, setCategoryBreakdown] = useState([]);
   const theme = useTheme();
   const navigate = useNavigate();
   const { startISO, endISO, label, year, month } = usePeriod();
@@ -180,6 +182,31 @@ const Dashboard = () => {
       } catch (e) {
         console.warn('Error al cargar resumen de cuenta corriente:', e?.response?.status || e?.message);
       }
+
+      // Load monthly history (last 6 months)
+      try {
+        const histRes = await axios.get('/api/dashboard/monthly-history', { params: { months: 6 } });
+        setMonthlyHistory(histRes.data || []);
+      } catch (e) {
+        console.warn('Error al cargar histórico mensual:', e?.response?.status || e?.message);
+        setMonthlyHistory([]);
+      }
+
+      // Load category breakdown for selected month (mode=monthly: TC + cuenta corriente)
+      try {
+        const catRes = await axios.get('/api/dashboard/categories', { 
+          params: { periodYear, periodMonth, mode: 'monthly' } 
+        });
+        const cats = (catRes.data || [])
+          .filter(c => c.total > 0)
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 8);
+        setCategoryBreakdown(cats);
+      } catch (e) {
+        console.warn('Error al cargar categorías:', e?.response?.status || e?.message);
+        setCategoryBreakdown([]);
+      }
+
       // Build categories treemap-like data
       const categoryMap = new Map();
       transactions
@@ -1115,6 +1142,107 @@ const Dashboard = () => {
             <div style={{ flexGrow: 1, minHeight: 0 }}>
               {renderTreemap()}
             </div>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Histórico Mensual de Gastos */}
+      <Grid container spacing={3} sx={{ mt: 2 }}>
+        <Grid item xs={12} md={8}>
+          <Paper elevation={2} sx={{ p: 3, height: 350 }}>
+            <Typography 
+              component="h2" 
+              variant="h5" 
+              sx={{ 
+                color: theme.palette.primary.main,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 700,
+                mb: 2,
+                letterSpacing: '-0.5px'
+              }}
+            >
+              Evolución de Gastos (Últimos 6 meses)
+            </Typography>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={monthlyHistory} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="label" 
+                  tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
+                />
+                <YAxis 
+                  tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`}
+                  tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
+                />
+                <RechartsTooltip 
+                  formatter={(value) => [formatCurrency(value), 'Total Gastos']}
+                  contentStyle={{ 
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`
+                  }}
+                />
+                <Bar 
+                  dataKey="total" 
+                  fill={theme.palette.primary.main}
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper elevation={2} sx={{ p: 3, height: 350 }}>
+            <Typography 
+              component="h2" 
+              variant="h6" 
+              sx={{ 
+                color: theme.palette.primary.main,
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 700,
+                mb: 2,
+                letterSpacing: '-0.5px'
+              }}
+            >
+              Categorías del Mes
+            </Typography>
+            {categoryBreakdown.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={categoryBreakdown}
+                    dataKey="total"
+                    nameKey="categoria"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={70}
+                    label={false}
+                  >
+                    {categoryBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    formatter={(value, name) => [formatCurrency(value), name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography color="text.secondary">Sin datos del mes</Typography>
+              </Box>
+            )}
+            <Box sx={{ maxHeight: 80, overflow: 'auto' }}>
+              {categoryBreakdown.slice(0, 4).map((cat, idx) => (
+                <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: COLORS[idx], mr: 1 }} />
+                    <Typography variant="body2" noWrap sx={{ maxWidth: 120 }}>{cat.categoria}</Typography>
+                  </Box>
+                  <Typography variant="body2" fontWeight={600}>{formatCurrency(cat.total)}</Typography>
+                </Box>
+              ))}
+            </Box>
           </Paper>
         </Grid>
       </Grid>
