@@ -266,7 +266,7 @@ const getCategoryBreakdown = async (req, res) => {
                     -- Gastos fijos proyectados
                     SELECT 
                         pt.category_id,
-                        COALESCE(po.amount, pt.amount) as amount,
+                        COALESCE(po.monto, pt.amount) as amount,
                         'proyectado' as source
                     FROM projected_templates pt
                     LEFT JOIN projected_occurrences po 
