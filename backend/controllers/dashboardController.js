@@ -351,8 +351,8 @@ const getCategoryBreakdown = async (req, res) => {
 };
 
 /**
- * Get monthly expense history for the last N months
- * Returns total expenses per month (TC nacional + internacional + cuenta corriente)
+ * Get monthly history with detailed breakdown
+ * Returns: gastos TC (nacional + intl), gastos CC, ingresos CC, balance
  */
 const getMonthlyHistory = async (req, res) => {
     try {
@@ -369,54 +369,66 @@ const getMonthlyHistory = async (req, res) => {
         }
         
         const results = [];
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         
         for (const { year, month } of monthsList) {
-            const query = `
-                SELECT 
-                    COALESCE(SUM(amount), 0) as total,
-                    COUNT(*) as count
-                FROM (
-                    -- TC nacional
-                    SELECT ABS(t.monto) as amount
-                    FROM transactions t
-                    LEFT JOIN imports i ON t.import_id = i.id
-                    WHERE t.user_id = $1
-                      AND t.tipo = 'gasto'
-                      AND i.period_year = $2
-                      AND i.period_month = $3
-                    
-                    UNION ALL
-                    
-                    -- TC internacional
-                    SELECT iu.amount_clp as amount
-                    FROM intl_unbilled iu
-                    WHERE iu.user_id = $1
-                      AND iu.period_year = $2
-                      AND iu.period_month = $3
-                      AND iu.tipo = 'gasto'
-                    
-                    UNION ALL
-                    
-                    -- Cuenta corriente (cargos)
-                    SELECT ct.amount
-                    FROM checking_transactions ct
-                    WHERE ct.user_id = $1
-                      AND ct.year = $2
-                      AND ct.month = $3
-                      AND ct.tipo = 'cargo'
-                ) combined
-            `;
+            // TC Nacional (gastos)
+            const tcNacionalRes = await db.query(`
+                SELECT COALESCE(SUM(ABS(t.monto)), 0) as total
+                FROM transactions t
+                LEFT JOIN imports i ON t.import_id = i.id
+                WHERE t.user_id = $1
+                  AND t.tipo = 'gasto'
+                  AND i.period_year = $2
+                  AND i.period_month = $3
+            `, [userId, year, month]);
             
-            const result = await db.query(query, [userId, year, month]);
-            const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            // TC Internacional (gastos)
+            const tcIntlRes = await db.query(`
+                SELECT COALESCE(SUM(amount_clp), 0) as total
+                FROM intl_unbilled
+                WHERE user_id = $1
+                  AND period_year = $2
+                  AND period_month = $3
+                  AND tipo = 'gasto'
+            `, [userId, year, month]);
+            
+            // Cuenta Corriente - Cargos (gastos)
+            const ccCargosRes = await db.query(`
+                SELECT COALESCE(SUM(amount), 0) as total
+                FROM checking_transactions
+                WHERE user_id = $1
+                  AND year = $2
+                  AND month = $3
+                  AND tipo = 'cargo'
+            `, [userId, year, month]);
+            
+            // Cuenta Corriente - Abonos (ingresos)
+            const ccAbonosRes = await db.query(`
+                SELECT COALESCE(SUM(amount), 0) as total
+                FROM checking_transactions
+                WHERE user_id = $1
+                  AND year = $2
+                  AND month = $3
+                  AND tipo = 'abono'
+            `, [userId, year, month]);
+            
+            const gastosTC = Number(tcNacionalRes.rows[0]?.total || 0) + Number(tcIntlRes.rows[0]?.total || 0);
+            const gastosCC = Number(ccCargosRes.rows[0]?.total || 0);
+            const ingresosCC = Number(ccAbonosRes.rows[0]?.total || 0);
+            const gastosTotal = gastosTC + gastosCC;
+            const balance = ingresosCC - gastosTotal;
             
             results.push({
                 year,
                 month,
                 monthName: monthNames[month - 1],
                 label: `${monthNames[month - 1]} ${year}`,
-                total: Number(result.rows[0]?.total || 0),
-                count: Number(result.rows[0]?.count || 0)
+                gastosTC,
+                gastosCC,
+                ingresosCC,
+                gastosTotal,
+                balance
             });
         }
         
