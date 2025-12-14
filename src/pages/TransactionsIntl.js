@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -28,7 +28,10 @@ import {
   Chip,
   TablePagination,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Card,
+  CardContent,
+  Grid
 } from '@mui/material';
 import { 
   Edit as EditIcon, 
@@ -249,13 +252,73 @@ const TransactionsIntl = () => {
   });
   const titleBrandLabel = cardFilter === 'ALL' ? 'Todas' : (cardFilter === 'VISA' ? 'Visa' : 'Mastercard');
 
+  // Calcular totales
+  const totals = useMemo(() => {
+    const gastos = filteredRows.filter(r => r.tipo === 'gasto');
+    const pagos = filteredRows.filter(r => r.tipo === 'pago');
+    return {
+      totalUSD: gastos.reduce((sum, r) => sum + Number(r.amount_usd || 0), 0),
+      totalCLP: gastos.reduce((sum, r) => sum + Number(r.amount_clp || 0), 0),
+      countGastos: gastos.length,
+      pagosUSD: pagos.reduce((sum, r) => sum + Number(r.amount_usd || 0), 0),
+      pagosCLP: pagos.reduce((sum, r) => sum + Number(r.amount_clp || 0), 0),
+      countPagos: pagos.length,
+      countTotal: filteredRows.length
+    };
+  }, [filteredRows]);
+
+  const formatUSD = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(n||0));
+
   const handleChangePage = (event, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (event) => { setRowsPerPage(parseInt(event.target.value, 10)); setPage(0); };
 
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const monthLabel = `${monthNames[month - 1]} ${year}`;
+
   return (
     <Box>
-      <MonthPicker />
-      <Typography variant="h5" sx={{ mt: 2, mb: 2, fontWeight: 700 }}>Transacciones No Facturadas Internacionales (TC) • {titleBrandLabel} ({filteredRows.length})</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5" fontWeight={700}>Transacciones No Facturadas Internacionales (TC)</Typography>
+        <MonthPicker />
+      </Box>
+
+      {/* Cards de totales */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: 'error.main', color: 'white' }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Total Gastos ({monthLabel})</Typography>
+              <Typography variant="h5" fontWeight="bold">{formatUSD(totals.totalUSD)}</Typography>
+              <Typography variant="h6" sx={{ opacity: 0.9 }}>{formatCurrency(totals.totalCLP)}</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>{totals.countGastos} transacciones</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Total Pagos ({monthLabel})</Typography>
+              <Typography variant="h5" fontWeight="bold">{formatUSD(totals.pagosUSD)}</Typography>
+              <Typography variant="h6" sx={{ opacity: 0.9 }}>{formatCurrency(totals.pagosCLP)}</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>{totals.countPagos} transacciones</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Balance ({monthLabel})</Typography>
+              <Typography variant="h5" fontWeight="bold">{formatUSD(totals.totalUSD - totals.pagosUSD)}</Typography>
+              <Typography variant="h6" sx={{ opacity: 0.9 }}>{formatCurrency(totals.totalCLP - totals.pagosCLP)}</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>Gastos - Pagos</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
+        {titleBrandLabel} ({filteredRows.length} registros)
+      </Typography>
       <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
         <SyncButton 
           onSyncComplete={() => {

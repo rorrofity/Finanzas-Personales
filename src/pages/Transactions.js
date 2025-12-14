@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Paper,
@@ -34,6 +34,7 @@ import {
   Stack,
   useMediaQuery,
   useTheme,
+  Grid,
 } from '@mui/material';
 import { 
   Delete as DeleteIcon, 
@@ -505,6 +506,22 @@ const Transactions = () => {
 
   const titleBrandLabel = cardFilter === 'ALL' ? 'Todas' : (cardFilter === 'VISA' ? 'Visa' : 'Mastercard');
 
+  // Calcular totales
+  const totals = useMemo(() => {
+    const gastos = filteredTransactions.filter(t => t.tipo === 'gasto');
+    const pagos = filteredTransactions.filter(t => t.tipo === 'pago');
+    return {
+      totalGastos: gastos.reduce((sum, t) => sum + Math.abs(Number(t.monto || 0)), 0),
+      countGastos: gastos.length,
+      totalPagos: pagos.reduce((sum, t) => sum + Math.abs(Number(t.monto || 0)), 0),
+      countPagos: pagos.length,
+      countTotal: filteredTransactions.length
+    };
+  }, [filteredTransactions]);
+
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const monthLabel = `${monthNames[month - 1]} ${year}`;
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
@@ -523,7 +540,42 @@ const Transactions = () => {
 
   return (
     <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-      <MonthPicker />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5" fontWeight={700}>Transacciones No Facturadas (TC)</Typography>
+        <MonthPicker />
+      </Box>
+
+      {/* Cards de totales */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: 'error.main', color: 'white' }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Total Gastos ({monthLabel})</Typography>
+              <Typography variant="h4" fontWeight="bold">{formatAmount(totals.totalGastos)}</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>{totals.countGastos} transacciones</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Total Pagos ({monthLabel})</Typography>
+              <Typography variant="h4" fontWeight="bold">{formatAmount(totals.totalPagos)}</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>{totals.countPagos} transacciones</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Balance ({monthLabel})</Typography>
+              <Typography variant="h4" fontWeight="bold">{formatAmount(totals.totalGastos - totals.totalPagos)}</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>Gastos - Pagos</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       {showInfo && (
         <Alert
           severity="info"
