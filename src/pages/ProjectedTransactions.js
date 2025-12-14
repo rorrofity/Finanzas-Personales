@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
+  Card,
+  CardContent,
   Dialog,
   DialogActions,
   DialogContent,
@@ -10,6 +12,7 @@ import {
   IconButton,
   MenuItem,
   Paper,
+  Stack,
   Switch,
   TextField,
   Tooltip,
@@ -22,6 +25,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Select,
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import axios from 'axios';
@@ -46,11 +50,13 @@ const emptyForm = (year, month) => ({
 export default function ProjectedTransactions() {
   const { year, month } = usePeriod();
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null); // occurrence object
   const [form, setForm] = useState(emptyForm(year, month));
   const [error, setError] = useState('');
+  const [filter, setFilter] = useState({ tipo: 'todos', category_id: '' });
 
   useEffect(() => {
     setForm(emptyForm(year, month));
@@ -60,8 +66,12 @@ export default function ProjectedTransactions() {
   const load = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('/api/projected', { params: { year, month } });
-      setItems(res.data || []);
+      const [projRes, catRes] = await Promise.all([
+        axios.get('/api/projected', { params: { year, month } }),
+        axios.get('/api/categories'),
+      ]);
+      setItems(projRes.data || []);
+      setCategories(catRes.data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -150,36 +160,95 @@ export default function ProjectedTransactions() {
     await load();
   };
 
+  // Filtrar items por tipo y categoría
+  const filteredItems = useMemo(() => {
+    return items.filter(it => {
+      if (filter.tipo !== 'todos' && it.tipo !== filter.tipo) return false;
+      if (filter.category_id && it.category_id !== filter.category_id) return false;
+      return true;
+    });
+  }, [items, filter]);
+
   const totals = useMemo(() => {
-    const acc = items.reduce((a, it) => {
+    const acc = filteredItems.reduce((a, it) => {
       if (it.active === false) return a;
       const amt = Number(it.monto) || 0;
       if (it.tipo === 'ingreso') a.ingresos += amt;
       if (it.tipo === 'gasto') a.gastos += amt;
       return a;
     }, { ingresos: 0, gastos: 0 });
-    return { ...acc, saldo: acc.ingresos - acc.gastos };
-  }, [items]);
+    const countIngresos = filteredItems.filter(it => it.tipo === 'ingreso' && it.active !== false).length;
+    const countGastos = filteredItems.filter(it => it.tipo === 'gasto' && it.active !== false).length;
+    return { ...acc, saldo: acc.ingresos - acc.gastos, countIngresos, countGastos };
+  }, [filteredItems]);
+
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const monthLabel = `${monthNames[month - 1]} ${year}`;
 
   return (
     <Box>
-      <MonthPicker />
-      <Typography variant="h4" sx={{ mb: 2 }}>Transacciones Proyectadas</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4">Transacciones Proyectadas</Typography>
+        <MonthPicker />
+      </Box>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item>
-          <Button variant="contained" startIcon={<Add />} onClick={onOpenCreate}>Nueva proyección</Button>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ bgcolor: totals.saldo >= 0 ? 'primary.main' : 'error.main', color: 'white' }}>
+            <CardContent>
+              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Saldo Proyectado ({monthLabel})</Typography>
+              <Typography variant="h4" fontWeight="bold">{currency(totals.saldo)}</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.8 }}>Ingresos - Gastos del mes</Typography>
+            </CardContent>
+          </Card>
         </Grid>
-        <Grid item>
-          <Chip label={`Ingresos: ${currency(totals.ingresos)}`} color="success" variant="outlined" />
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="subtitle2" color="success.main">Total Ingresos ({monthLabel})</Typography>
+              <Typography variant="h5" color="success.main">{currency(totals.ingresos)}</Typography>
+              <Typography variant="caption">{totals.countIngresos} proyecciones</Typography>
+            </CardContent>
+          </Card>
         </Grid>
-        <Grid item>
-          <Chip label={`Gastos: ${currency(totals.gastos)}`} color="error" variant="outlined" />
-        </Grid>
-        <Grid item>
-          <Chip label={`Saldo: ${currency(totals.saldo)}`} color={totals.saldo >= 0 ? 'success' : 'error'} variant="filled" />
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="subtitle2" color="error.main">Total Gastos ({monthLabel})</Typography>
+              <Typography variant="h5" color="error.main">{currency(totals.gastos)}</Typography>
+              <Typography variant="caption">{totals.countGastos} proyecciones</Typography>
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
+
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 1 }}>
+        <TextField
+          select
+          size="small"
+          label="Tipo"
+          value={filter.tipo}
+          onChange={(e) => setFilter(prev => ({ ...prev, tipo: e.target.value }))}
+          sx={{ minWidth: 160 }}
+        >
+          <MenuItem value="todos">Todos</MenuItem>
+          <MenuItem value="ingreso">Ingreso</MenuItem>
+          <MenuItem value="gasto">Gasto</MenuItem>
+        </TextField>
+        <TextField
+          select
+          size="small"
+          label="Categoría"
+          value={filter.category_id || 'todas'}
+          onChange={(e) => setFilter(prev => ({ ...prev, category_id: e.target.value === 'todas' ? '' : e.target.value }))}
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem value="todas">Todas</MenuItem>
+          {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+        </TextField>
+        <Box sx={{ flex: 1 }} />
+        <Button variant="contained" startIcon={<Add />} onClick={onOpenCreate}>Nueva proyección</Button>
+      </Stack>
 
       <Paper>
         <TableContainer>
@@ -197,20 +266,42 @@ export default function ProjectedTransactions() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {(!items || items.length === 0) && (
+              {(!filteredItems || filteredItems.length === 0) && (
                 <TableRow>
                   <TableCell colSpan={8} align="center">
-                    No tienes proyecciones para este mes. Crea tu primera proyección.
+                    No hay proyecciones para este mes.
                   </TableCell>
                 </TableRow>
               )}
-              {items && items.map((it) => (
+              {filteredItems && filteredItems.map((it) => {
+                const cat = categories.find(c => c.id === it.category_id);
+                return (
                 <TableRow key={it.occurrence_id} hover>
                   <TableCell>{new Date(it.fecha).toLocaleDateString('es-CL')}</TableCell>
                   <TableCell>{it.nombre}</TableCell>
                   <TableCell>{it.tipo}</TableCell>
                   <TableCell align="right">{currency(it.monto)}</TableCell>
-                  <TableCell>{it.category_id ? it.category_id : '-'}</TableCell>
+                  <TableCell>
+                    <TextField
+                      select
+                      size="small"
+                      value={it.category_id || ''}
+                      onChange={async (e) => {
+                        const newCatId = e.target.value || null;
+                        try {
+                          await axios.put(`/api/projected/${it.occurrence_id}`, { category_id: newCatId });
+                          await load();
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }}
+                      sx={{ minWidth: 140 }}
+                      SelectProps={{ displayEmpty: true }}
+                    >
+                      <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                      {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+                    </TextField>
+                  </TableCell>
                   <TableCell>{it.repeat_monthly ? 'Sí' : 'No'}</TableCell>
                   <TableCell>
                     <Chip label={it.active ? 'Activo' : 'Inactivo'} color={it.active ? 'success' : 'default'} size="small" />
@@ -227,7 +318,8 @@ export default function ProjectedTransactions() {
                     </Tooltip>
                   </TableCell>
                 </TableRow>
-              ))}
+              );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
@@ -253,7 +345,10 @@ export default function ProjectedTransactions() {
               <TextField fullWidth label="Día del mes" type="number" inputProps={{ min: 1, max: 31 }} value={form.day_of_month} disabled={!!editing} onChange={(e) => setForm({ ...form, day_of_month: Number(e.target.value) })} helperText={editing ? 'El día de la plantilla no se edita aquí' : 'Si el día no existe en el mes, se usa el último día'} />
             </Grid>
             <Grid item xs={6}>
-              <TextField fullWidth label="Categoría (opcional)" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} />
+              <TextField select fullWidth label="Categoría (opcional)" value={form.category_id || ''} onChange={(e) => setForm({ ...form, category_id: e.target.value || null })}>
+                <MenuItem value="">Sin categoría</MenuItem>
+                {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+              </TextField>
             </Grid>
             <Grid item xs={12}>
               <TextField fullWidth label="Notas (opcional)" value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} inputProps={{ maxLength: 140 }} />
