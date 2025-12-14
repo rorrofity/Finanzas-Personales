@@ -113,6 +113,54 @@ class ProjectedModel {
     const res = await this.db.query(`DELETE FROM projected_occurrences WHERE id = $1 AND user_id = $2 RETURNING *`, [occurrenceId, userId]);
     return res.rows[0];
   }
+
+  async getOccurrenceById(userId, occurrenceId) {
+    const res = await this.db.query(
+      `SELECT * FROM projected_occurrences WHERE id = $1 AND user_id = $2`,
+      [occurrenceId, userId]
+    );
+    return res.rows[0];
+  }
+
+  async updateTemplate(userId, templateId, values) {
+    const fields = ['nombre','tipo','monto','category_id','notas'];
+    const sets = [];
+    const params = [];
+    let idx = 1;
+    for (const f of fields) {
+      if (values[f] !== undefined) {
+        sets.push(`${f} = $${idx++}`);
+        params.push(values[f]);
+      }
+    }
+    if (sets.length === 0) return null;
+    const query = `UPDATE projected_templates SET ${sets.join(', ')}, updated_at = NOW() WHERE id = $${idx} AND user_id = $${idx+1} RETURNING *`;
+    params.push(templateId, userId);
+    const res = await this.db.query(query, params);
+    return res.rows[0];
+  }
+
+  async updateFutureOccurrences(userId, templateId, fromYear, fromMonth, values) {
+    const fields = ['nombre','tipo','monto','category_id','notas'];
+    const sets = [];
+    const params = [];
+    let idx = 1;
+    for (const f of fields) {
+      if (values[f] !== undefined) {
+        sets.push(`${f} = $${idx++}`);
+        params.push(values[f]);
+      }
+    }
+    if (sets.length === 0) return 0;
+    // Update future occurrences that don't have override=TRUE for these specific fields
+    // We update occurrences from (year, month) forward (excluding current month since that one was just updated)
+    const query = `UPDATE projected_occurrences SET ${sets.join(', ')}, updated_at = NOW() 
+                   WHERE user_id = $${idx} AND template_id = $${idx+1} 
+                   AND (year > $${idx+2} OR (year = $${idx+2} AND month > $${idx+3}))`;
+    params.push(userId, templateId, fromYear, fromMonth);
+    const res = await this.db.query(query, params);
+    return res.rowCount;
+  }
 }
 
 module.exports = ProjectedModel;

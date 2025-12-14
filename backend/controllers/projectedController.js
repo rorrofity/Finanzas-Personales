@@ -115,7 +115,34 @@ const updateOccurrence = async (req, res) => {
     }
     if (active !== undefined) payload.active = !!active;
 
+    // Get occurrence to find template_id and current year/month
+    const occurrence = await projectedModel.getOccurrenceById(userId, occurrenceId);
+    if (!occurrence) {
+      return res.status(404).json({ error: 'Ocurrencia no encontrada' });
+    }
+
+    // Update current occurrence
     const updated = await projectedModel.updateOccurrence(userId, occurrenceId, payload);
+
+    // Propagate changes to template and future occurrences (except 'active' which is per-occurrence)
+    const templatePayload = { ...payload };
+    delete templatePayload.active; // 'active' is per-occurrence, not propagated
+
+    if (Object.keys(templatePayload).length > 0) {
+      // Update template
+      await projectedModel.updateTemplate(userId, occurrence.template_id, templatePayload);
+      
+      // Update future occurrences (months after current)
+      const futureUpdated = await projectedModel.updateFutureOccurrences(
+        userId, 
+        occurrence.template_id, 
+        occurrence.year, 
+        occurrence.month, 
+        templatePayload
+      );
+      console.log(`[projected] Updated template and ${futureUpdated} future occurrences`);
+    }
+
     res.json({ message: 'Proyección actualizada', occurrence: updated });
   } catch (error) {
     console.error('Error en updateOccurrence:', error);
