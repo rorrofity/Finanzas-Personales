@@ -26,7 +26,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } 
 import axios from '../config/axios';
 import { usePeriod } from '../contexts/PeriodContext';
 import MonthPicker from '../components/MonthPicker';
-import BillingPeriodConfig from '../components/BillingPeriodConfig';
 
 // Soft color palette for categories
 const CATEGORY_COLORS = [
@@ -170,7 +169,6 @@ const FinancialHealth = () => {
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <MonthPicker />
-          <BillingPeriodConfig year={year} month={month} onRecalculated={fetchData} />
           <Tooltip title="Actualizar">
             <IconButton onClick={fetchData} size="small" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
               <RefreshIcon fontSize="small" />

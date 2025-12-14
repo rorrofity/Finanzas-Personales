@@ -285,32 +285,32 @@ const TransactionsIntl = () => {
       {/* Cards de totales */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'error.main', color: 'white' }}>
+          <Card variant="outlined" sx={{ borderLeft: '4px solid', borderLeftColor: 'error.main' }}>
             <CardContent>
-              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Total Gastos ({monthLabel})</Typography>
-              <Typography variant="h5" fontWeight="bold">{formatUSD(totals.totalUSD)}</Typography>
-              <Typography variant="h6" sx={{ opacity: 0.9 }}>{formatCurrency(totals.totalCLP)}</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>{totals.countGastos} transacciones</Typography>
+              <Typography variant="subtitle2" color="error.main">Total Gastos ({monthLabel})</Typography>
+              <Typography variant="h5" fontWeight="bold" color="error.main">{formatUSD(totals.totalUSD)}</Typography>
+              <Typography variant="body2" color="text.secondary">{formatCurrency(totals.totalCLP)}</Typography>
+              <Typography variant="caption" color="text.secondary">{totals.countGastos} transacciones</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'success.main', color: 'white' }}>
+          <Card variant="outlined" sx={{ borderLeft: '4px solid', borderLeftColor: 'success.main' }}>
             <CardContent>
-              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Total Pagos ({monthLabel})</Typography>
-              <Typography variant="h5" fontWeight="bold">{formatUSD(totals.pagosUSD)}</Typography>
-              <Typography variant="h6" sx={{ opacity: 0.9 }}>{formatCurrency(totals.pagosCLP)}</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>{totals.countPagos} transacciones</Typography>
+              <Typography variant="subtitle2" color="success.main">Total Pagos ({monthLabel})</Typography>
+              <Typography variant="h5" fontWeight="bold" color="success.main">{formatUSD(totals.pagosUSD)}</Typography>
+              <Typography variant="body2" color="text.secondary">{formatCurrency(totals.pagosCLP)}</Typography>
+              <Typography variant="caption" color="text.secondary">{totals.countPagos} transacciones</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+          <Card variant="outlined" sx={{ borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
             <CardContent>
-              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Balance ({monthLabel})</Typography>
-              <Typography variant="h5" fontWeight="bold">{formatUSD(totals.totalUSD - totals.pagosUSD)}</Typography>
-              <Typography variant="h6" sx={{ opacity: 0.9 }}>{formatCurrency(totals.totalCLP - totals.pagosCLP)}</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>Gastos - Pagos</Typography>
+              <Typography variant="subtitle2" color="primary.main">Balance ({monthLabel})</Typography>
+              <Typography variant="h5" fontWeight="bold" color="primary.main">{formatUSD(totals.totalUSD - totals.pagosUSD)}</Typography>
+              <Typography variant="body2" color="text.secondary">{formatCurrency(totals.totalCLP - totals.pagosCLP)}</Typography>
+              <Typography variant="caption" color="text.secondary">Gastos - Pagos</Typography>
             </CardContent>
           </Card>
         </Grid>
