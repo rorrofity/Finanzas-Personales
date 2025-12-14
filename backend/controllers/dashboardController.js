@@ -393,7 +393,7 @@ const getMonthlyHistory = async (req, res) => {
                   AND tipo = 'gasto'
             `, [userId, year, month]);
             
-            // Cuenta Corriente - Cargos (gastos)
+            // Cuenta Corriente - Cargos (gastos) EXCLUYENDO pagos de tarjeta de crédito
             const ccCargosRes = await db.query(`
                 SELECT COALESCE(SUM(amount), 0) as total
                 FROM checking_transactions
@@ -401,6 +401,24 @@ const getMonthlyHistory = async (req, res) => {
                   AND year = $2
                   AND month = $3
                   AND tipo = 'cargo'
+                  AND LOWER(descripcion) NOT LIKE '%pago%tarjeta%'
+                  AND LOWER(descripcion) NOT LIKE '%pago tc%'
+                  AND LOWER(descripcion) NOT LIKE '%cargo por pago tc%'
+                  AND LOWER(descripcion) NOT LIKE '%pago tarjeta de credito%'
+            `, [userId, year, month]);
+            
+            // Pago de TC (para referencia, no se suma a gastos)
+            const pagoTCRes = await db.query(`
+                SELECT COALESCE(SUM(amount), 0) as total
+                FROM checking_transactions
+                WHERE user_id = $1
+                  AND year = $2
+                  AND month = $3
+                  AND tipo = 'cargo'
+                  AND (LOWER(descripcion) LIKE '%pago%tarjeta%'
+                       OR LOWER(descripcion) LIKE '%pago tc%'
+                       OR LOWER(descripcion) LIKE '%cargo por pago tc%'
+                       OR LOWER(descripcion) LIKE '%pago tarjeta de credito%')
             `, [userId, year, month]);
             
             // Cuenta Corriente - Abonos (ingresos)
@@ -415,9 +433,12 @@ const getMonthlyHistory = async (req, res) => {
             
             const gastosTC = Number(tcNacionalRes.rows[0]?.total || 0) + Number(tcIntlRes.rows[0]?.total || 0);
             const gastosCC = Number(ccCargosRes.rows[0]?.total || 0);
+            const pagoTC = Number(pagoTCRes.rows[0]?.total || 0);
             const ingresosCC = Number(ccAbonosRes.rows[0]?.total || 0);
+            // Balance real = Ingresos CC - Gastos CC (sin pago TC)
+            const balanceReal = ingresosCC - gastosCC;
+            // Gastos totales para categorías = TC + CC (sin pago TC)
             const gastosTotal = gastosTC + gastosCC;
-            const balance = ingresosCC - gastosTotal;
             
             results.push({
                 year,
@@ -426,9 +447,10 @@ const getMonthlyHistory = async (req, res) => {
                 label: `${monthNames[month - 1]} ${year}`,
                 gastosTC,
                 gastosCC,
+                pagoTC,
                 ingresosCC,
                 gastosTotal,
-                balance
+                balance: balanceReal
             });
         }
         
@@ -440,9 +462,122 @@ const getMonthlyHistory = async (req, res) => {
     }
 };
 
+/**
+ * Get category evolution over last N months
+ * Returns: array of months with category breakdown for stacked area chart
+ */
+const getCategoryEvolution = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { months = 6 } = req.query;
+        const numMonths = Math.min(parseInt(months) || 6, 12);
+        
+        // Generate list of last N months
+        const now = new Date();
+        const monthsList = [];
+        for (let i = 0; i < numMonths; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            monthsList.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
+        }
+        
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const results = [];
+        const allCategories = new Set();
+        
+        for (const { year, month } of monthsList) {
+            // Combine TC + CC (excluding pago TC) by category
+            const query = `
+                WITH combined AS (
+                    -- TC Nacional
+                    SELECT 
+                        t.category_id,
+                        ABS(t.monto) as amount
+                    FROM transactions t
+                    LEFT JOIN imports i ON t.import_id = i.id
+                    WHERE t.user_id = $1
+                      AND t.tipo = 'gasto'
+                      AND i.period_year = $2
+                      AND i.period_month = $3
+                    
+                    UNION ALL
+                    
+                    -- TC Internacional
+                    SELECT 
+                        iu.category_id,
+                        iu.amount_clp as amount
+                    FROM intl_unbilled iu
+                    WHERE iu.user_id = $1
+                      AND iu.period_year = $2
+                      AND iu.period_month = $3
+                      AND iu.tipo = 'gasto'
+                    
+                    UNION ALL
+                    
+                    -- Cuenta corriente (cargos, excluyendo pago TC)
+                    SELECT 
+                        ct.category_id,
+                        ct.amount
+                    FROM checking_transactions ct
+                    WHERE ct.user_id = $1
+                      AND ct.year = $2
+                      AND ct.month = $3
+                      AND ct.tipo = 'cargo'
+                      AND LOWER(ct.descripcion) NOT LIKE '%pago%tarjeta%'
+                      AND LOWER(ct.descripcion) NOT LIKE '%pago tc%'
+                      AND LOWER(ct.descripcion) NOT LIKE '%cargo por pago tc%'
+                      AND LOWER(ct.descripcion) NOT LIKE '%pago tarjeta de credito%'
+                )
+                SELECT 
+                    COALESCE(c.name, 'Sin categoría') as categoria,
+                    SUM(combined.amount) as total
+                FROM combined
+                LEFT JOIN categories c ON combined.category_id = c.id
+                GROUP BY c.id, c.name
+                ORDER BY total DESC
+            `;
+            
+            const catRes = await db.query(query, [userId, year, month]);
+            
+            const monthData = {
+                year,
+                month,
+                label: `${monthNames[month - 1]} ${year}`,
+                categories: {}
+            };
+            
+            catRes.rows.forEach(row => {
+                const catName = row.categoria;
+                allCategories.add(catName);
+                monthData.categories[catName] = Number(row.total);
+            });
+            
+            results.push(monthData);
+        }
+        
+        // Normalize: ensure all months have all categories
+        const categoriesArray = Array.from(allCategories);
+        const normalizedResults = results.map(m => {
+            const normalized = { label: m.label, year: m.year, month: m.month };
+            categoriesArray.forEach(cat => {
+                normalized[cat] = m.categories[cat] || 0;
+            });
+            return normalized;
+        });
+        
+        res.json({
+            data: normalizedResults.reverse(), // chronological order
+            categories: categoriesArray
+        });
+    } catch (error) {
+        console.error('Error in getCategoryEvolution:', error);
+        res.status(500).json({ error: 'Error al obtener evolución de categorías' });
+    }
+};
+
 module.exports = {
     getDashboardData,
     getMonthlySummary,
     getCategoryBreakdown,
-    getMonthlyHistory
+    getMonthlyHistory,
+    getCategoryEvolution
 };

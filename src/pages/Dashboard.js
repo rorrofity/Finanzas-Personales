@@ -49,6 +49,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [monthlyHistory, setMonthlyHistory] = useState([]);
   const [categoryBreakdown, setCategoryBreakdown] = useState([]);
+  const [categoryEvolution, setCategoryEvolution] = useState({ data: [], categories: [] });
   const [currentMonthData, setCurrentMonthData] = useState(null);
   const theme = useTheme();
   const { year, month } = usePeriod();
@@ -96,6 +97,10 @@ const Dashboard = () => {
         .sort((a, b) => b.total - a.total)
         .slice(0, 8);
       setCategoryBreakdown(cats);
+
+      // Fetch category evolution (last 6 months)
+      const catEvoRes = await axios.get('/api/dashboard/category-evolution', { params: { months: 6 } });
+      setCategoryEvolution(catEvoRes.data || { data: [], categories: [] });
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -257,6 +262,50 @@ const Dashboard = () => {
             />
           </ComposedChart>
         </ResponsiveContainer>
+      </Paper>
+
+      {/* Evolución de Gastos por Categoría */}
+      <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'text.secondary' }}>
+        Evolución de Gastos por Categoría
+      </Typography>
+      <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+        {categoryEvolution.data.length > 0 ? (
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={categoryEvolution.data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+              <XAxis 
+                dataKey="label" 
+                tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
+              />
+              <YAxis 
+                tickFormatter={formatCurrencyShort}
+                tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
+              />
+              <RechartsTooltip
+                formatter={(value, name) => [formatCurrency(value), name]}
+                contentStyle={{
+                  backgroundColor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 8
+                }}
+              />
+              <Legend />
+              {categoryEvolution.categories.slice(0, 8).map((cat, idx) => (
+                <Bar 
+                  key={cat}
+                  dataKey={cat} 
+                  name={cat}
+                  stackId="categories"
+                  fill={COLORS[idx % COLORS.length]}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 300 }}>
+            <Typography color="text.secondary">Sin datos de categorías</Typography>
+          </Box>
+        )}
       </Paper>
 
       {/* Categorías y Balance */}
