@@ -45,7 +45,7 @@ async function list(req, res) {
     if (year && month) {
       const { y, m } = ensureValidPeriod(year, month);
       const rows = await model.list(req.user.id, y, m);
-      return res.json(rows);
+      return res.json({ items: rows, total: rows.length });
     }
     
     // Default: últimos 6 meses

@@ -33,15 +33,18 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete, FileUpload, CheckCircle, Close } from '@mui/icons-material';
 import axios from 'axios';
+import MonthPicker from '../components/MonthPicker';
+import { usePeriod } from '../contexts/PeriodContext';
 
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
 export default function Checking() {
+  const { year, month } = usePeriod();
   const [globalBalance, setGlobalBalance] = useState(0);
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
-  const pageSize = 20; // Más filas por página
+  const pageSize = 20;
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
@@ -61,7 +64,7 @@ export default function Checking() {
       setLoading(true);
       const [gRes, lRes, cRes] = await Promise.all([
         axios.get('/api/checking/global-balance'),
-        axios.get('/api/checking', { params: { recent: 'true' } }),
+        axios.get('/api/checking', { params: { year, month } }),
         axios.get('/api/categories'),
       ]);
       setGlobalBalance(Number(gRes.data?.saldo_actual || 0));
@@ -76,7 +79,7 @@ export default function Checking() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [year, month]);
 
   const filteredRows = useMemo(() => {
     return rows.filter(r => {
@@ -198,16 +201,24 @@ export default function Checking() {
     }
   };
 
-  // Calcular totales de los últimos 6 meses
+  // Calcular totales del mes seleccionado
   const totals = useMemo(() => {
     const abonos = rows.filter(r => r.tipo === 'abono').reduce((sum, r) => sum + Number(r.amount), 0);
     const cargos = rows.filter(r => r.tipo === 'cargo').reduce((sum, r) => sum + Number(r.amount), 0);
-    return { abonos, cargos };
+    const countAbonos = rows.filter(r => r.tipo === 'abono').length;
+    const countCargos = rows.filter(r => r.tipo === 'cargo').length;
+    return { abonos, cargos, countAbonos, countCargos };
   }, [rows]);
+
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const monthLabel = `${monthNames[month - 1]} ${year}`;
 
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 2 }}>Cuenta Corriente</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4">Cuenta Corriente</Typography>
+        <MonthPicker />
+      </Box>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item xs={12} md={4}>
@@ -222,18 +233,18 @@ export default function Checking() {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="subtitle2" color="success.main">Total Abonos (6 meses)</Typography>
+              <Typography variant="subtitle2" color="success.main">Total Abonos ({monthLabel})</Typography>
               <Typography variant="h5" color="success.main">{currency(totals.abonos)}</Typography>
-              <Typography variant="caption">{rows.filter(r => r.tipo === 'abono').length} transacciones</Typography>
+              <Typography variant="caption">{totals.countAbonos} transacciones</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="subtitle2" color="error.main">Total Cargos (6 meses)</Typography>
+              <Typography variant="subtitle2" color="error.main">Total Cargos ({monthLabel})</Typography>
               <Typography variant="h5" color="error.main">{currency(totals.cargos)}</Typography>
-              <Typography variant="caption">{rows.filter(r => r.tipo === 'cargo').length} transacciones</Typography>
+              <Typography variant="caption">{totals.countCargos} transacciones</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -256,19 +267,11 @@ export default function Checking() {
           select
           size="small"
           label="Categoría"
-          value={filter.category_id}
-          onChange={(e)=>setFilter(prev=>({ ...prev, category_id: e.target.value }))}
+          value={filter.category_id || 'todas'}
+          onChange={(e)=>setFilter(prev=>({ ...prev, category_id: e.target.value === 'todas' ? '' : e.target.value }))}
           sx={{ minWidth: 200 }}
-          SelectProps={{
-            displayEmpty: true,
-            renderValue: (selected) => {
-              if (!selected) return <em>Todas</em>;
-              const cat = categories.find(c => String(c.id) === String(selected));
-              return cat ? cat.name : <em>Todas</em>;
-            }
-          }}
         >
-          <MenuItem value=""><em>Todas</em></MenuItem>
+          <MenuItem value="todas">Todas</MenuItem>
           {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
         </TextField>
         <Box sx={{ flex: 1 }} />
