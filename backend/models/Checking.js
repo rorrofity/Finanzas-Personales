@@ -210,11 +210,11 @@ class Checking {
 
   /**
    * Importación masiva con detección de duplicados
-   * Duplicado = misma fecha + monto + descripción normalizada
+   * Duplicado = misma fecha + monto + tipo + descripción normalizada
    */
   async bulkImport(userId, rows) {
-    // Función para normalizar descripción (quitar espacios extras, lowercase)
-    const normalizeDesc = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    // Función para normalizar descripción (quitar espacios extras, lowercase, trim)
+    const normalizeDesc = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 60);
     
     // Función para normalizar fecha a YYYY-MM-DD
     const normalizeDate = (d) => {
@@ -226,14 +226,14 @@ class Checking {
 
     // Obtener transacciones existentes del usuario
     const existingRes = await this.query(
-      `SELECT fecha, amount, descripcion FROM checking_transactions WHERE user_id = $1`,
+      `SELECT fecha, amount, tipo, descripcion FROM checking_transactions WHERE user_id = $1`,
       [userId]
     );
     
-    // Crear mapa de existentes: key = fecha|monto|descripcion_normalizada
+    // Crear mapa de existentes: key = fecha|monto|tipo|descripcion_normalizada
     const existingSet = new Set();
     for (const row of existingRes.rows) {
-      const key = `${normalizeDate(row.fecha)}|${row.amount}|${normalizeDesc(row.descripcion)}`;
+      const key = `${normalizeDate(row.fecha)}|${Number(row.amount)}|${row.tipo}|${normalizeDesc(row.descripcion)}`;
       existingSet.add(key);
     }
 
@@ -251,8 +251,8 @@ class Checking {
         continue;
       }
 
-      // Crear key para verificar duplicado
-      const key = `${fechaNorm}|${amount}|${descNorm}`;
+      // Crear key para verificar duplicado (incluye tipo)
+      const key = `${fechaNorm}|${amount}|${tipo}|${descNorm}`;
       
       if (existingSet.has(key)) {
         // Ya existe, omitir
