@@ -286,32 +286,36 @@ const getCategoryBreakdown = async (req, res) => {
                 ORDER BY total DESC
             `;
         } else {
-            // Para Dashboard: TC + cuenta corriente del mes (por fecha de transacción)
+            // Para Dashboard: TC + cuenta corriente del mes (por fecha calendario)
+            // Calcular rango de fechas del mes
+            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+            const lastDay = new Date(year, month, 0).getDate();
+            const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+            
             query = `
                 WITH combined AS (
-                    -- TC no facturado (por periodo de facturación)
+                    -- TC Nacional (por fecha real de transacción)
                     SELECT 
                         t.category_id,
                         ABS(t.monto) as amount,
                         'tc_nacional' as source
                     FROM transactions t
-                    LEFT JOIN imports i ON t.import_id = i.id
                     WHERE t.user_id = $1
                       AND t.tipo = 'gasto'
-                      AND i.period_year = $2
-                      AND i.period_month = $3
+                      AND t.fecha >= $2::date
+                      AND t.fecha <= $3::date
                     
                     UNION ALL
                     
-                    -- TC internacional
+                    -- TC internacional (por fecha real)
                     SELECT 
                         iu.category_id,
                         iu.amount_clp as amount,
                         'tc_internacional' as source
                     FROM intl_unbilled iu
                     WHERE iu.user_id = $1
-                      AND iu.period_year = $2
-                      AND iu.period_month = $3
+                      AND iu.fecha >= $2::date
+                      AND iu.fecha <= $3::date
                       AND iu.tipo = 'gasto'
                     
                     UNION ALL
@@ -323,8 +327,8 @@ const getCategoryBreakdown = async (req, res) => {
                         'cuenta_corriente' as source
                     FROM checking_transactions ct
                     WHERE ct.user_id = $1
-                      AND ct.year = $2
-                      AND ct.month = $3
+                      AND ct.year = $4
+                      AND ct.month = $5
                       AND ct.tipo = 'cargo'
                       AND LOWER(ct.descripcion) NOT LIKE '%pago%tarjeta%'
                       AND LOWER(ct.descripcion) NOT LIKE '%pago tc%'
@@ -340,6 +344,13 @@ const getCategoryBreakdown = async (req, res) => {
                 GROUP BY c.id, c.name
                 ORDER BY total DESC
             `;
+            
+            const result = await db.query(query, [userId, startDate, endDate, year, month]);
+            return res.json(result.rows.map(r => ({
+                categoria: r.categoria,
+                total: Number(r.total),
+                count: Number(r.count)
+            })));
         }
         
         const result = await db.query(query, [userId, year, month]);
@@ -376,26 +387,30 @@ const getMonthlyHistory = async (req, res) => {
         const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
         
         for (const { year, month } of monthsList) {
-            // TC Nacional (gastos)
+            // Calcular rango de fechas del mes calendario
+            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+            const lastDay = new Date(year, month, 0).getDate();
+            const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+            
+            // TC Nacional (gastos) - filtrar por fecha real de transacción
             const tcNacionalRes = await db.query(`
                 SELECT COALESCE(SUM(ABS(t.monto)), 0) as total
                 FROM transactions t
-                LEFT JOIN imports i ON t.import_id = i.id
                 WHERE t.user_id = $1
                   AND t.tipo = 'gasto'
-                  AND i.period_year = $2
-                  AND i.period_month = $3
-            `, [userId, year, month]);
+                  AND t.fecha >= $2::date
+                  AND t.fecha <= $3::date
+            `, [userId, startDate, endDate]);
             
-            // TC Internacional (gastos)
+            // TC Internacional (gastos) - filtrar por fecha real
             const tcIntlRes = await db.query(`
                 SELECT COALESCE(SUM(amount_clp), 0) as total
                 FROM intl_unbilled
                 WHERE user_id = $1
-                  AND period_year = $2
-                  AND period_month = $3
+                  AND fecha >= $2::date
+                  AND fecha <= $3::date
                   AND tipo = 'gasto'
-            `, [userId, year, month]);
+            `, [userId, startDate, endDate]);
             
             // Cuenta Corriente - Cargos (gastos) EXCLUYENDO pagos de tarjeta de crédito
             const ccCargosRes = await db.query(`
@@ -489,30 +504,34 @@ const getCategoryEvolution = async (req, res) => {
         const allCategories = new Set();
         
         for (const { year, month } of monthsList) {
-            // Combine TC + CC (excluding pago TC) by category
+            // Calcular rango de fechas del mes calendario
+            const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+            const lastDay = new Date(year, month, 0).getDate();
+            const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+            
+            // Combine TC + CC (excluding pago TC) by category - filtrar por fecha calendario
             const query = `
                 WITH combined AS (
-                    -- TC Nacional
+                    -- TC Nacional (por fecha real)
                     SELECT 
                         t.category_id,
                         ABS(t.monto) as amount
                     FROM transactions t
-                    LEFT JOIN imports i ON t.import_id = i.id
                     WHERE t.user_id = $1
                       AND t.tipo = 'gasto'
-                      AND i.period_year = $2
-                      AND i.period_month = $3
+                      AND t.fecha >= $2::date
+                      AND t.fecha <= $3::date
                     
                     UNION ALL
                     
-                    -- TC Internacional
+                    -- TC Internacional (por fecha real)
                     SELECT 
                         iu.category_id,
                         iu.amount_clp as amount
                     FROM intl_unbilled iu
                     WHERE iu.user_id = $1
-                      AND iu.period_year = $2
-                      AND iu.period_month = $3
+                      AND iu.fecha >= $2::date
+                      AND iu.fecha <= $3::date
                       AND iu.tipo = 'gasto'
                     
                     UNION ALL
@@ -523,8 +542,8 @@ const getCategoryEvolution = async (req, res) => {
                         ct.amount
                     FROM checking_transactions ct
                     WHERE ct.user_id = $1
-                      AND ct.year = $2
-                      AND ct.month = $3
+                      AND ct.year = $4
+                      AND ct.month = $5
                       AND ct.tipo = 'cargo'
                       AND LOWER(ct.descripcion) NOT LIKE '%pago%tarjeta%'
                       AND LOWER(ct.descripcion) NOT LIKE '%pago tc%'
@@ -540,7 +559,7 @@ const getCategoryEvolution = async (req, res) => {
                 ORDER BY total DESC
             `;
             
-            const catRes = await db.query(query, [userId, year, month]);
+            const catRes = await db.query(query, [userId, startDate, endDate, year, month]);
             
             const monthData = {
                 year,
