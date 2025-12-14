@@ -316,7 +316,7 @@ const getCategoryBreakdown = async (req, res) => {
                     
                     UNION ALL
                     
-                    -- Cuenta corriente (cargos del mes)
+                    -- Cuenta corriente (cargos del mes, excluyendo pago TC)
                     SELECT 
                         ct.category_id,
                         ct.amount,
@@ -326,6 +326,10 @@ const getCategoryBreakdown = async (req, res) => {
                       AND ct.year = $2
                       AND ct.month = $3
                       AND ct.tipo = 'cargo'
+                      AND LOWER(ct.descripcion) NOT LIKE '%pago%tarjeta%'
+                      AND LOWER(ct.descripcion) NOT LIKE '%pago tc%'
+                      AND LOWER(ct.descripcion) NOT LIKE '%cargo por pago tc%'
+                      AND LOWER(ct.descripcion) NOT LIKE '%pago tarjeta de credito%'
                 )
                 SELECT 
                     COALESCE(c.name, 'Sin categoría') as categoria,
