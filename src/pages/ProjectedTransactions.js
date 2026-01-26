@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatDateLocal, parseDateLocal } from '../utils/dateUtils';
 import {
   Box,
   Button,
@@ -91,7 +92,7 @@ export default function ProjectedTransactions() {
       nombre: occ.nombre,
       tipo: occ.tipo,
       monto: Math.abs(Number(occ.monto || 0)),
-      day_of_month: new Date(occ.fecha).getDate(),
+      day_of_month: parseDateLocal(occ.fecha).getDate(),
       year: occ.year,
       month: occ.month,
       category_id: occ.category_id || '',
@@ -277,7 +278,7 @@ export default function ProjectedTransactions() {
                 const cat = categories.find(c => c.id === it.category_id);
                 return (
                 <TableRow key={it.occurrence_id} hover>
-                  <TableCell>{new Date(it.fecha).toLocaleDateString('es-CL')}</TableCell>
+                  <TableCell>{formatDateLocal(it.fecha)}</TableCell>
                   <TableCell>{it.nombre}</TableCell>
                   <TableCell>{it.tipo}</TableCell>
                   <TableCell align="right">{currency(it.monto)}</TableCell>

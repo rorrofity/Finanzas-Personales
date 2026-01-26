@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { formatDateLocal } from '../utils/dateUtils';
 import {
   Box,
   Button,
@@ -425,7 +426,7 @@ const TransactionsIntl = () => {
                     <TableCell>
                       <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
                     </TableCell>
-                    <TableCell>{new Date(r.fecha).toLocaleDateString('es-CL')}</TableCell>
+                    <TableCell>{formatDateLocal(r.fecha)}</TableCell>
                     <TableCell>
                       {r.descripcion}
                       {r.tipo === 'desestimar' && (<Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />)}

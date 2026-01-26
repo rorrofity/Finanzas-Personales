@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { formatDateLocal } from '../utils/dateUtils';
 import {
   Box,
   Paper,
@@ -690,7 +691,7 @@ const Transactions = () => {
                               {transaction.descripcion}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {new Date(transaction.fecha).toLocaleDateString()} • {transaction.network || '-'}
+                              {formatDateLocal(transaction.fecha)} • {transaction.network || '-'}
                             </Typography>
                           </Box>
                           <Typography variant="body1" fontWeight="bold" color="error.main" sx={{ ml: 1, whiteSpace: 'nowrap' }}>
@@ -773,7 +774,7 @@ const Transactions = () => {
                             onChange={() => handleSelectTransaction(transaction.id)}
                           />
                         </TableCell>
-                        <TableCell>{new Date(transaction.fecha).toLocaleDateString()}</TableCell>
+                        <TableCell>{formatDateLocal(transaction.fecha)}</TableCell>
                         <TableCell>
                           {transaction.descripcion}{' '}
                           {transaction.tipo === 'desestimar' && (

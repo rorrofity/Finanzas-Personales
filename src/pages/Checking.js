@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatDateLocal, parseDateLocal } from '../utils/dateUtils';
 import {
   Box,
   Button,
@@ -301,7 +302,7 @@ export default function Checking() {
               )}
               {filteredRows.map(r => (
                 <TableRow key={r.id} hover>
-                  <TableCell>{new Date(r.fecha).toLocaleDateString('es-CL')}</TableCell>
+                  <TableCell>{formatDateLocal(r.fecha)}</TableCell>
                   <TableCell>{r.descripcion}</TableCell>
                   <TableCell sx={{ textTransform:'capitalize' }}>{r.tipo}</TableCell>
                   <TableCell align="right">{currency(r.amount)}</TableCell>
