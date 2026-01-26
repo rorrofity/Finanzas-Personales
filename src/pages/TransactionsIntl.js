@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import MonthPicker from '../components/MonthPicker';
 import SyncButton from '../components/SyncButton';
+import BillingPeriodConfig from '../components/BillingPeriodConfig';
 import { usePeriod } from '../contexts/PeriodContext';
 import axios from 'axios';
 
@@ -279,7 +280,10 @@ const TransactionsIntl = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" fontWeight={700}>Transacciones No Facturadas Internacionales (TC)</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h5" fontWeight={700}>Transacciones No Facturadas Internacionales (TC)</Typography>
+          <BillingPeriodConfig year={year} month={month} onRecalculated={load} />
+        </Box>
         <MonthPicker />
       </Box>
 

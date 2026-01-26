@@ -46,6 +46,7 @@ import {
 import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
 import SyncButton from '../components/SyncButton';
+import BillingPeriodConfig from '../components/BillingPeriodConfig';
 import { usePeriod } from '../contexts/PeriodContext';
 
 const Transactions = () => {
@@ -542,7 +543,10 @@ const Transactions = () => {
   return (
     <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" fontWeight={700}>Transacciones No Facturadas (TC)</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h5" fontWeight={700}>Transacciones No Facturadas (TC)</Typography>
+          <BillingPeriodConfig year={year} month={month} onRecalculated={fetchTransactions} />
+        </Box>
         <MonthPicker />
       </Box>
 
