@@ -99,18 +99,21 @@ router.post('/periods', auth, async (req, res) => {
 /**
  * POST /api/billing/recalculate/:year/:month
  * Recalculate transactions for a billing period
- * Finds all transactions within the period's date range and assigns them to this billing period
+ * 1. Assigns transactions within the date range to this billing period
+ * 2. Reassigns transactions currently in this period but OUTSIDE the date range to the next period
  */
 router.post('/recalculate/:year/:month', auth, async (req, res) => {
   try {
     const { year, month } = req.params;
     const userId = req.user.id;
+    const billingYear = parseInt(year);
+    const billingMonth = parseInt(month);
     
     // Get the billing period configuration
     const periodResult = await db.query(`
       SELECT * FROM billing_periods 
       WHERE user_id = $1 AND billing_year = $2 AND billing_month = $3
-    `, [userId, year, month]);
+    `, [userId, billingYear, billingMonth]);
     
     if (periodResult.rows.length === 0) {
       return res.status(404).json({ error: 'Período de facturación no configurado' });
@@ -118,8 +121,8 @@ router.post('/recalculate/:year/:month', auth, async (req, res) => {
     
     const period = periodResult.rows[0];
     
-    // Update transactions that fall within this period's date range
-    const updateResult = await db.query(`
+    // Step 1: Assign transactions within the date range to this period
+    const updateInRangeResult = await db.query(`
       UPDATE transactions
       SET 
         billing_year = $1,
@@ -130,22 +133,50 @@ router.post('/recalculate/:year/:month', auth, async (req, res) => {
         AND fecha <= $5
       RETURNING id
     `, [
-      period.billing_year,
-      period.billing_month,
+      billingYear,
+      billingMonth,
       userId,
       period.period_start,
       period.period_end
     ]);
     
-    const updatedCount = updateResult.rows.length;
+    const updatedInRange = updateInRangeResult.rows.length;
+    
+    // Step 2: Reassign transactions that are currently in this period but AFTER period_end to next period
+    // Calculate next billing period
+    const nextMonth = billingMonth === 12 ? 1 : billingMonth + 1;
+    const nextYear = billingMonth === 12 ? billingYear + 1 : billingYear;
+    
+    const updateOutOfRangeResult = await db.query(`
+      UPDATE transactions
+      SET 
+        billing_year = $1,
+        billing_month = $2,
+        updated_at = NOW()
+      WHERE user_id = $3
+        AND billing_year = $4
+        AND billing_month = $5
+        AND fecha > $6
+      RETURNING id
+    `, [
+      nextYear,
+      nextMonth,
+      userId,
+      billingYear,
+      billingMonth,
+      period.period_end
+    ]);
+    
+    const movedToNext = updateOutOfRangeResult.rows.length;
     
     res.json({
       success: true,
-      message: `${updatedCount} transacciones actualizadas`,
-      updated: updatedCount,
+      message: `${updatedInRange} transacciones asignadas a ${billingMonth}/${billingYear}, ${movedToNext} movidas al período siguiente`,
+      updated: updatedInRange,
+      movedToNextPeriod: movedToNext,
       period: {
-        billing_year: period.billing_year,
-        billing_month: period.billing_month,
+        billing_year: billingYear,
+        billing_month: billingMonth,
         period_start: period.period_start,
         period_end: period.period_end
       }
