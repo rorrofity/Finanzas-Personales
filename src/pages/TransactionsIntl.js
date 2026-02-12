@@ -282,7 +282,7 @@ const TransactionsIntl = () => {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h5" fontWeight={700}>Transacciones No Facturadas Internacionales (TC)</Typography>
-          <BillingPeriodConfig year={year} month={month} onRecalculated={load} />
+          <BillingPeriodConfig year={year} month={month} onRecalculated={fetchRows} />
         </Box>
         <MonthPicker />
       </Box>

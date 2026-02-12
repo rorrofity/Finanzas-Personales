@@ -78,6 +78,7 @@ const getSummary = async (req, res) => {
     ];
 
     // 1. Obtener saldo cuenta corriente actual (usar known_balance que es el saldo real)
+    // Primero buscar el mes actual, si no existe, usar el saldo conocido más reciente
     let checkingBalance = 0;
     try {
       const checkingRes = await db.query(`
@@ -88,6 +89,18 @@ const getSummary = async (req, res) => {
       
       if (checkingRes.rows.length > 0) {
         checkingBalance = Number(checkingRes.rows[0].saldo_actual) || 0;
+      } else {
+        // Fallback: usar el saldo conocido más reciente de cualquier mes
+        const fallbackRes = await db.query(`
+          SELECT COALESCE(known_balance, initial_balance, 0) as saldo_actual
+          FROM checking_balances
+          WHERE user_id = $1 AND known_balance IS NOT NULL
+          ORDER BY year DESC, month DESC
+          LIMIT 1
+        `, [userId]);
+        if (fallbackRes.rows.length > 0) {
+          checkingBalance = Number(fallbackRes.rows[0].saldo_actual) || 0;
+        }
       }
     } catch (e) {
       console.warn('Error obteniendo saldo cuenta corriente:', e.message);
