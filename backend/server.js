@@ -20,6 +20,7 @@ const syncRoutes = require('./routes/syncRoutes');
 const suspiciousRoutes = require('./routes/suspiciousRoutes');
 const financialHealthRoutes = require('./routes/financialHealthRoutes');
 const billingRoutes = require('./routes/billingRoutes');
+const cardRoutes = require('./routes/cardRoutes');
 
 // Initialize Express app
 const app = express();
@@ -108,6 +109,7 @@ app.use('/api/sync', syncRoutes); // Cambiar a /api/sync para evitar conflicto c
 app.use('/api/suspicious', suspiciousRoutes);
 app.use('/api/financial-health', financialHealthRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/cards', cardRoutes);
 
 // Serve static files from React build (only in production)
 if (process.env.NODE_ENV === 'production') {

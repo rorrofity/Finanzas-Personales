@@ -16,7 +16,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
-import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import ProjectedTransactions from './pages/ProjectedTransactions';
 import TransactionsIntl from './pages/TransactionsIntl';
 import Installments from './pages/Installments';
@@ -60,7 +60,7 @@ function App() {
               <Route path="projected-transactions" element={<ProjectedTransactions />} />
               <Route path="categories" element={<Categories />} />
               <Route path="review-duplicates" element={<ReviewDuplicates />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
           </Routes>
           </PeriodProvider>

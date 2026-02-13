@@ -23,7 +23,7 @@ import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   Receipt as ReceiptIcon,
-  Person as PersonIcon,
+  Settings as SettingsIcon,
   Category as CategoryIcon,
   ChevronLeft as ChevronLeftIcon,
   Warning as WarningIcon,
@@ -96,7 +96,7 @@ const DashboardLayout = () => {
       icon: <Badge badgeContent={suspiciousCount} color="warning"><WarningIcon /></Badge>, 
       path: '/review-duplicates' 
     },
-    { text: 'Perfil', icon: <PersonIcon />, path: '/profile' },
+    { text: 'Configuración', icon: <SettingsIcon />, path: '/settings' },
   ];
 
   return (
@@ -138,7 +138,7 @@ const DashboardLayout = () => {
             onClose={handleCloseMenu}
             onClick={handleCloseMenu}
           >
-            <MenuItem onClick={() => navigate('/profile')}>Mi Perfil</MenuItem>
+            <MenuItem onClick={() => navigate('/settings')}>Configuración</MenuItem>
             <MenuItem onClick={handleLogout}>Cerrar Sesión</MenuItem>
           </Menu>
         </Toolbar>

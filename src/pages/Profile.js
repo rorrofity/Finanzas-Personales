@@ -14,7 +14,7 @@ import { Google as GoogleIcon, Email as EmailIcon } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
-const Profile = () => {
+const Profile = ({ embedded = false }) => {
   const { user, updateUser } = useAuth();
   const [formData, setFormData] = useState({
     nombre: user?.nombre || '',
@@ -81,9 +81,8 @@ const Profile = () => {
     }
   };
 
-  return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
-      <Paper sx={{ p: 4 }}>
+  const content = (
+    <>
         <Box
           sx={{
             display: 'flex',
@@ -209,6 +208,15 @@ const Profile = () => {
             Guardar Cambios
           </Button>
         </Box>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
+      <Paper sx={{ p: 4 }}>
+        {content}
       </Paper>
     </Box>
   );
