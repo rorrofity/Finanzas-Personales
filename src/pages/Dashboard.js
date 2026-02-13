@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Grid,
@@ -9,7 +9,9 @@ import {
   CardContent,
   useTheme,
   Container,
-  Alert
+  Alert,
+  LinearProgress,
+  Tooltip,
 } from '@mui/material';
 import {
   BarChart,
@@ -26,14 +28,14 @@ import {
   Pie,
   Cell,
   ComposedChart,
-  Area
+  Area,
+  Sector,
 } from 'recharts';
 import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
 import SyncButton from '../components/SyncButton';
+import CategoryDetailDrawer from '../components/CategoryDetailDrawer';
 import { usePeriod } from '../contexts/PeriodContext';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -52,7 +54,17 @@ const Dashboard = () => {
   const [categoryEvolution, setCategoryEvolution] = useState({ data: [], categories: [] });
   const [currentMonthData, setCurrentMonthData] = useState(null);
   const theme = useTheme();
-  const { year, month } = usePeriod();
+  const { year, month, setYear, setMonth } = usePeriod();
+
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerCategory, setDrawerCategory] = useState(null);
+  const [drawerYear, setDrawerYear] = useState(null);
+  const [drawerMonth, setDrawerMonth] = useState(null);
+  const [drawerColor, setDrawerColor] = useState(null);
+
+  // Pie chart active sector
+  const [activePieIndex, setActivePieIndex] = useState(-1);
 
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return '$0';
@@ -94,8 +106,7 @@ const Dashboard = () => {
       });
       const cats = (catRes.data || [])
         .filter(c => c.total > 0)
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 8);
+        .sort((a, b) => b.total - a.total);
       setCategoryBreakdown(cats);
 
       // Fetch category evolution (last 6 months)
@@ -138,6 +149,50 @@ const Dashboard = () => {
       </CardContent>
     </Card>
   );
+
+  // Open the category detail drawer
+  const openCategoryDrawer = useCallback((categoryName, targetYear, targetMonth, color) => {
+    setDrawerCategory(categoryName);
+    setDrawerYear(targetYear || year);
+    setDrawerMonth(targetMonth || month);
+    setDrawerColor(color || null);
+    setDrawerOpen(true);
+  }, [year, month]);
+
+  // Handle click on history bar — navigate to that month
+  const handleHistoryBarClick = useCallback((data) => {
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      const payload = data.activePayload[0].payload;
+      if (payload.year && payload.month) {
+        setYear(payload.year);
+        setMonth(payload.month);
+      }
+    }
+  }, [setYear, setMonth]);
+
+  // Handle click on category evolution bar
+  const handleCategoryEvoClick = useCallback((data, catName, catColor) => {
+    if (data && data.year && data.month) {
+      openCategoryDrawer(catName, data.year, data.month, catColor);
+    }
+  }, [openCategoryDrawer]);
+
+  // Active pie sector renderer for hover effect
+  const renderActiveShape = (props) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+    return (
+      <g>
+        <Sector
+          cx={cx} cy={cy}
+          innerRadius={innerRadius - 2}
+          outerRadius={outerRadius + 6}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+      </g>
+    );
+  };
 
   if (loading) {
     return (
@@ -221,7 +276,12 @@ const Dashboard = () => {
       </Typography>
       <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
         <ResponsiveContainer width="100%" height={350}>
-          <ComposedChart data={monthlyHistory} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <ComposedChart
+            data={monthlyHistory}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            onClick={handleHistoryBarClick}
+            style={{ cursor: 'pointer' }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
             <XAxis 
               dataKey="label" 
@@ -262,6 +322,9 @@ const Dashboard = () => {
             />
           </ComposedChart>
         </ResponsiveContainer>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+          Haz clic en un mes para navegar
+        </Typography>
       </Paper>
 
       {/* Evolución de Gastos por Categoría */}
@@ -290,13 +353,15 @@ const Dashboard = () => {
                 }}
               />
               <Legend />
-              {categoryEvolution.categories.slice(0, 8).map((cat, idx) => (
+              {categoryEvolution.categories.slice(0, 10).map((cat, idx) => (
                 <Bar 
                   key={cat}
                   dataKey={cat} 
                   name={cat}
                   stackId="categories"
                   fill={COLORS[idx % COLORS.length]}
+                  cursor="pointer"
+                  onClick={(data) => handleCategoryEvoClick(data, cat, COLORS[idx % COLORS.length])}
                 />
               ))}
             </BarChart>
@@ -312,15 +377,15 @@ const Dashboard = () => {
       <Grid container spacing={3}>
         {/* Pie Chart Categorías */}
         <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 3, height: 450, display: 'flex', flexDirection: 'column' }}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 450, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
               Categorías del Mes
             </Typography>
             {categoryBreakdown.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'row', flex: 1, gap: 2 }}>
-                {/* Pie Chart */}
-                <Box sx={{ width: '45%', minHeight: 200 }}>
-                  <ResponsiveContainer width="100%" height={200}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 1 }}>
+                {/* Pie Chart — clickable */}
+                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                  <ResponsiveContainer width="100%" height={220}>
                     <PieChart>
                       <Pie
                         data={categoryBreakdown}
@@ -328,8 +393,17 @@ const Dashboard = () => {
                         nameKey="categoria"
                         cx="50%"
                         cy="50%"
-                        outerRadius={70}
-                        innerRadius={35}
+                        outerRadius={80}
+                        innerRadius={40}
+                        activeIndex={activePieIndex}
+                        activeShape={renderActiveShape}
+                        onMouseEnter={(_, index) => setActivePieIndex(index)}
+                        onMouseLeave={() => setActivePieIndex(-1)}
+                        onClick={(_, index) => {
+                          const cat = categoryBreakdown[index];
+                          if (cat) openCategoryDrawer(cat.categoria, year, month, COLORS[index % COLORS.length]);
+                        }}
+                        cursor="pointer"
                       >
                         {categoryBreakdown.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -341,39 +415,61 @@ const Dashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 </Box>
-                {/* Lista de categorías */}
-                <Box sx={{ width: '55%', overflow: 'auto' }}>
-                  {categoryBreakdown.slice(0, 6).map((cat, idx) => (
-                    <Box 
-                      key={idx} 
-                      sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        py: 0.75,
-                        borderBottom: `1px solid ${theme.palette.divider}`
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                        <Box 
-                          sx={{ 
-                            width: 10, 
-                            height: 10, 
-                            borderRadius: '50%', 
-                            bgcolor: COLORS[idx], 
-                            mr: 1,
-                            flexShrink: 0
-                          }} 
-                        />
-                        <Typography variant="body2" noWrap sx={{ fontSize: '0.85rem' }}>
-                          {cat.categoria}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ ml: 1, flexShrink: 0, fontSize: '0.85rem' }}>
-                        {formatCurrency(cat.total)}
-                      </Typography>
-                    </Box>
-                  ))}
+                {/* Lista de TODAS las categorías con progress bar */}
+                <Box sx={{ overflow: 'auto', maxHeight: 300 }}>
+                  {categoryBreakdown.map((cat, idx) => {
+                    const pct = totalGastosCategoria > 0 ? (cat.total / totalGastosCategoria) * 100 : 0;
+                    const color = COLORS[idx % COLORS.length];
+                    return (
+                      <Tooltip key={idx} title="Clic para ver transacciones" arrow placement="left">
+                        <Box
+                          onClick={() => openCategoryDrawer(cat.categoria, year, month, color)}
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            py: 0.75,
+                            px: 1,
+                            borderRadius: 1,
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s',
+                            '&:hover': { bgcolor: theme.palette.action.hover },
+                            borderBottom: `1px solid ${theme.palette.divider}`,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.25 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                              <Box
+                                sx={{
+                                  width: 10, height: 10, borderRadius: '50%',
+                                  bgcolor: color, mr: 1, flexShrink: 0
+                                }}
+                              />
+                              <Typography variant="body2" noWrap sx={{ fontSize: '0.85rem' }}>
+                                {cat.categoria}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                {pct.toFixed(0)}%
+                              </Typography>
+                              <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.85rem' }}>
+                                {formatCurrency(cat.total)}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={pct}
+                            sx={{
+                              height: 4, borderRadius: 2,
+                              bgcolor: theme.palette.action.hover,
+                              '& .MuiLinearProgress-bar': { bgcolor: color, borderRadius: 2 }
+                            }}
+                          />
+                        </Box>
+                      </Tooltip>
+                    );
+                  })}
                 </Box>
               </Box>
             ) : (
@@ -444,6 +540,16 @@ const Dashboard = () => {
           Datos: TC no facturadas + Cuenta Corriente del mes
         </Typography>
       </Box>
+
+      {/* Category Detail Drawer */}
+      <CategoryDetailDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        category={drawerCategory}
+        year={drawerYear}
+        month={drawerMonth}
+        color={drawerColor}
+      />
     </Container>
   );
 };

@@ -597,10 +597,122 @@ const getCategoryEvolution = async (req, res) => {
     }
 };
 
+/**
+ * Get individual transactions for a specific category in a given month
+ * Combines: TC nacional + TC internacional + Cuenta corriente
+ */
+const getCategoryTransactions = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { periodYear, periodMonth, category } = req.query;
+
+        if (!periodYear || !periodMonth || !category) {
+            return res.status(400).json({ error: 'periodYear, periodMonth y category son requeridos' });
+        }
+
+        const year = parseInt(periodYear);
+        const month = parseInt(periodMonth);
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+
+        // Category filter: handle "Sin categoría" as NULL category_id
+        const isSinCategoria = category === 'Sin categoría' || category === 'Sin categorizar';
+
+        const query = `
+            WITH combined AS (
+                -- TC Nacional
+                SELECT 
+                    t.fecha::date as fecha,
+                    t.descripcion,
+                    ABS(t.monto) as monto,
+                    'tc_nacional' as source,
+                    t.category_id
+                FROM transactions t
+                WHERE t.user_id = $1
+                  AND t.tipo = 'gasto'
+                  AND t.fecha >= $2::date
+                  AND t.fecha <= $3::date
+
+                UNION ALL
+
+                -- TC Internacional
+                SELECT 
+                    iu.fecha::date as fecha,
+                    iu.descripcion,
+                    iu.amount_clp as monto,
+                    'tc_internacional' as source,
+                    iu.category_id
+                FROM intl_unbilled iu
+                WHERE iu.user_id = $1
+                  AND iu.fecha >= $2::date
+                  AND iu.fecha <= $3::date
+                  AND iu.tipo = 'gasto'
+
+                UNION ALL
+
+                -- Cuenta corriente (cargos, excluyendo pago TC)
+                SELECT 
+                    make_date(ct.year, ct.month, 1) as fecha,
+                    ct.descripcion,
+                    ct.amount as monto,
+                    'cuenta_corriente' as source,
+                    ct.category_id
+                FROM checking_transactions ct
+                WHERE ct.user_id = $1
+                  AND ct.year = $4
+                  AND ct.month = $5
+                  AND ct.tipo = 'cargo'
+                  AND LOWER(ct.descripcion) NOT LIKE '%pago%tarjeta%'
+                  AND LOWER(ct.descripcion) NOT LIKE '%pago tc%'
+                  AND LOWER(ct.descripcion) NOT LIKE '%cargo por pago tc%'
+                  AND LOWER(ct.descripcion) NOT LIKE '%pago tarjeta de credito%'
+            )
+            SELECT 
+                combined.fecha,
+                combined.descripcion,
+                combined.monto,
+                combined.source
+            FROM combined
+            LEFT JOIN categories c ON combined.category_id = c.id
+            WHERE ${isSinCategoria ? 'combined.category_id IS NULL' : 'c.name = $6'}
+            ORDER BY combined.fecha DESC, combined.monto DESC
+        `;
+
+        const params = isSinCategoria
+            ? [userId, startDate, endDate, year, month]
+            : [userId, startDate, endDate, year, month, category];
+
+        const result = await db.query(query, params);
+
+        const transactions = result.rows.map(r => ({
+            fecha: r.fecha,
+            descripcion: r.descripcion,
+            monto: Number(r.monto),
+            source: r.source
+        }));
+
+        const total = transactions.reduce((sum, t) => sum + t.monto, 0);
+
+        res.json({
+            category,
+            year,
+            month,
+            total,
+            count: transactions.length,
+            transactions
+        });
+    } catch (error) {
+        console.error('Error in getCategoryTransactions:', error);
+        res.status(500).json({ error: 'Error al obtener transacciones por categoría' });
+    }
+};
+
 module.exports = {
     getDashboardData,
     getMonthlySummary,
     getCategoryBreakdown,
     getMonthlyHistory,
-    getCategoryEvolution
+    getCategoryEvolution,
+    getCategoryTransactions
 };
