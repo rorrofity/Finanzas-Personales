@@ -36,12 +36,18 @@ import {
   useMediaQuery,
   useTheme,
   Grid,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import { 
   Delete as DeleteIcon, 
   Edit as EditIcon,
   ArrowUpward as ArrowUpwardIcon,
-  ArrowDownward as ArrowDownwardIcon 
+  ArrowDownward as ArrowDownwardIcon,
+  ExpandMore as ExpandMoreIcon,
+  CheckCircle as CheckCircleIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
@@ -66,6 +72,7 @@ const Transactions = () => {
   const [openImportDialog, setOpenImportDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [importResult, setImportResult] = useState(null);
   const [provider, setProvider] = useState(localStorage.getItem('import_provider') || '');
   const [network, setNetwork] = useState(localStorage.getItem('import_network') || '');
   // Período del extracto (Mes/Año) para importar: por defecto el mes siguiente al actual
@@ -293,16 +300,11 @@ const Transactions = () => {
         },
       });
 
-      setSnackbar({
-        open: true,
-        message: 'Archivo importado exitosamente',
-        severity: 'success'
-      });
-      
-      fetchTransactions();
-      setOpenImportDialog(false);
-      setSelectedFile(null);
+      // Store result to show in modal instead of closing immediately
+      setImportResult(response.data);
       setUploadProgress(0);
+      setSelectedFile(null);
+      fetchTransactions();
     } catch (err) {
       console.error('Error importing file:', err);
       setError(err.response?.data?.message || 'Error al importar el archivo');
@@ -957,151 +959,245 @@ const Transactions = () => {
       </Dialog>
 
       {/* Diálogo de importación CSV */}
-      <Dialog open={openImportDialog} onClose={() => setOpenImportDialog(false)}>
-        <DialogTitle>Importar Transacciones</DialogTitle>
+      <Dialog
+        open={openImportDialog}
+        onClose={() => { setOpenImportDialog(false); setImportResult(null); }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{importResult ? 'Resultado de Importación' : 'Importar Transacciones'}</DialogTitle>
         <DialogContent>
-          <Box p={2}>
-            <Typography variant="body2" gutterBottom>
-              Selecciona un archivo CSV o Excel para importar tus transacciones.
-              El archivo debe contener las siguientes columnas:
-            </Typography>
-            <ul>
-              <li>Fecha</li>
-              <li>Descripción</li>
-              <li>Monto ($)</li>
-              <li>Cuotas (opcional)</li>
-            </ul>
-            <Box mt={2}>
-              <input
-                accept=".csv, .xls, .xlsx"
-                style={{ display: 'none' }}
-                id="csv-file"
-                type="file"
-                onChange={handleFileSelect}
-              />
-              <label htmlFor="csv-file">
-                <Button variant="contained" component="span">
-                  Seleccionar Archivo
-                </Button>
-              </label>
-              {selectedFile && (
-                <Typography variant="body2" mt={1}>
-                  Archivo seleccionado: {selectedFile.name}
-                </Typography>
+          {importResult ? (
+            /* === Vista de resultados === */
+            <Box p={1}>
+              {/* Resumen principal */}
+              {importResult.stats?.inserted > 0 ? (
+                <Alert severity="success" icon={<CheckCircleIcon />} sx={{ mb: 2 }}>
+                  Se insertaron <strong>{importResult.stats.inserted}</strong> transacciones nuevas
+                </Alert>
+              ) : (
+                <Alert severity="info" icon={<WarningIcon />} sx={{ mb: 2 }}>
+                  No se insertaron nuevas transacciones — todas ya existen en la base de datos
+                </Alert>
               )}
-              {uploadProgress > 0 && (
-                <Box mt={2}>
-                  <LinearProgress variant="determinate" value={uploadProgress} />
-                </Box>
-              )}
-              {/* Período del Extracto (Mes/Año) */}
-              <Box mt={3} display="flex" gap={2}>
-                <FormControl fullWidth>
-                  <InputLabel id="import-month-label">Mes</InputLabel>
-                  <Select
-                    labelId="import-month-label"
-                    label="Mes"
-                    value={importMonth}
-                    onChange={(e) => setImportMonth(Number(e.target.value))}
-                  >
-                    <MenuItem value={1}>enero</MenuItem>
-                    <MenuItem value={2}>febrero</MenuItem>
-                    <MenuItem value={3}>marzo</MenuItem>
-                    <MenuItem value={4}>abril</MenuItem>
-                    <MenuItem value={5}>mayo</MenuItem>
-                    <MenuItem value={6}>junio</MenuItem>
-                    <MenuItem value={7}>julio</MenuItem>
-                    <MenuItem value={8}>agosto</MenuItem>
-                    <MenuItem value={9}>septiembre</MenuItem>
-                    <MenuItem value={10}>octubre</MenuItem>
-                    <MenuItem value={11}>noviembre</MenuItem>
-                    <MenuItem value={12}>diciembre</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth>
-                  <InputLabel id="import-year-label">Año</InputLabel>
-                  <Select
-                    labelId="import-year-label"
-                    label="Año"
-                    value={importYear}
-                    onChange={(e) => setImportYear(Number(e.target.value))}
-                  >
-                    {Array.from({ length: 7 }).map((_, idx) => {
-                      const y = new Date().getFullYear() + 1 - idx; // próximo año hacia atrás 6
-                      return (
-                        <MenuItem key={y} value={y}>{y}</MenuItem>
-                      );
-                    })}
-                  </Select>
-                </FormControl>
-              </Box>
 
-              {/* Selección de Banco */}
-              <Box mt={3}>
-                <FormControl fullWidth>
-                  <InputLabel id="provider-label">Banco</InputLabel>
-                  <Select
-                    labelId="provider-label"
-                    label="Banco"
-                    value={provider}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setProvider(value);
-                      localStorage.setItem('import_provider', value);
-                      // Reset network when changing provider
-                      if (value !== 'banco_chile') {
-                        setNetwork('');
-                        localStorage.removeItem('import_network');
-                      }
-                    }}
-                  >
-                    <MenuItem value=""><em>Selecciona un banco</em></MenuItem>
-                    <MenuItem value="banco_chile">Banco de Chile</MenuItem>
-                    <MenuItem value="banco_cencosud">Banco Cencosud</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-              {/* Selección de Tarjeta (solo Banco de Chile) */}
-              {provider === 'banco_chile' && (
-                <Box mt={2}>
+              {/* Stats detalladas */}
+              <Stack spacing={1} sx={{ mb: 2 }}>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">Detectadas en archivo</Typography>
+                  <Typography variant="body2" fontWeight="bold">{importResult.stats?.total || importResult.stats?.detected || 0}</Typography>
+                </Box>
+                <Box display="flex" justifyContent="space-between">
+                  <Typography variant="body2" color="success.main">Nuevas insertadas</Typography>
+                  <Typography variant="body2" fontWeight="bold" color="success.main">{importResult.stats?.inserted || 0}</Typography>
+                </Box>
+                {(importResult.stats?.dedupe?.rejectedByMultiplicity > 0) && (
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="warning.main">Duplicadas omitidas (ya en BD)</Typography>
+                    <Typography variant="body2" fontWeight="bold" color="warning.main">{importResult.stats.dedupe.rejectedByMultiplicity}</Typography>
+                  </Box>
+                )}
+                {(importResult.stats?.skippedDuplicatesInDB > 0) && (
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="warning.main">Duplicadas omitidas (ya en BD)</Typography>
+                    <Typography variant="body2" fontWeight="bold" color="warning.main">{importResult.stats.skippedDuplicatesInDB}</Typography>
+                  </Box>
+                )}
+                {(importResult.stats?.dedupe?.rejectedByMultiplicity > 0 || importResult.stats?.skippedDuplicatesInDB > 0) && importResult.stats?.skipped > 0 && (
+                  <Box display="flex" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">Omitidas por otros filtros</Typography>
+                    <Typography variant="body2" fontWeight="bold">{importResult.stats.skipped}</Typography>
+                  </Box>
+                )}
+              </Stack>
+
+              {/* Lista colapsable de duplicados */}
+              {importResult.stats?.dedupe?.rejectedTransactions?.length > 0 && (
+                <Accordion sx={{ mt: 1 }}>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="body2" fontWeight="bold" color="warning.main">
+                      Ver {importResult.stats.dedupe.rejectedTransactions.length} transacciones duplicadas omitidas
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails sx={{ maxHeight: 300, overflow: 'auto' }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 'bold', py: 0.5 }}>Fecha</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', py: 0.5 }}>Descripción</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', py: 0.5 }} align="right">Monto</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {importResult.stats.dedupe.rejectedTransactions.map((tx, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell sx={{ py: 0.5, whiteSpace: 'nowrap' }}>{tx.fecha}</TableCell>
+                            <TableCell sx={{ py: 0.5, fontSize: '0.8rem' }}>{tx.descripcion}</TableCell>
+                            <TableCell sx={{ py: 0.5, whiteSpace: 'nowrap' }} align="right">{formatAmount(tx.monto)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </AccordionDetails>
+                </Accordion>
+              )}
+            </Box>
+          ) : (
+            /* === Vista de formulario === */
+            <Box p={2}>
+              <Typography variant="body2" gutterBottom>
+                Selecciona un archivo CSV o Excel para importar tus transacciones.
+                El archivo debe contener las siguientes columnas:
+              </Typography>
+              <ul>
+                <li>Fecha</li>
+                <li>Descripción</li>
+                <li>Monto ($)</li>
+                <li>Cuotas (opcional)</li>
+              </ul>
+              <Box mt={2}>
+                <input
+                  accept=".csv, .xls, .xlsx"
+                  style={{ display: 'none' }}
+                  id="csv-file"
+                  type="file"
+                  onChange={handleFileSelect}
+                />
+                <label htmlFor="csv-file">
+                  <Button variant="contained" component="span">
+                    Seleccionar Archivo
+                  </Button>
+                </label>
+                {selectedFile && (
+                  <Typography variant="body2" mt={1}>
+                    Archivo seleccionado: {selectedFile.name}
+                  </Typography>
+                )}
+                {uploadProgress > 0 && (
+                  <Box mt={2}>
+                    <LinearProgress variant="determinate" value={uploadProgress} />
+                  </Box>
+                )}
+                {/* Período del Extracto (Mes/Año) */}
+                <Box mt={3} display="flex" gap={2}>
                   <FormControl fullWidth>
-                    <InputLabel id="network-label">Tarjeta</InputLabel>
+                    <InputLabel id="import-month-label">Mes</InputLabel>
                     <Select
-                      labelId="network-label"
-                      label="Tarjeta"
-                      value={network}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setNetwork(value);
-                        localStorage.setItem('import_network', value);
-                      }}
+                      labelId="import-month-label"
+                      label="Mes"
+                      value={importMonth}
+                      onChange={(e) => setImportMonth(Number(e.target.value))}
                     >
-                      <MenuItem value=""><em>Selecciona tarjeta</em></MenuItem>
-                      <MenuItem value="visa">Visa</MenuItem>
-                      <MenuItem value="mastercard">Mastercard</MenuItem>
+                      <MenuItem value={1}>enero</MenuItem>
+                      <MenuItem value={2}>febrero</MenuItem>
+                      <MenuItem value={3}>marzo</MenuItem>
+                      <MenuItem value={4}>abril</MenuItem>
+                      <MenuItem value={5}>mayo</MenuItem>
+                      <MenuItem value={6}>junio</MenuItem>
+                      <MenuItem value={7}>julio</MenuItem>
+                      <MenuItem value={8}>agosto</MenuItem>
+                      <MenuItem value={9}>septiembre</MenuItem>
+                      <MenuItem value={10}>octubre</MenuItem>
+                      <MenuItem value={11}>noviembre</MenuItem>
+                      <MenuItem value={12}>diciembre</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth>
+                    <InputLabel id="import-year-label">Año</InputLabel>
+                    <Select
+                      labelId="import-year-label"
+                      label="Año"
+                      value={importYear}
+                      onChange={(e) => setImportYear(Number(e.target.value))}
+                    >
+                      {Array.from({ length: 7 }).map((_, idx) => {
+                        const y = new Date().getFullYear() + 1 - idx; // próximo año hacia atrás 6
+                        return (
+                          <MenuItem key={y} value={y}>{y}</MenuItem>
+                        );
+                      })}
                     </Select>
                   </FormControl>
                 </Box>
-              )}
+
+                {/* Selección de Banco */}
+                <Box mt={3}>
+                  <FormControl fullWidth>
+                    <InputLabel id="provider-label">Banco</InputLabel>
+                    <Select
+                      labelId="provider-label"
+                      label="Banco"
+                      value={provider}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setProvider(value);
+                        localStorage.setItem('import_provider', value);
+                        // Reset network when changing provider
+                        if (value !== 'banco_chile') {
+                          setNetwork('');
+                          localStorage.removeItem('import_network');
+                        }
+                      }}
+                    >
+                      <MenuItem value=""><em>Selecciona un banco</em></MenuItem>
+                      <MenuItem value="banco_chile">Banco de Chile</MenuItem>
+                      <MenuItem value="banco_cencosud">Banco Cencosud</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+                {/* Selección de Tarjeta (solo Banco de Chile) */}
+                {provider === 'banco_chile' && (
+                  <Box mt={2}>
+                    <FormControl fullWidth>
+                      <InputLabel id="network-label">Tarjeta</InputLabel>
+                      <Select
+                        labelId="network-label"
+                        label="Tarjeta"
+                        value={network}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setNetwork(value);
+                          localStorage.setItem('import_network', value);
+                        }}
+                      >
+                        <MenuItem value=""><em>Selecciona tarjeta</em></MenuItem>
+                        <MenuItem value="visa">Visa</MenuItem>
+                        <MenuItem value="mastercard">Mastercard</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Box>
+                )}
+              </Box>
             </Box>
-          </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenImportDialog(false)}>Cancelar</Button>
-          <Button
-            onClick={handleImport}
-            variant="contained"
-            color="primary"
-            disabled={
-              !selectedFile ||
-              loading ||
-              !provider ||
-              (provider === 'banco_chile' && !network) ||
-              !importYear || !importMonth
-            }
-          >
-            {loading ? 'Importando...' : 'Importar'}
-          </Button>
+          {importResult ? (
+            <Button
+              onClick={() => { setOpenImportDialog(false); setImportResult(null); }}
+              variant="contained"
+            >
+              Cerrar
+            </Button>
+          ) : (
+            <>
+              <Button onClick={() => setOpenImportDialog(false)}>Cancelar</Button>
+              <Button
+                onClick={handleImport}
+                variant="contained"
+                color="primary"
+                disabled={
+                  !selectedFile ||
+                  loading ||
+                  !provider ||
+                  (provider === 'banco_chile' && !network) ||
+                  !importYear || !importMonth
+                }
+              >
+                {loading ? 'Importando...' : 'Importar'}
+              </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
 

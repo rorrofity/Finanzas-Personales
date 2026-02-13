@@ -656,13 +656,12 @@ const importTransactions = async (req, res) => {
     try {
       if (brand) {
         const dbCountQuery = `
-          SELECT i.network as brand, t.fecha::date as fecha_local, t.monto as monto_signed, COUNT(*) as cnt
+          SELECT COALESCE(i.network, $2) as brand, t.fecha::date as fecha_local, t.monto as monto_signed, COUNT(*) as cnt
           FROM transactions t
           LEFT JOIN imports i ON t.import_id = i.id
           WHERE t.user_id = $1
-            AND i.product_type = 'credit_card'
-            AND i.network = $2
-          GROUP BY i.network, t.fecha::date, t.monto
+            AND COALESCE(i.network, $2) = $2
+          GROUP BY COALESCE(i.network, $2), t.fecha::date, t.monto
         `;
         const dbCountRes = await db.query(dbCountQuery, [req.user.id, brand]);
         for (const row of dbCountRes.rows) {
@@ -676,6 +675,7 @@ const importTransactions = async (req, res) => {
 
     // Seleccionar exactamente (FILE_count - DB_count) por signature
     const toInsertBySignature = [];
+    const rejectedItems = [];
     let rejectedByMultiplicity = 0;
     for (const [signature, items] of fileBuckets.entries()) {
       const fileN = fileCounts.get(signature) || 0;
@@ -683,7 +683,13 @@ const importTransactions = async (req, res) => {
       const need = Math.max(fileN - dbN, 0);
       if (need > 0) {
         toInsertBySignature.push(...items.slice(0, need));
+        // Items beyond 'need' are also rejected
+        if (need < items.length) {
+          rejectedItems.push(...items.slice(need));
+          rejectedByMultiplicity += items.length - need;
+        }
       } else {
+        rejectedItems.push(...items);
         rejectedByMultiplicity += items.length;
       }
     }
@@ -759,7 +765,12 @@ const importTransactions = async (req, res) => {
         dedupe: {
           signaturesInFile: fileCounts.size,
           insertedAfterMultiplicity: transactionsForInsert.length,
-          rejectedByMultiplicity
+          rejectedByMultiplicity,
+          rejectedTransactions: rejectedItems.map(t => ({
+            fecha: formatLocalDate(t.fecha),
+            descripcion: t.descripcion,
+            monto: t.monto
+          }))
         }
       },
       transactions: importResult.insertedTransactions,
