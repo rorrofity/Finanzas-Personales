@@ -622,17 +622,12 @@ const importTransactions = async (req, res) => {
     // Dedupe por (brand, fecha_local, monto signed) con control de multiplicidad
     // =============================
 
-    // Helper para formatear fecha local America/Santiago a YYYY-MM-DD
+    // Helper para formatear fecha a YYYY-MM-DD (debe coincidir con t.fecha::date de PostgreSQL)
     const formatLocalDate = (date) => {
-      const parts = new Intl.DateTimeFormat('es-CL', {
-        timeZone: 'America/Santiago',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      }).formatToParts(date);
-      const dd = parts.find(p => p.type === 'day')?.value;
-      const mm = parts.find(p => p.type === 'month')?.value;
-      const yyyy = parts.find(p => p.type === 'year')?.value;
+      const d = date instanceof Date ? date : new Date(date);
+      const yyyy = d.getUTCFullYear();
+      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(d.getUTCDate()).padStart(2, '0');
       return `${yyyy}-${mm}-${dd}`;
     };
 
