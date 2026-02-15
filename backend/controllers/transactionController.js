@@ -639,8 +639,8 @@ const importTransactions = async (req, res) => {
     const fileCounts = new Map();  // signature -> N en archivo
     for (const tx of processedTransactions) {
       const fechaLocal = formatLocalDate(tx.fecha);
-      const montoSigned = Number(tx.monto);
-      const signature = `${brand || 'unknown'}|${fechaLocal}|${montoSigned}`;
+      const montoAbs = Math.abs(Number(tx.monto));
+      const signature = `${brand || 'unknown'}|${fechaLocal}|${montoAbs}`;
       if (!fileBuckets.has(signature)) fileBuckets.set(signature, []);
       fileBuckets.get(signature).push({ ...tx, _signature: signature });
       fileCounts.set(signature, (fileCounts.get(signature) || 0) + 1);
@@ -651,16 +651,16 @@ const importTransactions = async (req, res) => {
     try {
       if (brand) {
         const dbCountQuery = `
-          SELECT COALESCE(i.network, $2) as brand, t.fecha::date as fecha_local, t.monto as monto_signed, COUNT(*) as cnt
+          SELECT COALESCE(i.network, $2) as brand, t.fecha::date as fecha_local, ABS(t.monto) as monto_abs, COUNT(*) as cnt
           FROM transactions t
           LEFT JOIN imports i ON t.import_id = i.id
           WHERE t.user_id = $1
             AND COALESCE(i.network, $2) = $2
-          GROUP BY COALESCE(i.network, $2), t.fecha::date, t.monto
+          GROUP BY COALESCE(i.network, $2), t.fecha::date, ABS(t.monto)
         `;
         const dbCountRes = await db.query(dbCountQuery, [req.user.id, brand]);
         for (const row of dbCountRes.rows) {
-          const signature = `${row.brand}|${row.fecha_local.toISOString().slice(0,10)}|${Number(row.monto_signed)}`;
+          const signature = `${row.brand}|${row.fecha_local.toISOString().slice(0,10)}|${Number(row.monto_abs)}`;
           dbCounts.set(signature, Number(row.cnt));
         }
       }
