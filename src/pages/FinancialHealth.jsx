@@ -204,7 +204,7 @@ const FinancialHealth = () => {
             
             <Grid container spacing={2} alignItems="center">
               {/* Health Score */}
-              <Grid item xs={4} sm={4}>
+              <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
                   <Box sx={{ position: 'relative', display: 'inline-flex' }}>
                     {/* Background circle */}
@@ -260,7 +260,7 @@ const FinancialHealth = () => {
               </Grid>
               
               {/* Available Today */}
-              <Grid item xs={4} sm={4}>
+              <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
                   <WalletIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.primary.main, mb: 0.5 }} />
                   <Typography variant="caption" color="text.secondary" display="block">
@@ -273,7 +273,7 @@ const FinancialHealth = () => {
               </Grid>
               
               {/* Projected Balance */}
-              <Grid item xs={4} sm={4}>
+              <Grid item xs={12} sm={4}>
                 <Box sx={{ textAlign: 'center' }}>
                   {projectedResult >= 0 ? (
                     <TrendingUpIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.success.main, mb: 0.5 }} />
@@ -458,7 +458,7 @@ const FinancialHealth = () => {
             
             {categoryData.length > 0 ? (
               <Grid container spacing={2}>
-                <Grid item xs={5}>
+                <Grid item xs={12} md={5}>
                   <ResponsiveContainer width="100%" height={160}>
                     <PieChart>
                       <Pie
@@ -481,7 +481,7 @@ const FinancialHealth = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 </Grid>
-                <Grid item xs={7}>
+                <Grid item xs={12} md={7}>
                   {categoryData.map((cat, idx) => {
                     const total = categoryData.reduce((sum, c) => sum + c.value, 0);
                     const percent = total > 0 ? Math.round((cat.value / total) * 100) : 0;

@@ -217,11 +217,11 @@ const Dashboard = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 3 }}>
         <Typography variant="h4" fontWeight={700} color="primary">
           Dashboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'flex-start' }}}>
           <MonthPicker />
           <SyncButton />
         </Box>
@@ -232,7 +232,7 @@ const Dashboard = () => {
         Resumen del Mes
       </Typography>
       <Grid container spacing={2} sx={{ mb: 4 }}>
-        <Grid item xs={6} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
             title="Gastos TC"
             value={currentMonthData?.gastosTC || 0}
@@ -241,7 +241,7 @@ const Dashboard = () => {
             subtitle="Tarjeta de crédito"
           />
         </Grid>
-        <Grid item xs={6} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
             title="Gastos CC"
             value={currentMonthData?.gastosCC || 0}
@@ -250,7 +250,7 @@ const Dashboard = () => {
             subtitle="Cuenta corriente"
           />
         </Grid>
-        <Grid item xs={6} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
             title="Ingresos CC"
             value={currentMonthData?.ingresosCC || 0}
@@ -259,7 +259,7 @@ const Dashboard = () => {
             subtitle="Cuenta corriente"
           />
         </Grid>
-        <Grid item xs={6} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
             title="Balance"
             value={currentMonthData?.balance || 0}

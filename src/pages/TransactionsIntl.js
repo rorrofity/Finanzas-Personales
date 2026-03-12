@@ -32,7 +32,9 @@ import {
   FormControlLabel,
   Card,
   CardContent,
-  Grid
+  Grid,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { 
   Edit as EditIcon, 
@@ -48,6 +50,8 @@ import { usePeriod } from '../contexts/PeriodContext';
 import axios from 'axios';
 
 const TransactionsIntl = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
   const periodKey = `${year}-${String(month).padStart(2,'0')}`;
   const [cardFilter, setCardFilter] = useState(()=>{
@@ -324,7 +328,7 @@ const TransactionsIntl = () => {
       <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
         {titleBrandLabel} ({filteredRows.length} registros)
       </Typography>
-      <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+      <Stack direction="row" spacing={1} useFlexGap sx={{ mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
         <SyncButton 
           onSyncComplete={() => {
             fetchRows();
@@ -404,69 +408,147 @@ const TransactionsIntl = () => {
         </DialogActions>
       </Dialog>
 
-      <Paper>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>
-                  <input type="checkbox" checked={selectedIds.length === rows.length && rows.length>0} onChange={(e)=>toggleSelectAll(e.target.checked)} />
-                </TableCell>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Descripción</TableCell>
-                <TableCell align="right">Monto USD</TableCell>
-                <TableCell align="right">Monto CLP</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Categoría</TableCell>
-                <TableCell>Tarjeta</TableCell>
-                <TableCell>Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredRows.length ? filteredRows
+      {isMobile ? (
+        <Box sx={{ mb: 2 }}>
+          {filteredRows.length === 0 ? (
+            <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
+              No tienes transacciones internacionales no facturadas en este mes.
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {filteredRows
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map(r => (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
-                    </TableCell>
-                    <TableCell>{formatDateLocal(r.fecha)}</TableCell>
-                    <TableCell>
-                      {r.descripcion}
-                      {r.tipo === 'desestimar' && (<Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />)}
-                    </TableCell>
-                    <TableCell align="right">{Number(r.amount_usd).toFixed(2)}</TableCell>
-                    <TableCell align="right">{formatCurrency(r.amount_clp)}</TableCell>
-                    <TableCell>
-                      <Select size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
-                        <MenuItem value="gasto">Gasto</MenuItem>
-                        <MenuItem value="pago">Pago</MenuItem>
-                        <MenuItem value="desestimar">Desestimar</MenuItem>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select size="small" value={r.category_id || ''} displayEmpty onChange={(e)=>changeCategoryInline(r.id, e.target.value)} sx={{ minWidth: 140 }}>
-                        <MenuItem value=""><em>Sin categoría</em></MenuItem>
-                        {categoriesList.map(c => (
-                          <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
-                        ))}
-                      </Select>
-                    </TableCell>
-                    <TableCell>{String(r.brand).toUpperCase()}</TableCell>
-                    <TableCell>
-                      <Tooltip title="Editar"><IconButton size="small" onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
-                      <Tooltip title="Eliminar"><IconButton size="small" onClick={()=>handleDelete(r.id)}><DeleteIcon/></IconButton></Tooltip>
-                    </TableCell>
-                  </TableRow>
-                )) : (
+                .map((r) => (
+                  <Card key={r.id} variant="outlined" sx={{ 
+                    borderLeft: r.category_id ? '4px solid #4caf50' : '4px solid #ff9800',
+                  }}>
+                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                      <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                        <Box flex={1}>
+                          <Typography variant="body2" fontWeight="bold" sx={{ 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                          }}>
+                            {r.descripcion}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formatDateLocal(r.fecha)} • {String(r.brand).toUpperCase()}
+                          </Typography>
+                        </Box>
+                        <Box textAlign="right">
+                          <Typography variant="body1" fontWeight="bold" color="error.main" sx={{ ml: 1, whiteSpace: 'nowrap' }}>
+                            {Number(r.amount_usd).toFixed(2)} USD
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            {formatCurrency(r.amount_clp)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Select
+                          size="small"
+                          value={r.category_id || ''}
+                          onChange={(e) => changeCategoryInline(r.id, e.target.value)}
+                          displayEmpty
+                          sx={{ flex: 1, '& .MuiSelect-select': { py: 0.75 } }}
+                        >
+                          <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                          {categoriesList.map((category) => (
+                            <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>
+                          ))}
+                        </Select>
+                        <Select
+                          size="small"
+                          value={r.tipo}
+                          onChange={(e) => changeTypeInline(r.id, e.target.value)}
+                          sx={{ minWidth: 90, '& .MuiSelect-select': { py: 0.75 } }}
+                        >
+                          <MenuItem value="gasto">Gasto</MenuItem>
+                          <MenuItem value="pago">Pago</MenuItem>
+                          <MenuItem value="desestimar">Desest.</MenuItem>
+                        </Select>
+                        <IconButton size="small" onClick={() => handleOpenEdit(r)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => handleDelete(r.id)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+            </Stack>
+          )}
+        </Box>
+      ) : (
+        <Paper sx={{ mb: 2, overflow: 'hidden' }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={9} align="center">No tienes transacciones internacionales no facturadas en este mes. Importa un archivo para comenzar.</TableCell>
+                  <TableCell>
+                    <input type="checkbox" checked={selectedIds.length === rows.length && rows.length>0} onChange={(e)=>toggleSelectAll(e.target.checked)} />
+                  </TableCell>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Descripción</TableCell>
+                  <TableCell align="right">Monto USD</TableCell>
+                  <TableCell align="right">Monto CLP</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell>Categoría</TableCell>
+                  <TableCell>Tarjeta</TableCell>
+                  <TableCell>Acciones</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {filteredRows.length ? filteredRows
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map(r => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
+                      </TableCell>
+                      <TableCell>{formatDateLocal(r.fecha)}</TableCell>
+                      <TableCell>
+                        {r.descripcion}
+                        {r.tipo === 'desestimar' && (<Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />)}
+                      </TableCell>
+                      <TableCell align="right">{Number(r.amount_usd).toFixed(2)}</TableCell>
+                      <TableCell align="right">{formatCurrency(r.amount_clp)}</TableCell>
+                      <TableCell>
+                        <Select size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
+                          <MenuItem value="gasto">Gasto</MenuItem>
+                          <MenuItem value="pago">Pago</MenuItem>
+                          <MenuItem value="desestimar">Desestimar</MenuItem>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Select size="small" value={r.category_id || ''} displayEmpty onChange={(e)=>changeCategoryInline(r.id, e.target.value)} sx={{ minWidth: 140 }}>
+                          <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                          {categoriesList.map(c => (
+                            <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+                      <TableCell>{String(r.brand).toUpperCase()}</TableCell>
+                      <TableCell>
+                        <Tooltip title="Editar"><IconButton size="small" onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
+                        <Tooltip title="Eliminar"><IconButton size="small" onClick={()=>handleDelete(r.id)}><DeleteIcon/></IconButton></Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                  <TableRow>
+                    <TableCell colSpan={9} align="center">No tienes transacciones internacionales no facturadas en este mes. Importa un archivo para comenzar.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
       <TablePagination
         rowsPerPageOptions={[5, 10, 25]}
