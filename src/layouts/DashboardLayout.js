@@ -175,6 +175,11 @@ const DashboardLayout = () => {
             ))}
           </List>
         </Box>
+        <Box sx={{ mt: 'auto', p: 2, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.disabled">
+            v1.2.0-mobile
+          </Typography>
+        </Box>
       </Drawer>
 
       {/* Drawer para escritorio */}
@@ -226,6 +231,11 @@ const DashboardLayout = () => {
               </ListItemButton>
             ))}
           </List>
+        </Box>
+        <Box sx={{ mt: 'auto', p: 2, textAlign: 'center', display: desktopOpen ? 'block' : 'none' }}>
+          <Typography variant="caption" color="text.disabled">
+            v1.2.0-mobile
+          </Typography>
         </Box>
       </Drawer>
       <Box

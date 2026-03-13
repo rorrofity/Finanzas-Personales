@@ -283,12 +283,14 @@ const TransactionsIntl = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h5" fontWeight={700}>Transacciones No Facturadas Internacionales (TC)</Typography>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 2, gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant="h5" fontWeight={700}>Transacciones Internacionales</Typography>
           <BillingPeriodConfig year={year} month={month} onRecalculated={fetchRows} />
         </Box>
-        <MonthPicker />
+        <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
+          <MonthPicker />
+        </Box>
       </Box>
 
       {/* Cards de totales */}

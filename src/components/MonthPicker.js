@@ -40,9 +40,9 @@ export default function MonthPicker() {
   })();
 
   return (
-    <Box display="flex" alignItems="center" gap={2} mb={2}>
-      <Typography variant="subtitle1" sx={{ minWidth: 48 }}>Mes:</Typography>
-      <FormControl size="small" sx={{ minWidth: 160 }}>
+    <Box display="flex" alignItems="center" gap={{ xs: 1, sm: 2 }} mb={{ xs: 1, sm: 2 }} flexWrap="wrap">
+      <Typography variant="subtitle1" sx={{ minWidth: 48, display: { xs: 'none', sm: 'block' } }}>Mes:</Typography>
+      <FormControl size="small" sx={{ minWidth: { xs: 130, sm: 160 }, flex: { xs: 1, sm: 'none' } }}>
         <InputLabel id="month-label">Mes</InputLabel>
         <Select
           labelId="month-label"
@@ -56,7 +56,7 @@ export default function MonthPicker() {
           ))}
         </Select>
       </FormControl>
-      <FormControl size="small" sx={{ minWidth: 120 }}>
+      <FormControl size="small" sx={{ minWidth: { xs: 100, sm: 120 }, flex: { xs: 1, sm: 'none' } }}>
         <InputLabel id="year-label">Año</InputLabel>
         <Select
           labelId="year-label"
@@ -69,7 +69,7 @@ export default function MonthPicker() {
           ))}
         </Select>
       </FormControl>
-      <Typography variant="body2" sx={{ opacity: 0.7 }}>
+      <Typography variant="body2" sx={{ opacity: 0.7, width: { xs: '100%', sm: 'auto' }, textAlign: { xs: 'center', sm: 'left' } }}>
         {label || 'septiembre 2025'}
       </Typography>
     </Box>
