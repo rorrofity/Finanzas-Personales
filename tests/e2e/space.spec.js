@@ -145,6 +145,37 @@ test.describe('Espacio compartido — UI (Epic 11)', () => {
     await expect(page.getByText('Pareja').first()).toBeVisible();
   });
 
+  test('4.T3 revocación en vivo: 403 devuelve al espacio propio con aviso', async ({ page }) => {
+    await mockAuthenticatedSession(page);
+    await mockSpaces(page, { canEdit: true });
+    await mockTransactionsData(page);
+
+    await page.goto('/transactions');
+    await page.getByTestId('space-switcher').click();
+    await page.getByRole('option', { name: /Hogar de Rodrigo/i }).click();
+
+    // El dueño revoca: las siguientes peticiones al espacio devuelven 403
+    await page.unroute('**/api/transactions**');
+    await page.route('**/api/transactions**', async (route) => {
+      if (route.request().headers()['x-space-owner'] === SHARED_OWNER_ID) {
+        await route.fulfill({
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'No tienes acceso a este espacio', code: 'SPACE_FORBIDDEN' }),
+        });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+
+    // Forzar un refetch navegando dentro del espacio compartido
+    await page.reload();
+
+    // Aviso + vuelta al espacio propio (Req borde Epic 11)
+    await expect(page.getByText(/Perdiste acceso al espacio compartido/i)).toBeVisible();
+    await expect(page.getByTestId('space-switcher')).toHaveText(/Mi espacio/i);
+  });
+
   test('3.T3 dueño administra miembros desde Settings (invitar + toggles)', async ({ page }) => {
     await mockAuthenticatedSession(page);
     await mockSpaces(page, { sharedSpace: false });

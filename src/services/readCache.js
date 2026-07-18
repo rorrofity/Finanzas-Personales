@@ -1,4 +1,5 @@
 import { openDB } from 'idb';
+import { getActiveSpaceOwner } from './activeSpace';
 
 /**
  * Caché de LECTURA con IndexedDB (Req 9.3).
@@ -6,7 +7,13 @@ import { openDB } from 'idb';
  * Permite consultar datos previamente obtenidos cuando no hay conexión.
  * SOLO almacena respuestas de lectura (GET). Nunca encola escrituras
  * (no hay escritura offline — Req 9.4).
+ *
+ * Epic 11 (Req 11.14): toda clave se prefija con el espacio activo para
+ * que en offline nunca se muestren datos de un espacio en otro.
  */
+
+// Clave real en IndexedDB: `<ownerId|own>::<key>`
+const nsKey = (key) => `${getActiveSpaceOwner() || 'own'}::${key}`;
 
 const DB_NAME = 'finanzas-read-cache';
 const STORE_NAME = 'readCache';
@@ -38,7 +45,7 @@ export async function cacheRead(key, data) {
     await db.put(
       STORE_NAME,
       { data, cachedAt: Date.now() },
-      key
+      nsKey(key)
     );
   } catch (err) {
     // La caché es best-effort: si falla, no rompemos la app.
@@ -55,7 +62,7 @@ export async function cacheRead(key, data) {
 export async function getCachedRead(key) {
   try {
     const db = await getDB();
-    const entry = await db.get(STORE_NAME, key);
+    const entry = await db.get(STORE_NAME, nsKey(key));
     if (!entry) return null;
     return entry.data ?? null;
   } catch (err) {
@@ -73,7 +80,7 @@ export async function getCachedRead(key) {
 export async function getCachedEntry(key) {
   try {
     const db = await getDB();
-    const entry = await db.get(STORE_NAME, key);
+    const entry = await db.get(STORE_NAME, nsKey(key));
     return entry || null;
   } catch (err) {
     return null;
@@ -112,6 +119,21 @@ export async function fetchWithCache(key, networkFn) {
       return cached;
     }
     throw err;
+  }
+}
+
+/**
+ * Limpia por completo el caché de lectura (todos los espacios).
+ * Se invoca al cerrar sesión (Req 11.15) para no dejar datos financieros
+ * en un dispositivo potencialmente compartido.
+ */
+export async function clearReadCache() {
+  try {
+    const db = await getDB();
+    await db.clear(STORE_NAME);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('clearReadCache error:', err?.message || err);
   }
 }
 

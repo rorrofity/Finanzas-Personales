@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from '../config/axios';  
+import axios from '../config/axios';
+import { clearReadCache } from '../services/readCache';
 
 const AuthContext = createContext(null);
 
@@ -85,6 +86,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setUser(null);
     setError(null);
+    // Limpiar caché de lectura local (Req 11.15) — best effort
+    clearReadCache();
   };
 
   const clearError = () => {
