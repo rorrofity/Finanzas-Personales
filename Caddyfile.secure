@@ -48,12 +48,14 @@ finanzas.rocketflow.cl {
     encode gzip zstd
     
     # Reverse proxy al backend
-    reverse_proxy host.docker.internal:3001 {
+    # 172.17.0.1 = gateway del bridge de Docker (host). host.docker.internal
+    # NO resuelve en este droplet (Linux, sin extra_hosts en el compose).
+    reverse_proxy 172.17.0.1:3001 {
         # Health check
         health_uri /api/health
         health_interval 30s
         health_timeout 10s
-        
+
         # Headers para el backend
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
