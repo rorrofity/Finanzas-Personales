@@ -2,7 +2,7 @@
 
 ## Propósito
 
-**Finanzas Personales** es una aplicación web personal para el seguimiento completo de finanzas individuales, diseñada para un único usuario (el propietario) con acceso directo a su información financiera sin intermediarios ni servicios de terceros que almacenen sus datos sensibles.
+**Finanzas Personales** es una aplicación web personal para el seguimiento completo de las finanzas del hogar. Cada espacio de finanzas tiene un **dueño** (el propietario de los datos), quien puede **invitar a miembros de su hogar** con permisos granulares para ver y colaborar en ese espacio. Los datos viven en el servidor personal del dueño, sin intermediarios ni servicios de terceros que almacenen información sensible.
 
 ### Visión
 
@@ -29,10 +29,13 @@ Crear una herramienta de gestión financiera personal que:
 - Proyecciones automáticas de gastos fijos y cuotas
 
 ### 3. Simplicidad Operativa
-- Una persona = un usuario
-- Sin complejidad multi-tenant
-- Flujos directos sin aprobaciones ni permisos complejos
+- **Una persona = un usuario**: cada quien se autentica con su propia cuenta; nunca se comparten credenciales
+- **Un espacio de finanzas = un dueño**: los datos pertenecen al usuario dueño; el dueño puede invitar hasta 2 miembros de su hogar con permisos granulares (ver / crear+editar / eliminar), activables y desactivables al instante
+- Sin multi-tenant abierto: no hay registro público de espacios ni organizaciones
+- Flujos directos: la administración de miembros es exclusiva del dueño
 - Deploy directo a producción (no hay staging)
+
+*(Enmienda 2026-07-18: este principio decía "sin complejidad multi-tenant ni permisos". Se redefine para permitir el espacio compartido del hogar manteniendo la identidad individual — ver Epic 11 en spec.md.)*
 
 ### 4. Transparencia Total
 - Código abierto y documentado
@@ -186,7 +189,7 @@ Crear una herramienta de gestión financiera personal que:
 - **Fechas**: ISO 8601 con timezone America/Santiago
 
 ### Límites del Sistema
-- Usuario único por instancia (no multi-tenant)
+- Un dueño por espacio de finanzas; máximo 2 miembros invitados por espacio (no multi-tenant abierto)
 - Año mínimo: 2020, máximo: 2050
 - Montos: hasta 999,999,999.99 CLP
 - Descripciones: máximo 255 caracteres
@@ -206,14 +209,14 @@ Crear una herramienta de gestión financiera personal que:
 2. ✅ Importación CSV/Excel
 3. ✅ Sincronización emails vía N8N
 4. ✅ Dashboard de salud financiera
-5. 🚧 **Conversión a PWA** (Fases 0–3 completas; pendientes Fase 4 actualización SW/install prompt y Fase 5 auditoría + deploy)
+5. ✅ **Conversión a PWA** (desplegada a producción 2026-07-18)
+6. 🚧 **Espacio compartido del hogar (multi-usuario)** — épica actual: el dueño invita a un miembro con permisos granulares (Epic 11, enmienda constitucional aplicada 2026-07-18)
 
 ### Mediano Plazo (3-6 meses)
-1. 🎯 **Multi-usuario (hogar)** — próxima épica: acceso compartido para dos usuarios (propietario + pareja) sobre las finanzas del hogar. **Requiere enmienda constitucional**: el principio 3 ("una persona = un usuario") deberá revisarse formalmente antes de especificar e implementar esta épica vía SDD (nuevos spec/plan/tasks).
-2. Presupuestos por categoría con alertas
-3. Metas de ahorro con seguimiento
-4. Reportes exportables (PDF)
-5. Soporte multi-moneda completo
+1. Presupuestos por categoría con alertas
+2. Metas de ahorro con seguimiento
+3. Reportes exportables (PDF)
+4. Soporte multi-moneda completo
 
 ### Largo Plazo (6+ meses)
 1. App móvil nativa (React Native)
@@ -246,5 +249,5 @@ Crear una herramienta de gestión financiera personal que:
 
 ---
 
-*Última actualización: Junio 2026*
-*Versión de la constitución: 1.0*
+*Última actualización: 2026-07-18*
+*Versión de la constitución: 1.1 (enmienda: espacio compartido del hogar — principio 3 y límites del sistema)*

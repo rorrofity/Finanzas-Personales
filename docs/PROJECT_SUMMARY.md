@@ -125,8 +125,8 @@ Hay trabajo sin commitear en `main` (PWA/offline/mobile) al momento de esta revi
 
 ## 6. Roadmap / Próximas Funcionalidades
 
-1. **Cerrar épica PWA** (Fases 4–5) y desplegar a producción.
-2. **Multi-usuario (hogar)** — *próxima épica, a especificar vía SDD*: hoy el sistema es single-user por diseño (la constitución y spec lo restringen explícitamente). El objetivo es que Rodrigo y su pareja accedan a la misma instancia para registrar juntos las finanzas del hogar. Esto requiere revisar formalmente la constitución (principio "una persona = un usuario") y el out-of-scope de spec.md antes de implementar, definiendo: modelo de datos compartido vs. por usuario, invitaciones/registro, permisos y visibilidad.
+1. ✅ **Épica PWA completada y desplegada a producción** (2026-07-18).
+2. 🚧 **Espacio Compartido del Hogar (Epic 11)** — *épica actual, especificada el 2026-07-18*: el dueño invita (in-app, sin emails) hasta 2 miembros con permisos granulares (ver / crear+editar / eliminar) activables al instante. Modelo ACL sobre la cuenta del dueño (sin migrar datos), header `X-Space-Owner` + middleware `resolveSpace` (principio ACL-001), auditoría `created_by/updated_by`, sync N8N exclusivo del dueño, caché offline llaveado por espacio. El principio "una persona = un usuario" se mantiene; la enmienda constitucional v1.1 redefinió solo el alcance single-user. Ver spec.md Epic 11, plan.md v2 y tasks.md v2.
 3. Mantener el droplet y el dominio actuales como plataforma productiva.
 
 ---

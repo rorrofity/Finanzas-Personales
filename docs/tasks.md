@@ -1,204 +1,139 @@
-# tasks.md — Tareas de Implementación: Finanzas Personales PWA
+# tasks.md — Tareas de Implementación: Espacio Compartido del Hogar (Epic 11)
 
-> **Subordinación:** Este documento está subordinado a `constitution.md`, `spec.md` y `plan.md`. En caso de conflicto, la Constitución tiene prioridad absoluta.
+> **Subordinación:** subordinado a `constitution.md` v1.1, `spec.md` v1.1.0 (Epic 11) y `plan.md` v2.0.0.
+> Las tareas de la épica PWA (completada) están en `archive/tasks-pwa.md`.
 >
-> **Alcance:** Implementación de la **Epic 9 (PWA y Adaptación Mobile)**. La conversión es **frontend-only**: no se modifica el backend, la base de datos ni los flujos de negocio existentes. La app debe seguir "operando tal cual", añadiendo capa PWA + optimización mobile + consulta offline (solo lectura).
->
-> **Metodología — Test-First obligatorio (TEST-001):** Cada tarea de implementación sigue el ciclo estricto:
-> 1. **🔴 RED** — Escribir la prueba (Playwright E2E o unitaria) y ejecutarla para verificar que **FALLA**.
-> 2. **🟢 GREEN** — Implementar el mínimo código necesario para que la prueba **PASE**.
-> 3. **🔁 VERIFY** — Re-ejecutar la prueba (y la suite completa) para confirmar que pasa sin romper otras.
->
-> Una tarea de implementación **no se marca completa** hasta que su prueba asociada pasa. Las tareas `T-*` (test) preceden SIEMPRE a su tarea `I-*` (implementación).
->
-> **`walkthrough.md`:** Este documento se generará **únicamente al finalizar la implementación de código**, documentando lo efectivamente construido, decisiones tomadas y cómo ejecutar/validar la PWA. No se crea durante la fase de planificación.
->
-> Cada tarea referencia su Req del `spec.md`. Marcar `[x]` al completar.
+> **Metodología — Test-First obligatorio (TEST-001):** ciclo estricto por tarea:
+> 🔴 RED (prueba que falla) → 🟢 GREEN (mínimo código) → 🔁 VERIFY (suite en verde).
+> Las tareas `T-*` preceden SIEMPRE a su `I-*`. `walkthrough.md` se actualiza al final (Fase 5).
+
+## Leyenda
+
+`[ ]` pendiente · `[~]` en progreso · `[x]` completado · `[!]` bloqueado
+`T-*` test · `I-*` implementación · `S-*` setup/config · `V-*` verificación
 
 ---
 
-## Leyenda de Estado
-
-- `[ ]` Pendiente
-- `[~]` En progreso
-- `[x]` Completado
-- `[!]` Bloqueado
-
-**Tipos de tarea:**
-- `T-*` = **Test** (escribir prueba que debe fallar primero)
-- `I-*` = **Implementación** (código que hace pasar la prueba)
-- `S-*` = **Setup/Config** (sin prueba directa, p.ej. instalar dependencias)
-
----
-
-## Fase 0: Setup de Testing (Prerrequisito)
-
-> **Objetivo:** Infraestructura de pruebas lista ANTES de cualquier implementación.
-
-| # | Tarea | Tipo | Estado |
-|---|---|---|---|
-| 0.1 | Instalar y configurar Playwright (`@playwright/test`) en el proyecto | S | `[x]` |
-| 0.2 | Configurar `playwright.config.js` con viewports desktop + mobile (375px, 768px) | S | `[x]` |
-| 0.3 | Crear estructura `tests/e2e/` y `tests/unit/` | S | `[x]` |
-| 0.4 | Configurar script de test en `package.json` (`test:e2e`, `test:unit`) | S | `[x]` |
-| 0.5 | Crear helper de autenticación para tests E2E (login programático) | S | `[x]` |
-| 0.6 | Verificar baseline: ejecutar suite vacía y confirmar que el runner funciona | S | `[x]` |
-
-**Criterio de aceptación Fase 0:** `npm run test:e2e` ejecuta Playwright correctamente contra la app local.
-
----
-
-## Fase 1: Infraestructura PWA Base
-
-> **Objetivo:** App instalable con Service Worker funcionando. **Sin romper** la funcionalidad existente.
+## Fase 0: Infraestructura de Pruebas API
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 1.T1 | 🔴 T | E2E: prueba que el `manifest.json` se sirve con campos requeridos (name, icons, display=standalone) — **debe fallar** | 9.2 | `[x]` |
-| 1.T2 | 🔴 T | E2E: prueba que el Service Worker se registra y la app es "installable" — **debe fallar** | 9.1 | `[x]` |
-| 1.T3 | 🔴 T | E2E (regresión): login + navegación a Dashboard/Transactions funciona igual que hoy | — | `[x]` |
-| 1.S1 | S | Instalar deps: `workbox-*`, `idb` (+ `sharp` dev para íconos) | 9.1 | `[x]` |
-| 1.S2 | S | Workbox InjectManifest nativo de CRA (detecta `src/service-worker.js`) | 9.1 | `[x]` |
-| 1.I1 | 🟢 I | Crear `src/service-worker.js` (precache App Shell + caching GET only) | 9.1, 9.5 | `[x]` |
-| 1.I2 | 🟢 I | Crear `src/serviceWorkerRegistration.js` y registrar en `src/index.js` (solo prod) | 9.1 | `[x]` |
-| 1.I3 | 🟢 I | Generar íconos PWA (72→512px + maskable) en `public/icons/` vía `scripts/generate-pwa-icons.js` | 9.2 | `[x]` |
-| 1.I4 | 🟢 I | Actualizar `public/manifest.json` completo (íconos, shortcuts, theme, standalone) | 9.2, 9.7, 9.11 | `[x]` |
-| 1.I5 | 🟢 I | Capturar screenshots (wide + narrow) en `public/screenshots/` | 9.2 | `[ ]` (diferido: opcional, no bloquea instalabilidad) |
-| 1.V1 | 🔁 V | Re-ejecutar 1.T1, 1.T2, 1.T3 → todas **deben pasar** | 9.1, 9.2 | `[x]` |
-
-**Criterio de aceptación Fase 1:** Pruebas 1.T* en verde (12/12: 9 dev + 3 build). Build compila con SW. Funcionalidad existente intacta. *Lighthouse pendiente para Fase 5.*
+| 0.1 | S | Crear `tests/api/` + config Playwright (proyecto `api`, sin browser) | — | `[ ]` |
+| 0.2 | S | Helper `tests/api/helpers/users.js`: asegura 2 usuarios de prueba (dueño + miembro) vía register/login, retorna tokens | — | `[ ]` |
+| 0.3 | S | Script de limpieza: borra membresías de prueba entre corridas | — | `[ ]` |
+| 0.4 | V | Baseline: suite API vacía corre contra backend local | — | `[ ]` |
 
 ---
 
-## Fase 2: Caché de Lectura y Estado Offline
-
-> **Objetivo:** Consulta de datos sin conexión (solo lectura). Bloquear escritura offline con UI clara.
+## Fase 1: Núcleo ACL Backend (membresías + middleware)
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 2.T1 | 🔴 T | Unit: `useOffline` reacciona a eventos `online`/`offline` (`src/hooks/__tests__/useOffline.test.js`) | 9.3, 9.12 | `[x]` |
-| 2.T2 | 🔴 T | Unit: `fetchWithCache` retorna caché cuando está offline (`src/services/__tests__/readCache.test.js`) | 9.3 | `[x]` |
-| 2.T3 | 🔴 T | E2E: en modo offline (Playwright `context.setOffline`) se muestra banner + datos cacheados (`tests/e2e/offline.spec.js`) | 9.3 | `[x]` |
-| 2.T4 | 🔴 T | E2E: en offline, botones Nueva/Editar/Eliminar están disabled con tooltip | 9.4 | `[x]` |
-| 2.T5 | 🔴 T | E2E: en offline, `SyncButton` disabled con mensaje | 9.4 (borde) | `[x]` |
-| 2.T6 | 🔴 T | E2E: al reconectar, los datos se refrescan automáticamente | 9.12 | `[x]` |
-| 2.I1 | 🟢 I | Crear `src/services/readCache.js` con idb (`cacheRead`/`getCachedRead`) | 9.3 | `[x]` |
-| 2.I2 | 🟢 I | Crear `src/hooks/useOffline.js` | 9.3, 9.12 | `[x]` |
-| 2.I3 | 🟢 I | Crear `src/contexts/OfflineContext.jsx` | 9.3 | `[x]` |
-| 2.I4 | 🟢 I | Crear `src/components/OfflineBanner.jsx` e integrar en `DashboardLayout` | 9.3 | `[x]` |
-| 2.I5 | 🟢 I | Implementar `fetchWithCache` en GETs de Dashboard/Transactions | 9.3 | `[x]` |
-| 2.I6 | 🟢 I | Deshabilitar botones de escritura en offline (tooltip "Requiere conexión") | 9.4 | `[x]` |
-| 2.I7 | 🟢 I | Deshabilitar `SyncButton` en offline con mensaje inmediato | 9.4 (borde) | `[x]` |
-| 2.I8 | 🟢 I | Refresco automático de datos al reconectar | 9.12 | `[x]` |
-| 2.I9 | 🟢 I | Advertencia al 80% de quota de IndexedDB (`getStorageEstimate` en readCache.js) | 9.x (borde) | `[x]` |
-| 2.V1 | 🔁 V | Re-ejecutar 2.T1–2.T6 → todas **deben pasar** (último run Playwright: passed) | 9.3, 9.4, 9.12 | `[x]` |
-
-**Criterio de aceptación Fase 2:** ✅ CUMPLIDO — Pruebas 2.T* en verde. Sin conexión, el usuario consulta datos; no puede escribir y lo entiende claramente.
+| 1.T1 | 🔴 T | API: invitar email existente crea membresía activa; GET memberships del miembro incluye el espacio | 11.1, 11.4 | `[ ]` |
+| 1.T2 | 🔴 T | API: invitar email inexistente → `pending`; al registrarse ese email la membresía se vincula | 11.2 | `[ ]` |
+| 1.T3 | 🔴 T | API: 3er miembro → 400; email duplicado → 409; auto-invitación → 400 | 11.3 | `[ ]` |
+| 1.T4 | 🔴 T | API: request con `X-Space-Owner` sin membresía o inactiva → 403; con membresía → 200 | 11.5 | `[ ]` |
+| 1.T5 | 🔴 T | API: PUT members/:id cambia permisos/activo con efecto inmediato en siguiente request | 11.8 | `[ ]` |
+| 1.T6 | 🔴 T | API: endpoints `/api/space/members*` solo dueño (miembro → 403) | 11.10 | `[ ]` |
+| 1.S1 | S | Migración `026_create_space_members.sql` + correr en local | — | `[ ]` |
+| 1.I1 | 🟢 I | Modelo `SpaceMember.js` (CRUD, findMembership, linkPendingByEmail) | 11.1–11.3 | `[ ]` |
+| 1.I2 | 🟢 I | `spaceController.js` + `spaceRoutes.js` (memberships/members/invite/update/revoke) | 11.1–11.4 | `[ ]` |
+| 1.I3 | 🟢 I | Middleware `resolveSpace.js` + guards `requirePermission.js` | 11.5–11.8 | `[ ]` |
+| 1.I4 | 🟢 I | Hook en register/login Google: `linkPendingByEmail` | 11.2 | `[ ]` |
+| 1.V1 | 🔁 V | 1.T1–1.T6 en verde + suite E2E existente sin regresiones | — | `[ ]` |
 
 ---
 
-## Fase 3: Optimización Mobile (Responsive)
+## Fase 2: Adopción en Controllers de Datos + Auditoría
 
-> **Objetivo:** Que la app se vea y opere bien en teléfono, manteniendo toda la funcionalidad.
+> Un controller por commit: prueba de matriz de permisos primero, luego el cambio `req.user.id` → `req.spaceUserId`.
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 3.S1 | S | Auditar cada página en viewports 375px y 768px; documentar problemas | 9.8 | `[x]` |
-| 3.T1 | 🔴 T | E2E (375px): Transactions renderiza cards, sin scroll horizontal — **debe fallar** | 9.8, 9.9 | `[x]` |
-| 3.T2 | 🔴 T | E2E (375px): TransactionsIntl renderiza cards, sin overflow — **debe fallar** | 9.8, 9.9 | `[x]` |
-| 3.T3 | 🔴 T | E2E (375px): Checking/Installments/Projected usables sin scroll horizontal — **debe fallar** | 9.8, 9.9 | `[x]` |
-| 3.T4 | 🔴 T | E2E (375px): Dashboard y FinancialHealth apilan secciones, gráficos visibles — **debe fallar** | 9.8 | `[x]` |
-| 3.T5 | 🔴 T | E2E (375px): drawer funciona como menú mobile (abre/cierra) — **debe fallar** | 9.8, 9.10 | `[x]` |
-| 3.I1 | 🟢 I | Crear `src/components/ResponsiveTable.jsx` (tabla → cards en `< md`) | 9.8 | `[ ]` |
-| 3.I2 | 🟢 I | Adaptar `Transactions.js` a cards en mobile | 9.8, 9.9 | `[x]` |
-| 3.I3 | 🟢 I | Adaptar `TransactionsIntl.js` a layout mobile | 9.8, 9.9 | `[x]` |
-| 3.I4 | 🟢 I | Adaptar `Checking.js`, `Installments.js`, `ProjectedTransactions.js` | 9.8, 9.9 | `[x]` |
-| 3.I5 | 🟢 I | Ajustar `Dashboard.js` (alturas gráficos, densidad) | 9.8 | `[x]` |
-| 3.I6 | 🟢 I | Ajustar `FinancialHealth.jsx` (multi-columna → stack) | 9.8 | `[x]` |
-| 3.I7 | 🟢 I | Adaptar `DashboardLayout` drawer mobile (hamburguesa, swipe to close) | 9.8, 9.10 | `[x]` |
-| 3.I8 | 🟢 I | Ajustar gráficos Recharts (ResponsiveContainer, tooltips touch) | 9.8, 9.10 | `[ ]` |
-| 3.I9 | 🟢 I | Controles (filtros/selects/botones) accesibles sin scroll horizontal | 9.9 | `[ ]` |
-| 3.I10 | 🟢 I | Pull-to-refresh en listados principales | 9.10 | `[ ]` |
-| 3.I11 | 🟢 I | Áreas táctiles mínimas (44x44px) en botones e íconos | 9.8 | `[ ]` |
-| 3.V1 | 🔁 V | Re-ejecutar 3.T1–3.T5 → todas **deben pasar** | 9.8, 9.9, 9.10 | `[x]` |
-
-**Criterio de aceptación Fase 3:** Pruebas 3.T* en verde. Todas las páginas usables en teléfono sin scroll horizontal.
+| 2.T1 | 🔴 T | API matriz transactions: miembro ve (GET 200), sin can_edit POST/PUT → 403, sin can_delete DELETE/bulk → 403, con permisos → 200 y datos del espacio del dueño | 11.5–11.7 | `[ ]` |
+| 2.T2 | 🔴 T | API: transacción creada/editada por miembro registra `created_by`/`updated_by` = miembro | 11.11 | `[ ]` |
+| 2.T3 | 🔴 T | API matriz dashboard + financial-health + billing (lectura de espacio compartido) | 11.5 | `[ ]` |
+| 2.T4 | 🔴 T | API matriz categories / installments / intl-unbilled / checking / projected / suspicious | 11.5–11.7 | `[ ]` |
+| 2.T5 | 🔴 T | API: sync-emails como miembro → 403; como dueño → 200 | 11.9 | `[ ]` |
+| 2.T6 | 🔴 T | API: cardRoutes y billing config como miembro → 403 | 11.10 | `[ ]` |
+| 2.S1 | S | Migración `027_add_audit_to_transactions.sql` + correr en local | 11.11 | `[ ]` |
+| 2.I1 | 🟢 I | `transactionController`: spaceUserId + created_by/updated_by + guards en rutas | 11.6, 11.7, 11.11 | `[ ]` |
+| 2.I2 | 🟢 I | `dashboardController`, `financialHealthController`, `billingRoutes` (lectura) | 11.5 | `[ ]` |
+| 2.I3 | 🟢 I | `categoryController`, `installmentsController`, `intlUnbilledController`, `checkingController`, `projectedController`, `suspiciousRoutes` | 11.5–11.7 | `[ ]` |
+| 2.I4 | 🟢 I | `syncRoutes` sync-emails + `cardRoutes` + billing config con `requireOwner` | 11.9, 11.10 | `[ ]` |
+| 2.V1 | 🔁 V | 2.T1–2.T6 en verde + suite E2E existente sin regresiones | — | `[ ]` |
 
 ---
 
-## Fase 4: Actualización SW e Install Prompt
-
-> **Objetivo:** Experiencia de app instalada pulida.
+## Fase 3: Frontend — Switcher, Gestión de Miembros y Permisos en UI
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 4.T1 | 🔴 T | Unit+E2E: con SW `waiting`, aparece banner "Nueva versión disponible" (`UpdateBanner.test.js` + `tests/pwa-build/sw-update-standalone.spec.js`) | 9.6 | `[x]` |
-| 4.T2 | 🔴 T | Unit+E2E: pulsar "Actualizar" envía SKIP_WAITING y recarga en controllerchange | 9.6 | `[x]` |
-| 4.T3 | 🔴 T | E2E (build): manifest standalone + viewport-fit=cover + safe-area en CSS | 9.11 | `[x]` |
-| 4.I1 | 🟢 I | Detectar SW `waiting` + banner "Nueva versión" (`UpdateBanner.jsx`, evento `swUpdated` desde `serviceWorkerRegistration`) | 9.6 | `[x]` |
-| 4.I2 | 🟢 I | Botón "Actualizar" → `skipWaiting()` + reload | 9.6 | `[x]` |
-| 4.I3 | 🟢 I | Crear `src/components/InstallPrompt.jsx` (`beforeinstallprompt`) contextual con descarte persistente | 9.2 | `[x]` |
-| 4.I4 | 🟢 I | Safe-area-insets (notch iOS) vía GlobalStyles en `App.js` (index.html ya tenía viewport-fit=cover) | 9.11 | `[x]` |
-| 4.V1 | 🔁 V | Re-ejecutar 4.T1–4.T3 → todas pasan (unit 17/17, pwa-build 7/7) | 9.6, 9.11 | `[x]` |
-
-**Criterio de aceptación Fase 4:** ✅ CUMPLIDO — Pruebas 4.T* en verde. Instalable, abre standalone, se actualiza con aviso.
+| 3.T1 | 🔴 T | Unit: SpaceContext carga memberships, cambia espacio, persiste selección, maneja 403 → espacio propio | 11.13, borde | `[ ]` |
+| 3.T2 | 🔴 T | Unit: gating de botones — sin can_edit disabled con tooltip; sin can_delete idem; dueño todo habilitado | 11.6, 11.7, borde | `[ ]` |
+| 3.T3 | 🔴 T | E2E: dueño invita desde Settings, cambia toggles, desactiva y revoca | 11.1, 11.8 | `[ ]` |
+| 3.T4 | 🔴 T | E2E: miembro ve switcher, entra al espacio "Hogar", ve datos del dueño; sin switcher si no hay membresías | 11.4, 11.13 | `[ ]` |
+| 3.T5 | 🔴 T | E2E: SyncButton disabled para miembro; secciones de config ocultas | 11.9, 11.10 | `[ ]` |
+| 3.T6 | 🔴 T | Unit/E2E: CreatedByChip visible solo con >1 participante | 11.12 | `[ ]` |
+| 3.I1 | 🟢 I | `SpaceContext.jsx` + interceptor axios `X-Space-Owner` + manejo 403 | 11.5, 11.13 | `[ ]` |
+| 3.I2 | 🟢 I | `SpaceSwitcher.jsx` en DashboardLayout + refetch al cambiar espacio | 11.13 | `[ ]` |
+| 3.I3 | 🟢 I | `SpaceMembersSettings.jsx` en Settings (solo dueño) | 11.1, 11.8 | `[ ]` |
+| 3.I4 | 🟢 I | Gating de permisos en todas las páginas de datos (patrón `isOffline \|\| !canEdit`) | 11.6, 11.7 | `[ ]` |
+| 3.I5 | 🟢 I | SyncButton/config solo dueño en UI | 11.9, 11.10 | `[ ]` |
+| 3.I6 | 🟢 I | `CreatedByChip.jsx` en Transactions (cards y tabla) | 11.12 | `[ ]` |
+| 3.V1 | 🔁 V | 3.T1–3.T6 en verde | — | `[ ]` |
 
 ---
 
-## Fase 5: Auditoría, Despliegue y Walkthrough
-
-> **Objetivo:** Validar calidad de la suite completa y desplegar a producción con riesgo mínimo.
+## Fase 4: PWA/Caché por Espacio y Casos de Borde
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 5.1 | 🔁 V | Ejecutar suite completa (unit + E2E) → todo en verde (unit 17/17, E2E 49/49 ×4 corridas, pwa-build 7/7) | Todas | `[x]` |
-| 5.2 | 🔁 V | Test E2E de regresión: funcionalidad existente intacta (regression.spec.js + smoke.spec.js en verde) | N8N-001 | `[x]` |
-| 5.3 | S | Auditoría Lighthouse (LH12 sin categoría PWA; instalabilidad cubierta por Playwright): perf 98, a11y 96, best-practices 96, SEO 100 | Todas | `[x]` |
-| 5.4 | 🟢 I | Optimizar bundle: React.lazy por ruta (main 1.2MB → 461KB + 26 chunks) + Google Fonts no bloqueante (FCP 4.6s → 0.6s) | 9.5 | `[x]` |
-| 5.5 | S | Pruebas en dispositivos reales: iOS Safari + Android Chrome | 9.7, 9.11 | `[ ]` (manual: instalar desde el teléfono) |
-| 5.6 | S | Deploy a producción 2026-07-18 (git pull + npm install + build + pm2 restart; Caddyfile.secure aplicado con headers de seguridad + CSP, proxy corregido a 172.17.0.1) | — | `[x]` |
-| 5.7 | 🔁 V | Verificación post-deploy: SW activo + precache Workbox + manifest standalone + headers CSP/HSTS + N8N intacto, 0 errores de consola en `finanzas.rocketflow.cl` | — | `[x]` |
-| 5.8 | S | **Generar `walkthrough.md`** documentando lo construido, decisiones y cómo validar | — | `[x]` |
+| 4.T1 | 🔴 T | Unit: readCache llavea por espacio; datos de un espacio no aparecen en otro | 11.14 | `[ ]` |
+| 4.T2 | 🔴 T | Unit: logout limpia readCache | 11.15 | `[ ]` |
+| 4.T3 | 🔴 T | E2E: revocación en vivo → siguiente acción devuelve al espacio propio con aviso | borde | `[ ]` |
+| 4.I1 | 🟢 I | Namespace de espacio en `readCache.js` + integración en fetchWithCache | 11.14 | `[ ]` |
+| 4.I2 | 🟢 I | `clearReadCache()` en logout (AuthContext) | 11.15 | `[ ]` |
+| 4.I3 | 🟢 I | Manejo de 403 en vivo (interceptor + aviso + switch automático) | borde | `[ ]` |
+| 4.V1 | 🔁 V | 4.T1–4.T3 en verde + suite completa | — | `[ ]` |
 
-**Criterio de aceptación Fase 5:** ✅ CUMPLIDO (salvo 5.5 manual) — Suite completa en verde, PWA en producción, sin regresiones, `walkthrough.md` generado.
+---
+
+## Fase 5: Auditoría, Deploy y Walkthrough
+
+| # | Tipo | Tarea | Req | Estado |
+|---|---|---|---|---|
+| 5.1 | 🔁 V | Suite completa (unit + API + E2E + pwa-build) en verde | Todas | `[ ]` |
+| 5.2 | 🔁 V | Regresión: usuario sin membresías tiene UX idéntica a hoy | — | `[ ]` |
+| 5.3 | S | Deploy al droplet (git pull + npm install + build + migrate + pm2 restart) | — | `[ ]` |
+| 5.4 | 🔁 V | Verificación en producción con 2 cuentas reales (Rodrigo + pareja): invitar, permisos, espacio Hogar | — | `[ ]` |
+| 5.5 | S | Actualizar `walkthrough.md`, `PROJECT_SUMMARY.md` y memoria | — | `[ ]` |
 
 ---
 
 ## Mapeo Req → Tareas
 
-| Req (spec.md) | Tareas |
+| Req | Tareas |
 |---|---|
-| Req 9.1 (Service Worker) | 1.T2, 1.S1–1.S2, 1.I1–1.I2 |
-| Req 9.2 (Manifest + íconos) | 1.T1, 1.I3–1.I5, 4.I3 |
-| Req 9.3 (Lectura offline + banner) | 2.T1–2.T3, 2.I1–2.I5 |
-| Req 9.4 (Bloquear escritura offline) | 2.T4–2.T5, 2.I6–2.I7 |
-| Req 9.5 (Cache App Shell) | 1.I1, 5.4 |
-| Req 9.6 (Actualización SW) | 4.T1–4.T2, 4.I1–4.I2 |
-| Req 9.7 (Modo standalone) | 1.I4, 5.5 |
-| Req 9.8 (Layout mobile) | 3.T1–3.T5, 3.I1–3.I8, 3.I11 |
-| Req 9.9 (Controles sin scroll horizontal) | 3.T1–3.T3, 3.I2–3.I4, 3.I9 |
-| Req 9.10 (Gestos táctiles) | 3.T5, 3.I7, 3.I8, 3.I10 |
-| Req 9.11 (Standalone viewport) | 4.T3, 4.I4 |
-| Req 9.12 (Refresco al reconectar) | 2.T6, 2.I2, 2.I8 |
-
----
+| 11.1–11.3 (invitaciones) | 1.T1–1.T3, 1.I1–1.I2, 3.T3, 3.I3 |
+| 11.4 (memberships) | 1.T1, 1.I2, 3.T4 |
+| 11.5 (403 espacio) | 1.T4, 1.I3, 2.T1–2.T4, 2.I1–2.I3 |
+| 11.6–11.7 (can_edit/can_delete) | 2.T1, 2.T4, 2.I1, 2.I3, 3.T2, 3.I4 |
+| 11.8 (efecto inmediato) | 1.T5, 1.I3, 3.T3 |
+| 11.9 (sync solo dueño) | 2.T5, 2.I4, 3.T5, 3.I5 |
+| 11.10 (config solo dueño) | 1.T6, 2.T6, 2.I4, 3.T5, 3.I5 |
+| 11.11–11.12 (auditoría) | 2.T2, 2.S1, 2.I1, 3.T6, 3.I6 |
+| 11.13 (switcher) | 3.T1, 3.T4, 3.I1–3.I2 |
+| 11.14–11.15 (caché por espacio) | 4.T1–4.T2, 4.I1–4.I2 |
 
 ## Notas y Riesgos
 
-- **CRA y Workbox:** Create React App tiene soporte PWA limitado. Evaluar en tarea 1.S2 si conviene CRACO, `cra-template-pwa`, o migración futura a Vite. Decisión a confirmar con el usuario antes de implementar.
-- **No tocar backend:** Cualquier tarea que sugiera cambios en backend/DB está fuera de alcance de esta épica (ver `plan.md` §6 y §8).
-- **Despliegue directo a producción:** No hay staging. Validar exhaustivamente en local antes de 5.6.
-- **Prioridad del usuario:** "que siga operando tal cual la aplicación" — las regresiones en funcionalidad existente son inaceptables (pruebas 1.T3 y 5.2 son críticas).
-- **Test-First (TEST-001):** Toda tarea `I-*` requiere su prueba `T-*` fallando antes de implementar. No saltarse el ciclo RED→GREEN→VERIFY.
-- **walkthrough.md:** Se genera en la tarea 5.8, al final, documentando la implementación real.
+- **No tocar datos productivos:** las 2 migraciones solo agregan tabla/columnas nullable.
+- **Retrocompatibilidad:** sin `X-Space-Owner` todo opera igual que hoy; la suite E2E existente es la red de regresión y debe correr en verde en cada fase.
+- **Sin staging:** validar matriz de permisos completa en local antes del deploy (5.1 es bloqueante de 5.3).
+- **Google OAuth del miembro:** la pareja puede registrarse con Google; `linkPendingByEmail` debe correr también en ese flujo (1.I4).
 
 ---
 
-## Próxima Épica (fuera de este documento)
-
-Tras cerrar las Fases 4–5, la siguiente épica a especificar vía SDD es **Multi-usuario (hogar)**: acceso de dos usuarios (Rodrigo + pareja) a las finanzas compartidas. Requiere primero enmendar `constitution.md` (principio "una persona = un usuario") y el out-of-scope de `spec.md`, y generar nuevos spec/plan/tasks para la épica. Ver `docs/PROJECT_SUMMARY.md` §6.
-
----
-
-*Versión: 1.1.0*
-*Última actualización: 2026-07-18 (estados Fase 2 sincronizados con el código real)*
+*Versión: 2.0.0 (épica Espacio Compartido)*
+*Última actualización: 2026-07-18*

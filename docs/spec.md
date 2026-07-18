@@ -13,7 +13,8 @@ Finanzas Personales es una PWA (Progressive Web App) **mobile-first** para gesti
 Para evitar la sobre-ingeniería, **NO** se debe implementar lo siguiente:
 
 - **No aplicaciones nativas:** El esfuerzo será 100% PWA. No se generará código para iOS/Android nativo.
-- **No multi-usuario** *(en revisión)*: El sistema está diseñado para un único usuario propietario y esta spec (v1.x) no lo cambia. **Nota de roadmap (julio 2026):** existe la decisión de evolucionar a un modelo de **dos usuarios del hogar** (propietario + pareja) compartiendo las finanzas. Esa funcionalidad se especificará en una épica futura con su propia enmienda a `constitution.md` y nuevos spec/plan/tasks; mientras tanto, sigue fuera del alcance de esta versión. No se contempla multi-tenant abierto ni registro público.
+- **No multi-tenant abierto:** El modelo es **dueño + hasta 2 miembros invitados por espacio** (Epic 11, enmienda constitucional 1.1 del 2026-07-18). NO hay: registro público de espacios/organizaciones, espacios anidados, permisos por categoría o módulo, transferencia de propiedad del espacio, ni notificaciones por email (la invitación es in-app).
+- **No colaboración en tiempo real:** Sin websockets ni resolución de conflictos concurrentes; aplica last-write-wins.
 - **No red social:** No habrá sistema de mensajería, "likes", ni compartir datos con otros usuarios.
 - **No criptomonedas:** No se manejarán activos digitales ni inversiones complejas.
 - **No facturación electrónica:** No se emitirán documentos tributarios.
@@ -72,6 +73,12 @@ Para evitar la sobre-ingeniería, **NO** se debe implementar lo siguiente:
 - **Patrón:** HSTS, CSP, X-Frame-Options, X-Content-Type-Options vía Caddy/Express.
 - **Justificación:** Protección contra XSS, clickjacking, y ataques comunes.
 
+### ACL-001 — Autorización de Espacio Compartido Verificada por Request
+- **Nivel:** MUST (Obligatorio)
+- **Restricción:** Toda petición sobre un espacio ajeno DEBE validar membresía y permisos **contra la base de datos en cada request** (nunca embebidos en el JWT).
+- **Patrón:** Header `X-Space-Owner` + middleware `resolveSpace`; el JWT solo identifica a la persona (AUTH-001), la autorización del espacio se resuelve en BD.
+- **Justificación:** Activar/desactivar permisos o membresías debe tener efecto inmediato, sin esperar expiración de tokens (24h).
+
 ### TEST-001 — Desarrollo Guiado por Pruebas (Test-First)
 - **Nivel:** MUST (Obligatorio)
 - **Restricción:** NINGUNA implementación de código se realiza sin una prueba previa que falle.
@@ -84,7 +91,8 @@ Para evitar la sobre-ingeniería, **NO** se debe implementar lo siguiente:
 
 | Actor | Estado | Permisos |
 |---|---|---|
-| **Usuario Propietario** | Autenticado (JWT) | Lectura + Escritura completa. Gestiona todas sus finanzas. |
+| **Dueño del espacio** | Autenticado (JWT) | Lectura + escritura completa sobre SU espacio. Único que administra miembros, configuración (tarjetas, período de facturación) y sincronización N8N. |
+| **Miembro invitado** | Autenticado (JWT) con membresía activa | Sobre el espacio compartido: ver (siempre que esté activo), crear/editar si `can_edit`, eliminar si `can_delete`. Sobre SU propio espacio: dueño pleno. |
 
 ---
 
@@ -276,6 +284,45 @@ Los criterios de aceptación usan **notación EARS**:
 
 ---
 
+### Epic 11: Espacio Compartido del Hogar *(Épica Actual — NUEVA)*
+
+**Flujo:** El dueño invita por email a un miembro de su hogar (máx. 2). El miembro, con su propia cuenta, accede al espacio compartido mediante un selector de espacio. El dueño administra permisos granulares (crear+editar, eliminar) y puede activar/desactivar el acceso con efecto inmediato. Toda escritura queda auditada (quién creó/modificó).
+
+**Decisiones de diseño (2026-07-18, acordadas con el dueño del producto):**
+- Modelo **ACL sobre la cuenta del dueño**: los datos financieros permanecen bajo el `user_id` del dueño; NO se migran a un modelo de workspaces. Tabla nueva `space_members` define membresías y permisos.
+- Permisos: **ver** (implícito con membresía activa), **crear+editar** (`can_edit`, incluye importación de archivos y gestión de categorías), **eliminar** (`can_delete`). Switch maestro `is_active`.
+- **Sincronización N8N: exclusiva del dueño** (el workflow lee SU Gmail).
+- Invitación **in-app sin emails**: el dueño ingresa el email del invitado; si la cuenta existe, la membresía queda activa; si no, queda `pending` y se activa cuando esa persona se registre con ese email.
+
+**Principios aplicados:** `AUTH-001`, `ACL-001`, `DATA-001`, `SEC-001`, `N8N-001`
+
+| ID | Criterio de Aceptación |
+|---|---|
+| Req 11.1 | Cuando el dueño invite un email con cuenta existente, el sistema **debe** crear la membresía activa y el espacio compartido **debe** aparecer al miembro en su siguiente carga de la app. |
+| Req 11.2 | Si el email invitado no tiene cuenta, el sistema **debe** guardar la invitación `pending` y activarla automáticamente cuando ese email se registre. |
+| Req 11.3 | Si el dueño intenta invitar un tercer miembro, su propio email, o un email ya invitado, el sistema **debe** rechazar con HTTP 400/409. |
+| Req 11.4 | Cuando un usuario autenticado consulte sus espacios (`GET /api/space/memberships`), el sistema **debe** retornar su espacio propio y los espacios compartidos con membresía activa. |
+| Req 11.5 | Cuando una petición incluya `X-Space-Owner` distinto del propio usuario, el sistema **debe** validar en BD la membresía activa; si no existe o está inactiva, **debe** retornar HTTP 403. |
+| Req 11.6 | Si un miembro sin `can_edit` intenta POST/PUT (crear, editar, importar, categorizar), el sistema **debe** retornar HTTP 403. |
+| Req 11.7 | Si un miembro sin `can_delete` intenta DELETE (individual o bulk), el sistema **debe** retornar HTTP 403. |
+| Req 11.8 | Cuando el dueño cambie permisos o desactive una membresía, el efecto **debe** ser inmediato en la siguiente petición del miembro (sin re-login) — ACL-001. |
+| Req 11.9 | Si un miembro invoca la sincronización N8N (`/api/sync/sync-emails`) sobre un espacio ajeno, el sistema **debe** retornar HTTP 403; en la UI el botón **debe** verse deshabilitado con tooltip. |
+| Req 11.10 | La administración de miembros, tarjetas de crédito y configuración de período de facturación **debe** ser exclusiva del dueño (HTTP 403 para miembros; secciones ocultas o solo-lectura en UI). |
+| Req 11.11 | Cuando se cree o edite una transacción, el sistema **debe** registrar `created_by`/`updated_by` con el `user_id` de la persona que ejecutó la acción (no el dueño del espacio). |
+| Req 11.12 | Cuando el espacio tenga más de un participante, la UI **debe** mostrar quién registró cada transacción (indicador discreto). |
+| Req 11.13 | Cuando el usuario tenga acceso a más de un espacio, la UI **debe** mostrar un selector de espacio persistente (localStorage) y todas las vistas **deben** reflejar el espacio activo sin recargar la página. |
+| Req 11.14 | El caché offline de lectura (IndexedDB) **debe** llavear sus entradas por espacio activo; en modo offline NUNCA se **deben** mostrar datos de un espacio en otro. |
+| Req 11.15 | Cuando el usuario cierre sesión, el sistema **debe** limpiar el caché de lectura local (readCache). |
+
+**Casos de borde:**
+- Miembro activo sin `can_edit`: botones de escritura visibles pero disabled con tooltip "Sin permiso de edición" (mismo patrón que offline, Req 9.4).
+- Si el dueño desactiva la membresía mientras el miembro navega el espacio compartido, la siguiente petición retorna 403 y la UI **debe** volver automáticamente al espacio propio con un aviso.
+- `X-Space-Owner` ausente o igual al propio `user_id` → espacio propio con permisos plenos (comportamiento actual, retrocompatible).
+- El selector de espacio NO aparece si el usuario solo tiene su espacio propio (UX idéntica a hoy para usuarios sin membresías).
+- Los endpoints internos de N8N (`/api/sync/sync-save`) no cambian: siguen escribiendo al espacio del dueño.
+
+---
+
 ## 6. Modelo de Datos (PostgreSQL)
 
 ### 6.1 Tablas Principales
@@ -330,6 +377,24 @@ Los criterios de aceptación usan **notación EARS**:
 | `health_score` | INTEGER | 0-100 |
 | `health_status` | VARCHAR(20) | critical/warning/healthy/excellent |
 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() |
+
+#### `space_members` *(Nueva, Epic 11)*
+| Atributo | Tipo | Rol | Notas |
+|---|---|---|---|
+| `id` | UUID | **PK** | gen_random_uuid() |
+| `owner_user_id` | UUID | **FK** | → users(id) ON DELETE CASCADE. Dueño del espacio. |
+| `member_user_id` | UUID | **FK** Nullable | → users(id). NULL mientras la invitación esté `pending`. |
+| `invited_email` | VARCHAR(100) | — | Email invitado (para vincular al registrarse). |
+| `can_edit` | BOOLEAN | — | DEFAULT false. Crear/editar/importar/categorizar. |
+| `can_delete` | BOOLEAN | — | DEFAULT false. Eliminar (individual y bulk). |
+| `is_active` | BOOLEAN | — | DEFAULT true. Switch maestro del dueño. |
+| `status` | VARCHAR(10) | — | CHECK: `pending` / `linked`. |
+| `created_at` / `updated_at` | TIMESTAMPTZ | — | trigger auto |
+
+Restricciones: `UNIQUE(owner_user_id, invited_email)`; máx. 2 filas por `owner_user_id` (validado en API); `owner_user_id != member_user_id` (CHECK indirecto en API).
+
+#### Auditoría en `transactions` *(Epic 11)*
+Se agregan `created_by UUID NULL` y `updated_by UUID NULL` (FK → users). Histórico queda NULL (se muestra como registrado por el dueño).
 
 #### `pending_sync` *(Nueva, Epic 9)*
 Tabla para operaciones offline pendientes (o almacenamiento en IndexedDB del frontend).
@@ -404,7 +469,18 @@ users ||--o{ intl_unbilled : "1:N"
 | GET | `/alerts` | JWT | Listar alertas |
 | PUT | `/alerts/:id/dismiss` | JWT | Descartar alerta |
 
-### 7.6 PWA Offline Sync (`/api/pwa`)
+### 7.6 Espacio Compartido (`/api/space`) *(Epic 11)*
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| GET | `/memberships` | JWT | Espacios accesibles (propio + compartidos activos, con nombre del dueño y permisos) |
+| GET | `/members` | JWT (dueño) | Miembros/invitaciones de MI espacio |
+| POST | `/members` | JWT (dueño) | Invitar por email `{email, can_edit, can_delete}` |
+| PUT | `/members/:id` | JWT (dueño) | Actualizar `{can_edit, can_delete, is_active}` |
+| DELETE | `/members/:id` | JWT (dueño) | Revocar membresía/invitación |
+
+Todos los endpoints de datos existentes (7.2–7.5) aceptan el header **`X-Space-Owner: <uuid>`** para operar sobre un espacio compartido (validado por `resolveSpace`, ACL-001). Sin el header operan sobre el espacio propio.
+
+### 7.7 PWA Offline Sync (`/api/pwa`)
 | Método | Endpoint | Auth | Descripción |
 |---|---|---|---|
 | POST | `/batch-sync` | JWT | Sincronizar operaciones offline pendientes |
@@ -485,8 +561,9 @@ Frontend muestra resultado al usuario
 | PostgreSQL local, sin servicios externos | DATA-001 |
 | Separación `/src` (React) vs `/backend` (Express) | ARCH-001 |
 | Service Worker + IndexedDB + Background Sync | PWA-001 |
-| Botón "Sync" on-demand, no automático | N8N-001 |
+| Botón "Sync" on-demand, no automático (solo dueño) | N8N-001 |
 | Headers de seguridad en Caddy/Express | SEC-001 |
+| Middleware `resolveSpace`: membresía y permisos desde BD por request | ACL-001 |
 
 ---
 
@@ -509,5 +586,5 @@ Workbox simplifica el caching, routing, y background sync con APIs probadas y bi
 
 ---
 
-*Versión: 1.0.0*
-*Última actualización: 2026-06-07*
+*Versión: 1.1.0 — agrega Epic 11 (Espacio Compartido del Hogar) y principio ACL-001*
+*Última actualización: 2026-07-18*
