@@ -31,6 +31,8 @@ import {
   Alert,
   Pagination,
   LinearProgress,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Add, Edit, Delete, FileUpload, CheckCircle, Close } from '@mui/icons-material';
 import axios from 'axios';
@@ -40,6 +42,8 @@ import { usePeriod } from '../contexts/PeriodContext';
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
 export default function Checking() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
   const [globalBalance, setGlobalBalance] = useState(0);
   const [rows, setRows] = useState([]);
@@ -216,7 +220,7 @@ export default function Checking() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 2 }}>
         <Typography variant="h4">Cuenta Corriente</Typography>
         <MonthPicker />
       </Box>
@@ -280,64 +284,105 @@ export default function Checking() {
         <Button variant="contained" startIcon={<Add />} onClick={openNewMove}>Nuevo movimiento</Button>
       </Stack>
 
-      <Paper>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Descripción</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell align="right">Monto</TableCell>
-                <TableCell>Categoría</TableCell>
-                <TableCell>Notas</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredRows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">No hay movimientos este mes.</TableCell>
-                </TableRow>
-              )}
-              {filteredRows.map(r => (
-                <TableRow key={r.id} hover>
-                  <TableCell>{formatDateLocal(r.fecha)}</TableCell>
-                  <TableCell>{r.descripcion}</TableCell>
-                  <TableCell sx={{ textTransform:'capitalize' }}>{r.tipo}</TableCell>
-                  <TableCell align="right">{currency(r.amount)}</TableCell>
-                  <TableCell>
+      {isMobile ? (
+        <Stack spacing={1.5}>
+          {filteredRows.length === 0 ? (
+            <Paper sx={{ p: 3 }}>
+              <Typography align="center" color="text.secondary">No hay movimientos este mes.</Typography>
+            </Paper>
+          ) : (
+            filteredRows.map((r) => (
+              <Card key={r.id} variant="outlined">
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={700}>{r.descripcion}</Typography>
+                      <Typography variant="caption" color="text.secondary">{formatDateLocal(r.fecha)} · {r.tipo}</Typography>
+                    </Box>
+                    <Typography variant="body2" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>{currency(r.amount)}</Typography>
+                  </Box>
+                  <Stack spacing={1.25}>
                     <Select
                       size="small"
                       value={r.category_id || ''}
                       onChange={(e) => handleCategoryChange(r.id, e.target.value)}
                       displayEmpty
-                      sx={{ 
-                        minWidth: 120, 
-                        '& .MuiSelect-select': { py: 0.5, fontSize: '0.875rem' },
-                        bgcolor: r.category_id ? 'transparent' : 'warning.light',
-                        borderRadius: 1
-                      }}
+                      sx={{ width: '100%', bgcolor: r.category_id ? 'transparent' : 'warning.light', borderRadius: 1 }}
                     >
                       <MenuItem value=""><em>Sin categoría</em></MenuItem>
                       {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
                     </Select>
-                  </TableCell>
-                  <TableCell>{r.notas || ''}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Editar">
-                      <IconButton size="small" onClick={()=>openEditMove(r)}><Edit fontSize="small" /></IconButton>
-                    </Tooltip>
-                    <Tooltip title="Eliminar">
-                      <IconButton size="small" onClick={()=>deleteMove(r)}><Delete fontSize="small" /></IconButton>
-                    </Tooltip>
-                  </TableCell>
+                    {!!r.notas && <Typography variant="caption" color="text.secondary">{r.notas}</Typography>}
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Button size="small" startIcon={<Edit fontSize="small" />} onClick={() => openEditMove(r)}>Editar</Button>
+                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} onClick={() => deleteMove(r)}>Eliminar</Button>
+                    </Stack>
+                  </Stack>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </Stack>
+      ) : (
+        <Paper>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Descripción</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell align="right">Monto</TableCell>
+                  <TableCell>Categoría</TableCell>
+                  <TableCell>Notas</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {filteredRows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">No hay movimientos este mes.</TableCell>
+                  </TableRow>
+                )}
+                {filteredRows.map(r => (
+                  <TableRow key={r.id} hover>
+                    <TableCell>{formatDateLocal(r.fecha)}</TableCell>
+                    <TableCell>{r.descripcion}</TableCell>
+                    <TableCell sx={{ textTransform:'capitalize' }}>{r.tipo}</TableCell>
+                    <TableCell align="right">{currency(r.amount)}</TableCell>
+                    <TableCell>
+                      <Select
+                        size="small"
+                        value={r.category_id || ''}
+                        onChange={(e) => handleCategoryChange(r.id, e.target.value)}
+                        displayEmpty
+                        sx={{ 
+                          minWidth: 120, 
+                          '& .MuiSelect-select': { py: 0.5, fontSize: '0.875rem' },
+                          bgcolor: r.category_id ? 'transparent' : 'warning.light',
+                          borderRadius: 1
+                        }}
+                      >
+                        <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                        {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+                      </Select>
+                    </TableCell>
+                    <TableCell>{r.notas || ''}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Editar">
+                        <IconButton size="small" onClick={()=>openEditMove(r)}><Edit fontSize="small" /></IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton size="small" onClick={()=>deleteMove(r)}><Delete fontSize="small" /></IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
       {/* Pagination */}
       <Box mt={2} display="flex" justifyContent="flex-end">

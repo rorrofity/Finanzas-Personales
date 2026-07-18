@@ -27,6 +27,8 @@ import {
   TableHead,
   TableRow,
   Select,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import axios from 'axios';
@@ -49,6 +51,8 @@ const emptyForm = (year, month) => ({
 });
 
 export default function ProjectedTransactions() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -188,7 +192,7 @@ export default function ProjectedTransactions() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 2 }}>
         <Typography variant="h4">Transacciones Proyectadas</Typography>
         <MonthPicker />
       </Box>
@@ -251,38 +255,24 @@ export default function ProjectedTransactions() {
         <Button variant="contained" startIcon={<Add />} onClick={onOpenCreate}>Nueva proyección</Button>
       </Stack>
 
-      <Paper>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell align="right">Monto</TableCell>
-                <TableCell>Categoría</TableCell>
-                <TableCell>Repetición</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(!filteredItems || filteredItems.length === 0) && (
-                <TableRow>
-                  <TableCell colSpan={8} align="center">
-                    No hay proyecciones para este mes.
-                  </TableCell>
-                </TableRow>
-              )}
-              {filteredItems && filteredItems.map((it) => {
-                const cat = categories.find(c => c.id === it.category_id);
-                return (
-                <TableRow key={it.occurrence_id} hover>
-                  <TableCell>{formatDateLocal(it.fecha)}</TableCell>
-                  <TableCell>{it.nombre}</TableCell>
-                  <TableCell>{it.tipo}</TableCell>
-                  <TableCell align="right">{currency(it.monto)}</TableCell>
-                  <TableCell>
+      {isMobile ? (
+        <Stack spacing={1.5}>
+          {(!filteredItems || filteredItems.length === 0) ? (
+            <Paper sx={{ p: 3 }}>
+              <Typography align="center" color="text.secondary">No hay proyecciones para este mes.</Typography>
+            </Paper>
+          ) : (
+            filteredItems.map((it) => (
+              <Card key={it.occurrence_id} variant="outlined">
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={700}>{it.nombre}</Typography>
+                      <Typography variant="caption" color="text.secondary">{formatDateLocal(it.fecha)} · {it.tipo}</Typography>
+                    </Box>
+                    <Typography variant="body2" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>{currency(it.monto)}</Typography>
+                  </Box>
+                  <Stack spacing={1}>
                     <TextField
                       select
                       size="small"
@@ -296,35 +286,102 @@ export default function ProjectedTransactions() {
                           console.error(err);
                         }
                       }}
-                      sx={{ minWidth: 140 }}
+                      fullWidth
                       SelectProps={{ displayEmpty: true }}
                     >
                       <MenuItem value=""><em>Sin categoría</em></MenuItem>
                       {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
                     </TextField>
-                  </TableCell>
-                  <TableCell>{it.repeat_monthly ? 'Sí' : 'No'}</TableCell>
-                  <TableCell>
-                    <Chip label={it.active ? 'Activo' : 'Inactivo'} color={it.active ? 'success' : 'default'} size="small" />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Editar">
-                      <IconButton size="small" onClick={() => onOpenEdit(it)}><Edit fontSize="small" /></IconButton>
-                    </Tooltip>
-                    <Tooltip title="Eliminar (solo este mes)">
-                      <IconButton size="small" onClick={() => onDeleteOccurrence(it)}><Delete fontSize="small" /></IconButton>
-                    </Tooltip>
-                    <Tooltip title="Eliminar plantilla (desde este mes en adelante)">
-                      <IconButton size="small" color="error" onClick={() => onDeleteTemplateForward(it)}><Delete fontSize="small" /></IconButton>
-                    </Tooltip>
-                  </TableCell>
+                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                      <Chip label={it.repeat_monthly ? 'Repite' : 'Única'} size="small" />
+                      <Chip label={it.active ? 'Activo' : 'Inactivo'} color={it.active ? 'success' : 'default'} size="small" />
+                    </Stack>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end" useFlexGap flexWrap="wrap">
+                      <Button size="small" startIcon={<Edit fontSize="small" />} onClick={() => onOpenEdit(it)}>Editar</Button>
+                      <Button size="small" color="warning" startIcon={<Delete fontSize="small" />} onClick={() => onDeleteOccurrence(it)}>Eliminar mes</Button>
+                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} onClick={() => onDeleteTemplateForward(it)}>Eliminar plantilla</Button>
+                    </Stack>
+                  </Stack>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </Stack>
+      ) : (
+        <Paper>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Nombre</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell align="right">Monto</TableCell>
+                  <TableCell>Categoría</TableCell>
+                  <TableCell>Repetición</TableCell>
+                  <TableCell>Estado</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {(!filteredItems || filteredItems.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      No hay proyecciones para este mes.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {filteredItems && filteredItems.map((it) => {
+                  return (
+                  <TableRow key={it.occurrence_id} hover>
+                    <TableCell>{formatDateLocal(it.fecha)}</TableCell>
+                    <TableCell>{it.nombre}</TableCell>
+                    <TableCell>{it.tipo}</TableCell>
+                    <TableCell align="right">{currency(it.monto)}</TableCell>
+                    <TableCell>
+                      <TextField
+                        select
+                        size="small"
+                        value={it.category_id || ''}
+                        onChange={async (e) => {
+                          const newCatId = e.target.value || null;
+                          try {
+                            await axios.put(`/api/projected/${it.occurrence_id}`, { category_id: newCatId });
+                            await load();
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                        sx={{ minWidth: 140 }}
+                        SelectProps={{ displayEmpty: true }}
+                      >
+                        <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                        {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
+                      </TextField>
+                    </TableCell>
+                    <TableCell>{it.repeat_monthly ? 'Sí' : 'No'}</TableCell>
+                    <TableCell>
+                      <Chip label={it.active ? 'Activo' : 'Inactivo'} color={it.active ? 'success' : 'default'} size="small" />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Editar">
+                        <IconButton size="small" onClick={() => onOpenEdit(it)}><Edit fontSize="small" /></IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar (solo este mes)">
+                        <IconButton size="small" onClick={() => onDeleteOccurrence(it)}><Delete fontSize="small" /></IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar plantilla (desde este mes en adelante)">
+                        <IconButton size="small" color="error" onClick={() => onDeleteTemplateForward(it)}><Delete fontSize="small" /></IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
         <DialogTitle>{editing ? 'Editar proyección (mes)' : 'Nueva proyección'}</DialogTitle>

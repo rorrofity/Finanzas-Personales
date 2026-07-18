@@ -5,6 +5,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PeriodProvider } from './contexts/PeriodContext';
+import { OfflineProvider } from './contexts/OfflineContext';
 import theme from './theme';
 
 // Layouts
@@ -37,32 +38,32 @@ function App() {
         <CssBaseline />
         <AuthProvider>
           <PeriodProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <OfflineProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-            {/* Protected Routes */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="financial-health" element={<FinancialHealth />} />
-              <Route path="transactions" element={<Transactions />} />
-              <Route path="transactions-intl" element={<TransactionsIntl />} />
-              <Route path="installments" element={<Installments />} />
-              <Route path="checking" element={<Checking />} />
-              <Route path="projected-transactions" element={<ProjectedTransactions />} />
-              <Route path="categories" element={<Categories />} />
-              <Route path="review-duplicates" element={<ReviewDuplicates />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
-          </Routes>
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Dashboard />} />
+                  <Route path="financial-health" element={<FinancialHealth />} />
+                  <Route path="transactions" element={<Transactions />} />
+                  <Route path="transactions-intl" element={<TransactionsIntl />} />
+                  <Route path="installments" element={<Installments />} />
+                  <Route path="checking" element={<Checking />} />
+                  <Route path="projected-transactions" element={<ProjectedTransactions />} />
+                  <Route path="categories" element={<Categories />} />
+                  <Route path="review-duplicates" element={<ReviewDuplicates />} />
+                  <Route path="settings" element={<Settings />} />
+                </Route>
+              </Routes>
+            </OfflineProvider>
           </PeriodProvider>
         </AuthProvider>
       </ThemeProvider>

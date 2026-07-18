@@ -6,6 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import App from './App';
 import theme from './theme';
 import { AuthProvider } from './contexts/AuthContext';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -20,3 +21,7 @@ root.render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// Registro del Service Worker (solo activo en producción).
+// El banner de actualización (Req 9.6) se conectará a onUpdate en la Fase 4.
+serviceWorkerRegistration.register();

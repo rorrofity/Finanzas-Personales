@@ -30,6 +30,7 @@ import {
   MonetizationOn as HealthIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import OfflineBanner from '../components/OfflineBanner';
 import { getSuspiciousCount } from '../services/suspiciousService';
 
 const drawerWidth = 200;
@@ -248,6 +249,7 @@ const DashboardLayout = () => {
         }}
       >
         <Toolbar />
+        <OfflineBanner />
         <Outlet />
       </Box>
     </Box>

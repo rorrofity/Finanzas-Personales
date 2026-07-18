@@ -31,11 +31,13 @@ import {
   Area,
   Sector,
 } from 'recharts';
-import axios from 'axios';
+import axios from '../config/axios';
 import MonthPicker from '../components/MonthPicker';
 import SyncButton from '../components/SyncButton';
 import CategoryDetailDrawer from '../components/CategoryDetailDrawer';
 import { usePeriod } from '../contexts/PeriodContext';
+import { useOfflineContext } from '../contexts/OfflineContext';
+import { fetchWithCache } from '../services/readCache';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -55,6 +57,7 @@ const Dashboard = () => {
   const [currentMonthData, setCurrentMonthData] = useState(null);
   const theme = useTheme();
   const { year, month, setYear, setMonth } = usePeriod();
+  const { reconnectCount } = useOfflineContext();
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -86,32 +89,51 @@ const Dashboard = () => {
     fetchData();
   }, [year, month]);
 
+  useEffect(() => {
+    if (reconnectCount > 0) {
+      fetchData();
+    }
+  }, [reconnectCount]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch monthly history (last 6 months)
-      const histRes = await axios.get('/api/dashboard/monthly-history', { params: { months: 6 } });
-      const history = histRes.data || [];
+      const history = await fetchWithCache(
+        `dashboard:monthly-history:${year}-${month}`,
+        async () => {
+          const histRes = await axios.get('/api/dashboard/monthly-history', { params: { months: 6 } });
+          return histRes.data || [];
+        }
+      );
       setMonthlyHistory(history);
 
-      // Find current month data from history
       const current = history.find(h => h.year === year && h.month === month);
       setCurrentMonthData(current || { gastosTC: 0, gastosCC: 0, ingresosCC: 0, balance: 0 });
 
-      // Fetch category breakdown for selected month
-      const catRes = await axios.get('/api/dashboard/categories', {
-        params: { periodYear: year, periodMonth: month, mode: 'monthly' }
-      });
-      const cats = (catRes.data || [])
+      const rawCategories = await fetchWithCache(
+        `dashboard:categories:${year}-${month}`,
+        async () => {
+          const catRes = await axios.get('/api/dashboard/categories', {
+            params: { periodYear: year, periodMonth: month, mode: 'monthly' }
+          });
+          return catRes.data || [];
+        }
+      );
+      const cats = (rawCategories || [])
         .filter(c => c.total > 0)
         .sort((a, b) => b.total - a.total);
       setCategoryBreakdown(cats);
 
-      // Fetch category evolution (last 6 months)
-      const catEvoRes = await axios.get('/api/dashboard/category-evolution', { params: { months: 6 } });
-      setCategoryEvolution(catEvoRes.data || { data: [], categories: [] });
+      const categoryEvolutionData = await fetchWithCache(
+        `dashboard:category-evolution:${year}-${month}`,
+        async () => {
+          const catEvoRes = await axios.get('/api/dashboard/category-evolution', { params: { months: 6 } });
+          return catEvoRes.data || { data: [], categories: [] };
+        }
+      );
+      setCategoryEvolution(categoryEvolutionData || { data: [], categories: [] });
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -215,13 +237,13 @@ const Dashboard = () => {
   const totalGastosCategoria = categoryBreakdown.reduce((sum, c) => sum + c.total, 0);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
+    <Container maxWidth="xl" sx={{ py: 3, overflowX: 'hidden' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 3 }}>
         <Typography variant="h4" fontWeight={700} color="primary">
           Dashboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'flex-start' }}}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { xs: 'stretch', sm: 'center' }, width: { xs: '100%', sm: 'auto' }, justifyContent: { xs: 'flex-start' } }}>
           <MonthPicker />
           <SyncButton />
         </Box>
@@ -274,7 +296,7 @@ const Dashboard = () => {
       <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'text.secondary' }}>
         Evolución Histórica (últimos 6 meses)
       </Typography>
-      <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+      <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 4, overflowX: 'hidden' }}>
         <ResponsiveContainer width="100%" height={350}>
           <ComposedChart
             data={monthlyHistory}
@@ -331,7 +353,7 @@ const Dashboard = () => {
       <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'text.secondary' }}>
         Evolución de Gastos por Categoría
       </Typography>
-      <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+      <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 4, overflowX: 'hidden' }}>
         {categoryEvolution.data.length > 0 ? (
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={categoryEvolution.data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
@@ -377,7 +399,7 @@ const Dashboard = () => {
       <Grid container spacing={3}>
         {/* Pie Chart Categorías */}
         <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 3, minHeight: 450, display: 'flex', flexDirection: 'column' }}>
+          <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, minHeight: 450, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
             <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
               Categorías del Mes
             </Typography>
@@ -482,7 +504,7 @@ const Dashboard = () => {
 
         {/* Gráfico Balance Mensual */}
         <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 3, height: 400 }}>
+          <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, height: 400, overflowX: 'hidden' }}>
             <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
               Balance Mensual
             </Typography>

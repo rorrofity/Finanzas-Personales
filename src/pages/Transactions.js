@@ -49,11 +49,13 @@ import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import axios from '../config/axios';
 import MonthPicker from '../components/MonthPicker';
 import SyncButton from '../components/SyncButton';
 import BillingPeriodConfig from '../components/BillingPeriodConfig';
 import { usePeriod } from '../contexts/PeriodContext';
+import { useOfflineContext } from '../contexts/OfflineContext';
+import { fetchWithCache } from '../services/readCache';
 
 const Transactions = () => {
   const theme = useTheme();
@@ -105,6 +107,7 @@ const Transactions = () => {
   });
 
   const { startISO, endISO, year, month } = usePeriod();
+  const { isOffline, reconnectCount } = useOfflineContext();
   const periodKey = `${year}-${String(month).padStart(2,'0')}`;
   const [cardFilter, setCardFilter] = useState(() => {
     try { return sessionStorage.getItem(`tcFilterCard::transactions::${periodKey}`) || 'ALL'; } catch { return 'ALL'; }
@@ -113,12 +116,25 @@ const Transactions = () => {
   useEffect(() => {
     fetchTransactions();
     fetchCategories();
-  }, []);
+  }, [year, month]);
+
+  useEffect(() => {
+    if (reconnectCount > 0) {
+      fetchTransactions();
+      fetchCategories();
+    }
+  }, [reconnectCount]);
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get('/api/categories');
-      setCategoriesList(response.data || []);
+      const categories = await fetchWithCache(
+        'transactions:categories',
+        async () => {
+          const response = await axios.get('/api/categories');
+          return response.data || [];
+        }
+      );
+      setCategoriesList(categories || []);
     } catch (err) {
       console.error('Error fetching categories:', err);
       setError('Error al cargar las categorías');
@@ -128,15 +144,21 @@ const Transactions = () => {
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/transactions', {
-        params: {
-          orderBy,
-          orderDirection,
-          periodYear: year,
-          periodMonth: month
+      const data = await fetchWithCache(
+        `transactions:list:${year}-${month}:${orderBy}:${orderDirection}`,
+        async () => {
+          const response = await axios.get('/api/transactions', {
+            params: {
+              orderBy,
+              orderDirection,
+              periodYear: year,
+              periodMonth: month
+            }
+          });
+          return response.data || [];
         }
-      });
-      setTransactions(response.data || []);
+      );
+      setTransactions(data || []);
       setError(null);
     } catch (err) {
       setError('Error al cargar las transacciones');
@@ -617,6 +639,7 @@ const Transactions = () => {
                   color="primary"
                   size="small"
                   onClick={() => handleOpenDialog()}
+                  disabled={isOffline}
                 >
                   Nueva
                 </Button>
@@ -625,6 +648,7 @@ const Transactions = () => {
                   color="primary"
                   size="small"
                   onClick={() => setOpenImportDialog(true)}
+                  disabled={isOffline}
                 >
                   Importar
                 </Button>
@@ -665,6 +689,7 @@ const Transactions = () => {
               variant="contained"
               color="error"
               onClick={() => handleDeleteClick()}
+              disabled={isOffline}
             >
               Eliminar seleccionadas ({selectedTransactions.length})
             </Button>
@@ -712,6 +737,7 @@ const Transactions = () => {
                             size="small"
                             value={transaction.category_id || ''}
                             onChange={(e) => handleCategoryChange(transaction.id, e.target.value)}
+                            disabled={isOffline}
                             displayEmpty
                             sx={{ flex: 1, '& .MuiSelect-select': { py: 0.75 } }}
                           >
@@ -724,13 +750,14 @@ const Transactions = () => {
                             size="small"
                             value={transaction.tipo}
                             onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
+                            disabled={isOffline}
                             sx={{ minWidth: 90, '& .MuiSelect-select': { py: 0.75 } }}
                           >
                             <MenuItem value="gasto">Gasto</MenuItem>
                             <MenuItem value="pago">Pago</MenuItem>
                             <MenuItem value="desestimar">Desest.</MenuItem>
                           </Select>
-                          <IconButton size="small" onClick={() => handleDeleteClick(transaction)}>
+                          <IconButton size="small" onClick={() => handleDeleteClick(transaction)} disabled={isOffline} aria-label="Eliminar">
                             <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Stack>
@@ -797,6 +824,7 @@ const Transactions = () => {
                             size="small"
                             value={transaction.category_id || ''}
                             onChange={(e) => handleCategoryChange(transaction.id, e.target.value)}
+                            disabled={isOffline}
                             displayEmpty
                             sx={{
                               minWidth: 120,
@@ -820,6 +848,7 @@ const Transactions = () => {
                             size="small"
                             value={transaction.tipo}
                             onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
+                            disabled={isOffline}
                             sx={{
                               minWidth: 100,
                               '& .MuiSelect-select': {
@@ -849,6 +878,8 @@ const Transactions = () => {
                             <IconButton
                               size="small"
                               onClick={() => handleOpenDialog(transaction)}
+                              disabled={isOffline}
+                              aria-label="Editar"
                             >
                               <EditIcon />
                             </IconButton>
@@ -857,6 +888,8 @@ const Transactions = () => {
                             <IconButton
                               size="small"
                               onClick={() => handleDeleteClick(transaction)}
+                              disabled={isOffline}
+                              aria-label="Eliminar"
                             >
                               <DeleteIcon />
                             </IconButton>

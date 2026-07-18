@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <!-- Fondo a sangre completa (sin esquinas redondeadas: el sistema aplica la máscara) -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- Contenido escalado al ~64% y centrado, dentro de la zona segura -->
+  <g transform="translate(96,96) scale(0.625)">
+    <g fill="#FFFFFF" opacity="0.95">
+      <rect x="120" y="300" width="48" height="92" rx="12"/>
+      <rect x="196" y="248" width="48" height="144" rx="12"/>
+      <rect x="272" y="196" width="48" height="196" rx="12"/>
+      <rect x="348" y="140" width="48" height="252" rx="12"/>
+    </g>
+    <path d="M120 268 L208 212 L296 240 L392 132"
+          fill="none" stroke="#DBEAFE" stroke-width="20"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M356 124 L400 116 L392 160 Z" fill="#DBEAFE"/>
+  </g>
+</svg>

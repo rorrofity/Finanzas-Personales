@@ -6,8 +6,14 @@ jspm_packages/
 .env
 .env.local
 .env.development.local
+.env.test
 .env.test.local
 .env.production.local
+
+# Playwright / E2E artifacts
+/test-results/
+/playwright-report/
+/playwright/.cache/
 
 # Logs
 logs
@@ -46,5 +52,9 @@ yarn.lock
 uploads_history/
 uploads/
 server_pass
+
+# Cartolas bancarias / datos personales (nunca commitear)
+/*.xls
+/*.xlsx
 
 db_backup.sql

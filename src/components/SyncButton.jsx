@@ -17,6 +17,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
+import { useOfflineContext } from '../contexts/OfflineContext';
 
 /**
  * SyncButton Component
@@ -34,6 +35,7 @@ const SyncButton = ({
   variant = 'contained',
   size = 'medium'
 }) => {
+  const { isOffline } = useOfflineContext();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [notification, setNotification] = useState({
@@ -47,6 +49,15 @@ const SyncButton = ({
   });
 
   const handleSync = async () => {
+    if (isOffline) {
+      setNotification({
+        open: true,
+        message: 'Requiere conexión',
+        severity: 'warning'
+      });
+      return;
+    }
+
     setLoading(true);
     setProgress(0);
     
@@ -141,11 +152,17 @@ const SyncButton = ({
           size={size}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SyncIcon />}
           onClick={handleSync}
-          disabled={loading}
+          disabled={loading || isOffline}
           sx={{ minWidth: size === 'small' ? 150 : 200 }}
         >
           {loading ? 'Sincronizando...' : 'Sincronizar Emails'}
         </Button>
+
+        {isOffline && !loading && (
+          <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+            Requiere conexión
+          </Typography>
+        )}
         
         {loading && (
           <Box sx={{ width: '100%', mt: 0.5 }}>

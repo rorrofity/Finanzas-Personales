@@ -26,6 +26,9 @@ import {
   InputLabel,
   Snackbar,
   Alert,
+  Stack,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import axios from 'axios';
@@ -47,6 +50,8 @@ const emptyPlan = (year, month) => ({
 });
 
 export default function Installments() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
   const [plans, setPlans] = useState([]);
   const [occurrences, setOccurrences] = useState([]);
@@ -212,110 +217,188 @@ export default function Installments() {
         </Grid>
       </Grid>
 
-      <Paper sx={{ mb: 3 }}>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Tarjeta</TableCell>
-                <TableCell>Descripción</TableCell>
-                <TableCell align="right">Monto cuota</TableCell>
-                <TableCell>Cuota actual</TableCell>
-                <TableCell>Total cuotas</TableCell>
-                <TableCell>Categoría</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {plans.length === 0 && (
+      {isMobile ? (
+        <Stack spacing={1.5} sx={{ mb: 3 }}>
+          {plans.length === 0 ? (
+            <Paper sx={{ p: 3 }}>
+              <Typography align="center" color="text.secondary">No tienes compras en cuotas registradas. Crea tu primera compra en cuotas.</Typography>
+            </Paper>
+          ) : (
+            plans.map((p) => {
+              const occ = occurrences.find(o => o.plan_id === p.id);
+              const currentLabel = occ ? `${occ.installment_number}/${p.total_installments}` : '-';
+              return (
+                <Card key={p.id} variant="outlined">
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" fontWeight={700}>{p.descripcion}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{p.brand}</Typography>
+                      </Box>
+                      <Typography variant="body2" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>{currency(p.amount_per_installment)}</Typography>
+                    </Box>
+                    <Stack spacing={1}>
+                      <Typography variant="caption" color="text.secondary">Cuota actual: {currentLabel}</Typography>
+                      <Typography variant="caption" color="text.secondary">Total cuotas: {p.total_installments}</Typography>
+                      <Stack direction="row" justifyContent="flex-end">
+                        <Button size="small" color="error" startIcon={<Delete fontSize="small" />} onClick={() => handleDeletePlanForward(p)}>Eliminar plan</Button>
+                      </Stack>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </Stack>
+      ) : (
+        <Paper sx={{ mb: 3 }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={7} align="center">No tienes compras en cuotas registradas. Crea tu primera compra en cuotas.</TableCell>
+                  <TableCell>Tarjeta</TableCell>
+                  <TableCell>Descripción</TableCell>
+                  <TableCell align="right">Monto cuota</TableCell>
+                  <TableCell>Cuota actual</TableCell>
+                  <TableCell>Total cuotas</TableCell>
+                  <TableCell>Categoría</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              )}
-              {plans.map((p) => {
-                // calcular cuota del mes si existe
-                const occ = occurrences.find(o => o.plan_id === p.id);
-                const currentLabel = occ ? `${occ.installment_number}/${p.total_installments}` : '-';
-                return (
-                  <TableRow key={p.id} hover>
-                    <TableCell sx={{ textTransform: 'capitalize' }}>{p.brand}</TableCell>
-                    <TableCell>{p.descripcion}</TableCell>
-                    <TableCell align="right">{currency(p.amount_per_installment)}</TableCell>
-                    <TableCell>{currentLabel}</TableCell>
-                    <TableCell>{p.total_installments}</TableCell>
-                    <TableCell>{p.category_id || '-'}</TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Eliminar plan (desde este mes)">
-                        <IconButton size="small" color="error" onClick={() => handleDeletePlanForward(p)}><Delete fontSize="small" /></IconButton>
-                      </Tooltip>
-                    </TableCell>
+              </TableHead>
+              <TableBody>
+                {plans.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">No tienes compras en cuotas registradas. Crea tu primera compra en cuotas.</TableCell>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+                )}
+                {plans.map((p) => {
+                  const occ = occurrences.find(o => o.plan_id === p.id);
+                  const currentLabel = occ ? `${occ.installment_number}/${p.total_installments}` : '-';
+                  return (
+                    <TableRow key={p.id} hover>
+                      <TableCell sx={{ textTransform: 'capitalize' }}>{p.brand}</TableCell>
+                      <TableCell>{p.descripcion}</TableCell>
+                      <TableCell align="right">{currency(p.amount_per_installment)}</TableCell>
+                      <TableCell>{currentLabel}</TableCell>
+                      <TableCell>{p.total_installments}</TableCell>
+                      <TableCell>{p.category_id || '-'}</TableCell>
+                      <TableCell align="right">
+                        <Tooltip title="Eliminar plan (desde este mes)">
+                          <IconButton size="small" color="error" onClick={() => handleDeletePlanForward(p)}><Delete fontSize="small" /></IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
-      <Paper>
-        <Box p={2}>
+      {isMobile ? (
+        <Stack spacing={1.5}>
           <Typography variant="h6">Cuotas del mes</Typography>
-        </Box>
-        <Divider />
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Fecha (período)</TableCell>
-                <TableCell>Tarjeta</TableCell>
-                <TableCell>Descripción</TableCell>
-                <TableCell>Cuota</TableCell>
-                <TableCell align="right">Monto</TableCell>
-                <TableCell>Categoría</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {occurrences.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} align="center">No hay cuotas para este mes</TableCell>
-                </TableRow>
-              )}
-              {occurrences.map((o) => (
-                <TableRow key={o.id} hover>
-                  <TableCell>{`${o.year}-${String(o.month).padStart(2,'0')}`}</TableCell>
-                  <TableCell sx={{ textTransform: 'capitalize' }}>{o.brand}</TableCell>
-                  <TableCell>{o.descripcion}</TableCell>
-                  <TableCell>{`${o.installment_number}`}</TableCell>
-                  <TableCell align="right">{currency(o.amount)}</TableCell>
-                  <TableCell>
+          {occurrences.length === 0 ? (
+            <Paper sx={{ p: 3 }}>
+              <Typography align="center" color="text.secondary">No hay cuotas para este mes</Typography>
+            </Paper>
+          ) : (
+            occurrences.map((o) => (
+              <Card key={o.id} variant="outlined">
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={700}>{o.descripcion}</Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize' }}>{o.brand} · {`${o.year}-${String(o.month).padStart(2,'0')}`}</Typography>
+                    </Box>
+                    <Typography variant="body2" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>{currency(o.amount)}</Typography>
+                  </Box>
+                  <Stack spacing={1}>
+                    <Typography variant="caption" color="text.secondary">Cuota #{o.installment_number}</Typography>
                     <Select
                       size="small"
                       value={o.category_id || ''}
                       onChange={(e) => changeOccurrenceCategoryInline(o, e.target.value)}
                       displayEmpty
-                      sx={{ minWidth: 160 }}
+                      sx={{ width: '100%' }}
                     >
                       <MenuItem value=""><em>Sin categoría</em></MenuItem>
                       {categories.map(c => (
                         <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
                       ))}
                     </Select>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Editar cuota">
-                      <IconButton size="small" onClick={() => openEditOccurrence(o)}><Edit fontSize="small" /></IconButton>
-                    </Tooltip>
-                    <Tooltip title="Eliminar cuota">
-                      <IconButton size="small" onClick={() => handleDeleteOccurrence(o)}><Delete fontSize="small" /></IconButton>
-                    </Tooltip>
-                  </TableCell>
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      <Button size="small" startIcon={<Edit fontSize="small" />} onClick={() => openEditOccurrence(o)}>Editar</Button>
+                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} onClick={() => handleDeleteOccurrence(o)}>Eliminar</Button>
+                    </Stack>
+                  </Stack>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </Stack>
+      ) : (
+        <Paper>
+          <Box p={2}>
+            <Typography variant="h6">Cuotas del mes</Typography>
+          </Box>
+          <Divider />
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Fecha (período)</TableCell>
+                  <TableCell>Tarjeta</TableCell>
+                  <TableCell>Descripción</TableCell>
+                  <TableCell>Cuota</TableCell>
+                  <TableCell align="right">Monto</TableCell>
+                  <TableCell>Categoría</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {occurrences.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">No hay cuotas para este mes</TableCell>
+                  </TableRow>
+                )}
+                {occurrences.map((o) => (
+                  <TableRow key={o.id} hover>
+                    <TableCell>{`${o.year}-${String(o.month).padStart(2,'0')}`}</TableCell>
+                    <TableCell sx={{ textTransform: 'capitalize' }}>{o.brand}</TableCell>
+                    <TableCell>{o.descripcion}</TableCell>
+                    <TableCell>{`${o.installment_number}`}</TableCell>
+                    <TableCell align="right">{currency(o.amount)}</TableCell>
+                    <TableCell>
+                      <Select
+                        size="small"
+                        value={o.category_id || ''}
+                        onChange={(e) => changeOccurrenceCategoryInline(o, e.target.value)}
+                        displayEmpty
+                        sx={{ minWidth: 160 }}
+                      >
+                        <MenuItem value=""><em>Sin categoría</em></MenuItem>
+                        {categories.map(c => (
+                          <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Editar cuota">
+                        <IconButton size="small" onClick={() => openEditOccurrence(o)}><Edit fontSize="small" /></IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar cuota">
+                        <IconButton size="small" onClick={() => handleDeleteOccurrence(o)}><Delete fontSize="small" /></IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
         <DialogTitle>Nueva compra en cuotas</DialogTitle>
