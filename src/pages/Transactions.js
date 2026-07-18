@@ -55,6 +55,8 @@ import SyncButton from '../components/SyncButton';
 import BillingPeriodConfig from '../components/BillingPeriodConfig';
 import { usePeriod } from '../contexts/PeriodContext';
 import { useOfflineContext } from '../contexts/OfflineContext';
+import { useSpace } from '../contexts/SpaceContext';
+import CreatedByChip from '../components/CreatedByChip';
 import { fetchWithCache } from '../services/readCache';
 
 const Transactions = () => {
@@ -108,6 +110,14 @@ const Transactions = () => {
 
   const { startISO, endISO, year, month } = usePeriod();
   const { isOffline, reconnectCount } = useOfflineContext();
+  // Permisos del espacio activo (Epic 11, Reqs 11.6/11.7/11.12)
+  const { activeSpace, hasMembers } = useSpace();
+  const canEdit = activeSpace?.canEdit !== false;
+  const canDelete = activeSpace?.canDelete !== false;
+  const writeDisabled = isOffline || !canEdit;
+  const deleteDisabled = isOffline || !canDelete;
+  const writeTooltip = isOffline ? 'Requiere conexión' : !canEdit ? 'Sin permiso de edición' : '';
+  const showCreatedBy = activeSpace?.isOwner === false || hasMembers;
   const periodKey = `${year}-${String(month).padStart(2,'0')}`;
   const [cardFilter, setCardFilter] = useState(() => {
     try { return sessionStorage.getItem(`tcFilterCard::transactions::${periodKey}`) || 'ALL'; } catch { return 'ALL'; }
@@ -632,24 +642,32 @@ const Transactions = () => {
               variant="outlined"
               size="small"
             />
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              onClick={() => handleOpenDialog()}
-              disabled={isOffline}
-            >
-              Nueva
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              onClick={() => setOpenImportDialog(true)}
-              disabled={isOffline}
-            >
-              Importar
-            </Button>
+            <Tooltip title={writeTooltip}>
+              <span>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={() => handleOpenDialog()}
+                  disabled={writeDisabled}
+                >
+                  Nueva
+                </Button>
+              </span>
+            </Tooltip>
+            <Tooltip title={writeTooltip}>
+              <span>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={() => setOpenImportDialog(true)}
+                  disabled={writeDisabled}
+                >
+                  Importar
+                </Button>
+              </span>
+            </Tooltip>
           </Stack>
         </Box>
         <Box px={{ xs: 1, sm: 2 }} pb={1} display="flex" alignItems="center" gap={1} flexWrap="wrap">
@@ -685,7 +703,7 @@ const Transactions = () => {
               variant="contained"
               color="error"
               onClick={() => handleDeleteClick()}
-              disabled={isOffline}
+              disabled={deleteDisabled}
             >
               Eliminar seleccionadas ({selectedTransactions.length})
             </Button>
@@ -722,6 +740,11 @@ const Transactions = () => {
                             <Typography variant="caption" color="text.secondary">
                               {formatDateLocal(transaction.fecha)} • {transaction.network || '-'}
                             </Typography>
+                            {showCreatedBy && (
+                              <Box sx={{ mt: 0.5 }}>
+                                <CreatedByChip name={transaction.created_by_name} />
+                              </Box>
+                            )}
                           </Box>
                           <Typography variant="body1" fontWeight="bold" color="error.main" sx={{ ml: 1, whiteSpace: 'nowrap' }}>
                             {formatAmount(transaction.monto)}
@@ -733,7 +756,7 @@ const Transactions = () => {
                             size="small"
                             value={transaction.category_id || ''}
                             onChange={(e) => handleCategoryChange(transaction.id, e.target.value)}
-                            disabled={isOffline}
+                            disabled={writeDisabled}
                             displayEmpty
                             sx={{ flex: 1, '& .MuiSelect-select': { py: 0.75 } }}
                           >
@@ -746,17 +769,17 @@ const Transactions = () => {
                             size="small"
                             value={transaction.tipo}
                             onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
-                            disabled={isOffline}
+                            disabled={writeDisabled}
                             sx={{ minWidth: 90, '& .MuiSelect-select': { py: 0.75 } }}
                           >
                             <MenuItem value="gasto">Gasto</MenuItem>
                             <MenuItem value="pago">Pago</MenuItem>
                             <MenuItem value="desestimar">Desest.</MenuItem>
                           </Select>
-                          <IconButton size="small" onClick={() => handleOpenDialog(transaction)} disabled={isOffline} aria-label="Editar">
+                          <IconButton size="small" onClick={() => handleOpenDialog(transaction)} disabled={writeDisabled} aria-label="Editar">
                             <EditIcon fontSize="small" />
                           </IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteClick(transaction)} disabled={isOffline} aria-label="Eliminar">
+                          <IconButton size="small" onClick={() => handleDeleteClick(transaction)} disabled={deleteDisabled} aria-label="Eliminar">
                             <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Stack>
@@ -814,6 +837,11 @@ const Transactions = () => {
                           {transaction.tipo === 'desestimar' && (
                             <Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />
                           )}
+                          {showCreatedBy && transaction.created_by_name && (
+                            <Box component="span" sx={{ ml: 1 }}>
+                              <CreatedByChip name={transaction.created_by_name} />
+                            </Box>
+                          )}
                         </TableCell>
                         <TableCell>
                           {formatAmount(transaction.monto)}
@@ -823,7 +851,7 @@ const Transactions = () => {
                             size="small"
                             value={transaction.category_id || ''}
                             onChange={(e) => handleCategoryChange(transaction.id, e.target.value)}
-                            disabled={isOffline}
+                            disabled={writeDisabled}
                             displayEmpty
                             sx={{
                               minWidth: 120,
@@ -847,7 +875,7 @@ const Transactions = () => {
                             size="small"
                             value={transaction.tipo}
                             onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
-                            disabled={isOffline}
+                            disabled={writeDisabled}
                             sx={{
                               minWidth: 100,
                               '& .MuiSelect-select': {
@@ -877,7 +905,7 @@ const Transactions = () => {
                             <IconButton
                               size="small"
                               onClick={() => handleOpenDialog(transaction)}
-                              disabled={isOffline}
+                              disabled={writeDisabled}
                               aria-label="Editar"
                             >
                               <EditIcon />
@@ -887,7 +915,7 @@ const Transactions = () => {
                             <IconButton
                               size="small"
                               onClick={() => handleDeleteClick(transaction)}
-                              disabled={isOffline}
+                              disabled={deleteDisabled}
                               aria-label="Eliminar"
                             >
                               <DeleteIcon />

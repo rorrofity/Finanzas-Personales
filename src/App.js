@@ -8,6 +8,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PeriodProvider } from './contexts/PeriodContext';
 import { OfflineProvider } from './contexts/OfflineContext';
+import { SpaceProvider } from './contexts/SpaceContext';
 import theme from './theme';
 
 // Layouts
@@ -63,6 +64,7 @@ function App() {
         <UpdateBanner />
         <InstallPrompt />
         <AuthProvider>
+          <SpaceProvider>
           <PeriodProvider>
             <OfflineProvider>
               <Suspense fallback={<PageLoader />}>
@@ -93,6 +95,7 @@ function App() {
               </Suspense>
             </OfflineProvider>
           </PeriodProvider>
+          </SpaceProvider>
         </AuthProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>

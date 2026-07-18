@@ -30,7 +30,9 @@ import {
   MonetizationOn as HealthIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useSpace } from '../contexts/SpaceContext';
 import OfflineBanner from '../components/OfflineBanner';
+import SpaceSwitcher from '../components/SpaceSwitcher';
 import { getSuspiciousCount } from '../services/suspiciousService';
 
 const drawerWidth = 200;
@@ -39,6 +41,7 @@ const DashboardLayout = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { activeSpace } = useSpace();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState(true);
@@ -124,6 +127,7 @@ const DashboardLayout = () => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Finanzas Personales
           </Typography>
+          <SpaceSwitcher />
           <IconButton onClick={handleProfileMenu} sx={{ padding: 0 }}>
             <Avatar
               alt={user?.nombre}
@@ -250,7 +254,11 @@ const DashboardLayout = () => {
       >
         <Toolbar />
         <OfflineBanner />
-        <Outlet />
+        {/* key por espacio: al cambiar de espacio se remontan las páginas
+            y refetchean sus datos (Req 11.13) */}
+        <Box key={activeSpace?.ownerId || 'own'}>
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   );

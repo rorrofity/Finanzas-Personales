@@ -18,6 +18,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 import { useOfflineContext } from '../contexts/OfflineContext';
+import { useSpace } from '../contexts/SpaceContext';
 
 /**
  * SyncButton Component
@@ -36,6 +37,9 @@ const SyncButton = ({
   size = 'medium'
 }) => {
   const { isOffline } = useOfflineContext();
+  const { activeSpace } = useSpace();
+  // Sync N8N: exclusivo del dueño del espacio (Req 11.9)
+  const isOwner = activeSpace?.isOwner !== false;
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [notification, setNotification] = useState({
@@ -152,7 +156,7 @@ const SyncButton = ({
           size={size}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SyncIcon />}
           onClick={handleSync}
-          disabled={loading || isOffline}
+          disabled={loading || isOffline || !isOwner}
           sx={{ minWidth: size === 'small' ? 150 : 200 }}
         >
           {loading ? 'Sincronizando...' : 'Sincronizar Emails'}
@@ -161,6 +165,12 @@ const SyncButton = ({
         {isOffline && !loading && (
           <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
             Requiere conexión
+          </Typography>
+        )}
+
+        {!isOwner && !isOffline && !loading && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            Solo el dueño del espacio puede sincronizar
           </Typography>
         )}
         

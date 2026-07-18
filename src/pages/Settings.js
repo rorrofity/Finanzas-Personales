@@ -36,6 +36,9 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import Profile from './Profile';
+import GroupIcon from '@mui/icons-material/Group';
+import SpaceMembersSettings from '../components/SpaceMembersSettings';
+import { useSpace } from '../contexts/SpaceContext';
 
 function TabPanel({ children, value, index, ...other }) {
   return (
@@ -48,6 +51,9 @@ function TabPanel({ children, value, index, ...other }) {
 const emptyCard = { last_four: '', network: 'visa', holder: '', label: '' };
 
 const Settings = () => {
+  // Configuración exclusiva del dueño del espacio (Req 11.10)
+  const { activeSpace } = useSpace();
+  const isOwner = activeSpace?.isOwner !== false;
   const [tabIndex, setTabIndex] = useState(0);
   const [cards, setCards] = useState([]);
   const [loadingCards, setLoadingCards] = useState(false);
@@ -166,12 +172,26 @@ const Settings = () => {
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="Perfil" />
-          <Tab label="Tarjetas de Crédito" icon={<CreditCardIcon />} iconPosition="start" />
+          {isOwner && <Tab label="Tarjetas de Crédito" icon={<CreditCardIcon />} iconPosition="start" />}
+          {isOwner && <Tab label="Espacio compartido" icon={<GroupIcon />} iconPosition="start" />}
         </Tabs>
+
+        {!isOwner && (
+          <Alert severity="info" sx={{ my: 2 }}>
+            Estás viendo un espacio compartido. La configuración de tarjetas y
+            miembros solo está disponible para el dueño del espacio.
+          </Alert>
+        )}
 
         <TabPanel value={tabIndex} index={0}>
           <Profile embedded />
         </TabPanel>
+
+        {isOwner && (
+        <TabPanel value={tabIndex} index={2}>
+          <SpaceMembersSettings />
+        </TabPanel>
+        )}
 
         <TabPanel value={tabIndex} index={1}>
           {cardError && (
