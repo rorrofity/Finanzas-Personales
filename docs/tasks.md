@@ -155,12 +155,12 @@
 | 5.2 | 🔁 V | Test E2E de regresión: funcionalidad existente intacta (regression.spec.js + smoke.spec.js en verde) | N8N-001 | `[x]` |
 | 5.3 | S | Auditoría Lighthouse (LH12 sin categoría PWA; instalabilidad cubierta por Playwright): perf 98, a11y 96, best-practices 96, SEO 100 | Todas | `[x]` |
 | 5.4 | 🟢 I | Optimizar bundle: React.lazy por ruta (main 1.2MB → 461KB + 26 chunks) + Google Fonts no bloqueante (FCP 4.6s → 0.6s) | 9.5 | `[x]` |
-| 5.5 | S | Pruebas en dispositivos reales: iOS Safari + Android Chrome | 9.7, 9.11 | `[ ]` (manual, post-deploy) |
-| 5.6 | S | Deploy a producción (git pull + npm install + build + pm2 restart en droplet; no existe deploy-to-production.sh) | — | `[~]` |
-| 5.7 | 🔁 V | Verificación post-deploy: instalar PWA desde `finanzas.rocketflow.cl` | — | `[ ]` |
+| 5.5 | S | Pruebas en dispositivos reales: iOS Safari + Android Chrome | 9.7, 9.11 | `[ ]` (manual: instalar desde el teléfono) |
+| 5.6 | S | Deploy a producción 2026-07-18 (git pull + npm install + build + pm2 restart; Caddyfile.secure aplicado con headers de seguridad + CSP, proxy corregido a 172.17.0.1) | — | `[x]` |
+| 5.7 | 🔁 V | Verificación post-deploy: SW activo + precache Workbox + manifest standalone + headers CSP/HSTS + N8N intacto, 0 errores de consola en `finanzas.rocketflow.cl` | — | `[x]` |
 | 5.8 | S | **Generar `walkthrough.md`** documentando lo construido, decisiones y cómo validar | — | `[x]` |
 
-**Criterio de aceptación Fase 5:** Suite completa en verde, PWA en producción, sin regresiones, `walkthrough.md` generado.
+**Criterio de aceptación Fase 5:** ✅ CUMPLIDO (salvo 5.5 manual) — Suite completa en verde, PWA en producción, sin regresiones, `walkthrough.md` generado.
 
 ---
 
