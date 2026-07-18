@@ -1,15 +1,12 @@
 rocketflow.cl {
-    # Force modern TLS
-    protocols tls1.2 tls1.3
-    
     reverse_proxy n8n:5678 {
       flush_interval -1
     }
 }
 
 finanzas.rocketflow.cl {
-    # Force modern TLS
-    protocols tls1.2 tls1.3
+    # Nota: no usar la directiva `protocols` aquí — no es válida a nivel de
+    # sitio en esta versión de Caddy y su default ya es TLS 1.2+.
 
     # Headers de seguridad para mejorar confianza con Netskope y compliance
     header {
