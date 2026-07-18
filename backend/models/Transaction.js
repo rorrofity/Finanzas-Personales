@@ -19,7 +19,7 @@ class Transaction {
     }
   }
 
-  async importFromCSV(userId, transactionData, importId = null, billingYear = null, billingMonth = null) {
+  async importFromCSV(userId, transactionData, importId = null, billingYear = null, billingMonth = null, actorId = null) {
     let insertedCount = 0;
     let skippedCount = 0;
     const results = [];
@@ -134,8 +134,9 @@ class Transaction {
               cuotas,
               import_id,
               billing_year,
-              billing_month
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+              billing_month,
+              created_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING *
           `;
 
@@ -149,7 +150,8 @@ class Transaction {
             transaction.cuotas || '01',
             importId,
             txBillingYear,
-            txBillingMonth
+            txBillingMonth,
+            actorId || userId
           ];
 
           const result = await this.query(insertQuery, values);
@@ -223,14 +225,16 @@ class Transaction {
       // Construir la consulta con ordenamiento dinámico
       // Filtrar por billing_year/billing_month (período de pago) en lugar de fecha de transacción
       const query = `
-        SELECT 
-          t.*, 
+        SELECT
+          t.*,
           c.name as category_name,
           i.provider,
-          i.network
+          i.network,
+          cb.nombre as created_by_name
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
         LEFT JOIN imports i ON t.import_id = i.id
+        LEFT JOIN users cb ON t.created_by = cb.id
         WHERE t.user_id = $1
         ${periodYear && periodMonth ? 'AND (COALESCE(t.billing_year, EXTRACT(YEAR FROM t.fecha)) = $2 AND COALESCE(t.billing_month, EXTRACT(MONTH FROM t.fecha)) = $3)' : (startDate && endDate ? 'AND t.fecha >= $2 AND t.fecha <= $3' : '')}
         ORDER BY ${field === 'category_name' ? 'c.name' : (field === 'provider' ? 'i.provider' : (field === 'network' ? 'i.network' : 't.' + field))} ${direction}, t.created_at DESC

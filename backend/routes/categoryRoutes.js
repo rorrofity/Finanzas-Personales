@@ -8,13 +8,16 @@ const {
     deleteCategory
 } = require('../controllers/categoryController');
 
-// Todas las rutas requieren autenticación
+// Todas las rutas requieren autenticación + espacio activo (Epic 11)
+const { resolveSpace } = require('../middleware/resolveSpace');
+const { requireEdit, requireDelete } = require('../middleware/requirePermission');
 router.use(auth);
+router.use(resolveSpace);
 
 // Rutas CRUD para categorías
 router.get('/', getCategories);
-router.post('/', createCategory);
-router.put('/:id', updateCategory);
-router.delete('/:id', deleteCategory);
+router.post('/', requireEdit, createCategory);
+router.put('/:id', requireEdit, updateCategory);
+router.delete('/:id', requireDelete, deleteCategory);
 
 module.exports = router;

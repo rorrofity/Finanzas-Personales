@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
 const db = require('../config/database');
+const { resolveSpace } = require('../middleware/resolveSpace');
+const { requireOwner } = require('../middleware/requirePermission');
 
 // GET /api/cards — Listar tarjetas del usuario
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, resolveSpace, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT id, last_four, network, holder, label, is_active, created_at, updated_at
@@ -21,7 +23,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // POST /api/cards — Agregar tarjeta
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, resolveSpace, requireOwner, async (req, res) => {
   try {
     const { last_four, network, holder, label } = req.body;
 
@@ -52,7 +54,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // PUT /api/cards/:id — Editar tarjeta
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, resolveSpace, requireOwner, async (req, res) => {
   try {
     const { last_four, network, holder, label, is_active } = req.body;
 
@@ -130,7 +132,7 @@ router.get('/mapping', async (req, res) => {
 });
 
 // DELETE /api/cards/:id — Eliminar tarjeta
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, resolveSpace, requireOwner, async (req, res) => {
   try {
     const result = await db.query(
       'DELETE FROM credit_cards WHERE id = $1 AND user_id = $2 RETURNING id',

@@ -38,7 +38,7 @@ test.afterAll(async () => {
   await db.cleanSpaceMemberships(TEST_EMAILS);
   await db.cleanTestTransactions(TX_PREFIX);
   await db.deleteUserByEmail('e2e.pending@test.local');
-  await db.closeDb();
+  // No cerrar el pool: es compartido entre archivos de spec del mismo worker.
 });
 
 test.describe.serial('Fase 1 — Membresías y ACL', () => {

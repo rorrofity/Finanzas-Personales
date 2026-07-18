@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
 const db = require('../config/database');
+const { resolveSpace } = require('../middleware/resolveSpace');
+const { requireOwner } = require('../middleware/requirePermission');
 
 /**
  * GET /api/billing/periods
  * Get all billing periods for the user
  */
-router.get('/periods', auth, async (req, res) => {
+router.get('/periods', auth, resolveSpace, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT * FROM billing_periods 
@@ -26,7 +28,7 @@ router.get('/periods', auth, async (req, res) => {
  * GET /api/billing/periods/:year/:month
  * Get a specific billing period
  */
-router.get('/periods/:year/:month', auth, async (req, res) => {
+router.get('/periods/:year/:month', auth, resolveSpace, async (req, res) => {
   try {
     const { year, month } = req.params;
     
@@ -64,7 +66,7 @@ router.get('/periods/:year/:month', auth, async (req, res) => {
  * POST /api/billing/periods
  * Create or update a billing period
  */
-router.post('/periods', auth, async (req, res) => {
+router.post('/periods', auth, resolveSpace, requireOwner, async (req, res) => {
   try {
     const { billing_year, billing_month, period_start, period_end } = req.body;
     
@@ -102,7 +104,7 @@ router.post('/periods', auth, async (req, res) => {
  * 1. Assigns transactions within the date range to this billing period
  * 2. Reassigns transactions currently in this period but OUTSIDE the date range to the next period
  */
-router.post('/recalculate/:year/:month', auth, async (req, res) => {
+router.post('/recalculate/:year/:month', auth, resolveSpace, requireOwner, async (req, res) => {
   try {
     const { year, month } = req.params;
     const userId = req.user.id;
@@ -191,7 +193,7 @@ router.post('/recalculate/:year/:month', auth, async (req, res) => {
  * DELETE /api/billing/periods/:year/:month
  * Delete a billing period configuration
  */
-router.delete('/periods/:year/:month', auth, async (req, res) => {
+router.delete('/periods/:year/:month', auth, resolveSpace, requireOwner, async (req, res) => {
   try {
     const { year, month } = req.params;
     

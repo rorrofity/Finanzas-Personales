@@ -4,6 +4,8 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const { auth } = require('../middleware/auth');
 const { pool } = require('../config/database');
+const { resolveSpace } = require('../middleware/resolveSpace');
+const { requireOwner } = require('../middleware/requirePermission');
 
 /**
  * Calcula el período de facturación basándose en la fecha de transacción.
@@ -56,7 +58,7 @@ function calculateBillingPeriod(fecha) {
  * Endpoint principal llamado por el frontend
  * Orquesta la sincronización completa con N8N
  */
-router.post('/sync-emails', auth, async (req, res) => {
+router.post('/sync-emails', auth, resolveSpace, requireOwner, async (req, res) => {
   const userId = req.user.id;
   const startTime = Date.now();
   
@@ -451,7 +453,7 @@ router.post('/sync-save', async (req, res) => {
  * Endpoint para obtener información sobre la última sincronización
  * (Opcional - para implementación futura)
  */
-router.get('/sync-status', auth, async (req, res) => {
+router.get('/sync-status', auth, resolveSpace, async (req, res) => {
   const userId = req.user.id;
   
   try {

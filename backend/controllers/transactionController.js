@@ -715,7 +715,7 @@ const importTransactions = async (req, res) => {
 
     const transactionModel = new Transaction(db);
     // Pasar período de facturación seleccionado por el usuario (si lo eligió)
-    const importResult = await transactionModel.importFromCSV(req.user.id, transactionsForInsert, importId, periodYear, periodMonth);
+    const importResult = await transactionModel.importFromCSV(req.user.id, transactionsForInsert, importId, periodYear, periodMonth, req.actorId || req.user.id);
 
     // Detectar posibles duplicados sospechosos en las transacciones recién insertadas
     if (importResult.insertedTransactions && importResult.insertedTransactions.length > 0) {
@@ -911,15 +911,16 @@ const createTransaction = async (req, res) => {
   try {
     const { fecha, descripcion, monto, category_id, tipo } = req.body;
     const userId = req.user.id;
+    const actorId = req.actorId || userId; // auditoría Epic 11 (Req 11.11)
 
     const query = `
-      INSERT INTO transactions (user_id, fecha, descripcion, monto, category_id, tipo)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *, 
+      INSERT INTO transactions (user_id, fecha, descripcion, monto, category_id, tipo, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *,
         (SELECT name FROM categories WHERE id = category_id) as category_name
     `;
 
-    const result = await db.query(query, [userId, fecha, descripcion, monto, category_id, tipo]);
+    const result = await db.query(query, [userId, fecha, descripcion, monto, category_id, tipo, actorId]);
     
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -933,16 +934,17 @@ const updateTransaction = async (req, res) => {
     const { id } = req.params;
     const { fecha, descripcion, monto, category_id, tipo } = req.body;
     const userId = req.user.id;
+    const actorId = req.actorId || userId; // auditoría Epic 11 (Req 11.11)
 
     const query = `
-      UPDATE transactions 
-      SET fecha = $1, descripcion = $2, monto = $3, category_id = $4, tipo = $5
+      UPDATE transactions
+      SET fecha = $1, descripcion = $2, monto = $3, category_id = $4, tipo = $5, updated_by = $8
       WHERE id = $6 AND user_id = $7
-      RETURNING *, 
+      RETURNING *,
         (SELECT name FROM categories WHERE id = category_id) as category_name
     `;
 
-    const result = await db.query(query, [fecha, descripcion, monto, category_id, tipo, id, userId]);
+    const result = await db.query(query, [fecha, descripcion, monto, category_id, tipo, id, userId, actorId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Transacción no encontrada' });
@@ -960,16 +962,17 @@ const updateTransactionCategory = async (req, res) => {
     const { id } = req.params;
     const { category_id } = req.body;
     const userId = req.user.id;
+    const actorId = req.actorId || userId; // auditoría Epic 11 (Req 11.11)
 
     const query = `
-      UPDATE transactions 
-      SET category_id = $1, updated_at = CURRENT_TIMESTAMP
+      UPDATE transactions
+      SET category_id = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $4
       WHERE id = $2 AND user_id = $3
-      RETURNING *, 
+      RETURNING *,
         (SELECT name FROM categories WHERE id = category_id) as category_name
     `;
 
-    const result = await db.query(query, [category_id, id, userId]);
+    const result = await db.query(query, [category_id, id, userId, actorId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Transacción no encontrada' });

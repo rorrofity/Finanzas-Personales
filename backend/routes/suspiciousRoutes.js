@@ -11,11 +11,17 @@ const db = require('../config/database');
 
 const intlModel = new IntlUnbilled(db);
 
+// Espacio activo (Epic 11): resolver membresía después de autenticar.
+const { resolveSpace } = require('../middleware/resolveSpace');
+const { requireResolve } = require('../middleware/requirePermission');
+router.use(authenticateToken);
+router.use(resolveSpace);
+
 /**
  * GET /api/suspicious/count
  * Obtiene el conteo de transacciones sospechosas pendientes (nacionales + intl)
  */
-router.get('/count', authenticateToken, async (req, res) => {
+router.get('/count', async (req, res) => {
   try {
     const nationalCount = await countPendingSuspicious(req.user.id);
     const intlCount = await intlModel.countPendingSuspicious(req.user.id);
@@ -30,7 +36,7 @@ router.get('/count', authenticateToken, async (req, res) => {
  * GET /api/suspicious
  * Obtiene todas las transacciones sospechosas pendientes de revisión (nacionales + intl)
  */
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     // Obtener duplicados nacionales
     const nationalSuspicious = await getPendingSuspicious(req.user.id);
@@ -77,7 +83,7 @@ router.get('/', authenticateToken, async (req, res) => {
  * Resuelve un duplicado sospechoso (nacional o intl)
  * Body: { action: 'delete' | 'keep_both', transactionIdToDelete?: string, type?: 'national' | 'intl' }
  */
-router.post('/:id/resolve', authenticateToken, async (req, res) => {
+router.post('/:id/resolve', requireResolve, async (req, res) => {
   try {
     const { id } = req.params;
     const { action, transactionIdToDelete, type } = req.body;

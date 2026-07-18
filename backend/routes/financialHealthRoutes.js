@@ -13,8 +13,10 @@ const {
   markAlertRead
 } = require('../controllers/financialHealthController');
 
-// Todas las rutas requieren autenticación
+// Todas las rutas requieren autenticación + espacio activo (Epic 11)
+const { resolveSpace } = require('../middleware/resolveSpace');
 router.use(auth);
+router.use(resolveSpace);
 
 // GET /api/financial-health/summary - Resumen de salud financiera
 router.get('/summary', getSummary);

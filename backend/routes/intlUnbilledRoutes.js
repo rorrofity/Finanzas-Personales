@@ -16,8 +16,12 @@ const {
   countSuspiciousDuplicates
 } = require('../controllers/intlUnbilledController');
 
+const { resolveSpace } = require('../middleware/resolveSpace');
+const { requireEdit, requireDelete, requireResolve } = require('../middleware/requirePermission');
+
 const router = express.Router();
 router.use(auth);
+router.use(resolveSpace);
 
 // Configure uploads directory (same approach as transactions)
 const uploadsDir = path.join(__dirname, '..', 'uploads');
@@ -73,16 +77,16 @@ const handleUpload = (req, res, next) => {
 router.get('/', listByMonth);
 router.get('/summary', summaryByMonth);
 // JSON bulk (opcional)
-router.post('/import', bulkImport);
+router.post('/import', requireEdit, bulkImport);
 // File upload (misma UX que nacionales)
-router.post('/import-file', handleUpload, importFile);
-router.post('/', create);
-router.put('/:id', update);
-router.delete('/:id', remove);
+router.post('/import-file', requireEdit, handleUpload, importFile);
+router.post('/', requireEdit, create);
+router.put('/:id', requireEdit, update);
+router.delete('/:id', requireDelete, remove);
 
-// Duplicados sospechosos
+// Duplicados sospechosos (resolver con action=delete exige can_delete)
 router.get('/suspicious', getSuspiciousDuplicates);
 router.get('/suspicious/count', countSuspiciousDuplicates);
-router.post('/suspicious/:id/resolve', resolveSuspiciousDuplicate);
+router.post('/suspicious/:id/resolve', requireResolve, resolveSuspiciousDuplicate);
 
 module.exports = router;

@@ -30,4 +30,21 @@ const requireOwner = (req, res, next) => {
   next();
 };
 
-module.exports = { requireEdit, requireDelete, requireOwner };
+/**
+ * Resolver duplicados sospechosos: si la acción elimina una transacción
+ * requiere can_delete; mantener ambas requiere can_edit.
+ */
+const requireResolve = (req, res, next) => {
+  const p = req.spacePerms || {};
+  if (req.body?.action === 'delete' ? !p.canDelete : !p.canEdit) {
+    return forbidden(
+      res,
+      req.body?.action === 'delete'
+        ? 'Sin permiso de eliminación en este espacio'
+        : 'Sin permiso de edición en este espacio'
+    );
+  }
+  next();
+};
+
+module.exports = { requireEdit, requireDelete, requireOwner, requireResolve };
