@@ -1,20 +1,26 @@
 # 💰 Finanzas Personales
 
-Aplicación web para gestión de finanzas personales con React, Node.js, Express y PostgreSQL.
+Aplicación web (PWA) para gestión de finanzas personales con React, Node.js, Express y PostgreSQL.
 
 🌐 **Producción**: https://finanzas.rocketflow.cl
+
+> **Metodología**: Este proyecto se desarrolla con **Spec-Driven Development (SDD)** + **Test-Driven Development (TDD)**. Ver [docs/constitution.md](./docs/constitution.md), [docs/spec.md](./docs/spec.md), [docs/plan.md](./docs/plan.md) y [docs/tasks.md](./docs/tasks.md). Resumen completo del proyecto en [docs/PROJECT_SUMMARY.md](./docs/PROJECT_SUMMARY.md).
 
 ---
 
 ## ✨ Características Principales
 
 - 🔐 **Autenticación** - Login local + Google OAuth
-- 💳 **Transacciones** - Gestión de gastos/ingresos con categorías
-- 📊 **Dashboard** - Visualización de finanzas con gráficos
-- 📥 **Importación** - CSV/Excel desde bancos
-- 🔁 **Compras en Cuotas** - Manejo de cuotas con proyección
-- 🌍 **Transacciones Internacionales** - Soporte multi-moneda
-- 📧 **Sincronización de Emails** - Importación automática desde Gmail (en desarrollo)
+- 💳 **Transacciones** - Gestión de gastos/ingresos con categorías y períodos de facturación
+- 📊 **Dashboard** - Visualización con gráficos interactivos y drill-down por categoría
+- 📥 **Importación** - CSV/Excel desde bancos con detección de duplicados
+- 🔁 **Compras en Cuotas** - Manejo de cuotas con proyección automática
+- 🌍 **Transacciones Internacionales** - Compras en USD con conversión a CLP
+- 🏦 **Cuenta Corriente** - Importación de cartolas y seguimiento de saldo
+- 📆 **Transacciones Proyectadas** - Gastos/ingresos recurrentes proyectados
+- ❤️ **Salud Financiera** - Health score, proyección de balance y alertas
+- 📧 **Sincronización de Emails** - Importación automática desde Gmail vía N8N (✅ funcional)
+- 📱 **PWA + Mobile** - Instalable, consulta offline (solo lectura) y layout mobile-first
 
 ---
 
@@ -47,6 +53,13 @@ Abre: http://localhost:3000
 ---
 
 ## 📚 Documentación
+
+### Spec-Driven Development (docs/)
+- **[docs/PROJECT_SUMMARY.md](./docs/PROJECT_SUMMARY.md)** - Resumen completo del proyecto (funcionalidades, arquitectura, estado, roadmap)
+- **[docs/constitution.md](./docs/constitution.md)** - Principios innegociables y decisiones de diseño
+- **[docs/spec.md](./docs/spec.md)** - Especificación funcional por épicas (notación EARS)
+- **[docs/plan.md](./docs/plan.md)** - Plan de arquitectura técnica (épica PWA)
+- **[docs/tasks.md](./docs/tasks.md)** - Tareas de implementación TDD (RED→GREEN→VERIFY)
 
 ### Configuración
 - **[SETUP.md](./SETUP.md)** - Guía completa de configuración local y producción
@@ -245,10 +258,17 @@ Ver sección de troubleshooting en:
 
 ## 📝 Changelog
 
-### v2.0 (En desarrollo)
-- 🚧 Sincronización automática de emails
+### v1.2 (Actual - en desarrollo)
+- ✅ PWA: Service Worker (Workbox), manifest, íconos, instalable
+- ✅ Offline solo-lectura: caché IndexedDB, banner de conexión, escritura bloqueada offline
+- ✅ Optimización mobile: tablas → cards, drawer hamburguesa, MonthPicker responsivo
+- ✅ Sincronización de emails vía N8N (funcional)
+- ✅ Gestión de tarjetas de crédito (Settings + mapeo dinámico N8N)
+- ✅ Dashboard interactivo con drill-down por categoría
+- 🚧 Pendiente: banner de actualización SW, install prompt, auditoría Lighthouse, deploy PWA
+- 🎯 Próxima épica: **multi-usuario (hogar)** — acceso compartido con pareja (a especificar vía SDD)
 
-### v1.5 (Actual)
+### v1.5-legacy
 - ✅ Compras en cuotas
 - ✅ Transacciones internacionales
 - ✅ Filtros por tarjeta
@@ -272,4 +292,4 @@ MIT
 
 ---
 
-**Última actualización**: 2025-10-28
+**Última actualización**: 2026-07-18
