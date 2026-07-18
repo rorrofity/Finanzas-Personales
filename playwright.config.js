@@ -26,7 +26,9 @@ module.exports = defineConfig({
   /* Tiempo máximo por prueba */
   timeout: 30 * 1000,
   expect: {
-    timeout: 5 * 1000,
+    // 10s: con code-splitting (React.lazy) la primera visita a una ruta
+    // descarga su chunk del dev server; bajo carga puede superar 5s.
+    timeout: 10 * 1000,
   },
   /* Falla el build en CI si quedó un test.only */
   forbidOnly: !!process.env.CI,

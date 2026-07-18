@@ -632,28 +632,24 @@ const Transactions = () => {
               variant="outlined"
               size="small"
             />
-            {!isMobile && (
-              <>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                  onClick={() => handleOpenDialog()}
-                  disabled={isOffline}
-                >
-                  Nueva
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                  onClick={() => setOpenImportDialog(true)}
-                  disabled={isOffline}
-                >
-                  Importar
-                </Button>
-              </>
-            )}
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              onClick={() => handleOpenDialog()}
+              disabled={isOffline}
+            >
+              Nueva
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              onClick={() => setOpenImportDialog(true)}
+              disabled={isOffline}
+            >
+              Importar
+            </Button>
           </Stack>
         </Box>
         <Box px={{ xs: 1, sm: 2 }} pb={1} display="flex" alignItems="center" gap={1} flexWrap="wrap">
@@ -757,6 +753,9 @@ const Transactions = () => {
                             <MenuItem value="pago">Pago</MenuItem>
                             <MenuItem value="desestimar">Desest.</MenuItem>
                           </Select>
+                          <IconButton size="small" onClick={() => handleOpenDialog(transaction)} disabled={isOffline} aria-label="Editar">
+                            <EditIcon fontSize="small" />
+                          </IconButton>
                           <IconButton size="small" onClick={() => handleDeleteClick(transaction)} disabled={isOffline} aria-label="Eliminar">
                             <DeleteIcon fontSize="small" />
                           </IconButton>

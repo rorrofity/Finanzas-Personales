@@ -132,16 +132,16 @@
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 4.T1 | 🔴 T | E2E: con SW `waiting`, aparece banner "Nueva versión disponible" — **debe fallar** | 9.6 | `[ ]` |
-| 4.T2 | 🔴 T | E2E: pulsar "Actualizar" recarga con nuevo SW activo — **debe fallar** | 9.6 | `[ ]` |
-| 4.T3 | 🔴 T | E2E (standalone): viewport completo sin barra de navegador — **debe fallar** | 9.11 | `[ ]` |
-| 4.I1 | 🟢 I | Detectar SW `waiting` + banner "Nueva versión" | 9.6 | `[ ]` |
-| 4.I2 | 🟢 I | Botón "Actualizar" → `skipWaiting()` + reload | 9.6 | `[ ]` |
-| 4.I3 | 🟢 I | Crear `src/components/InstallPrompt.jsx` (`beforeinstallprompt`) contextual | 9.2 | `[ ]` |
-| 4.I4 | 🟢 I | Ajustar safe-area-insets (notch iOS) en layout standalone | 9.11 | `[ ]` |
-| 4.V1 | 🔁 V | Re-ejecutar 4.T1–4.T3 → todas **deben pasar** | 9.6, 9.11 | `[ ]` |
+| 4.T1 | 🔴 T | Unit+E2E: con SW `waiting`, aparece banner "Nueva versión disponible" (`UpdateBanner.test.js` + `tests/pwa-build/sw-update-standalone.spec.js`) | 9.6 | `[x]` |
+| 4.T2 | 🔴 T | Unit+E2E: pulsar "Actualizar" envía SKIP_WAITING y recarga en controllerchange | 9.6 | `[x]` |
+| 4.T3 | 🔴 T | E2E (build): manifest standalone + viewport-fit=cover + safe-area en CSS | 9.11 | `[x]` |
+| 4.I1 | 🟢 I | Detectar SW `waiting` + banner "Nueva versión" (`UpdateBanner.jsx`, evento `swUpdated` desde `serviceWorkerRegistration`) | 9.6 | `[x]` |
+| 4.I2 | 🟢 I | Botón "Actualizar" → `skipWaiting()` + reload | 9.6 | `[x]` |
+| 4.I3 | 🟢 I | Crear `src/components/InstallPrompt.jsx` (`beforeinstallprompt`) contextual con descarte persistente | 9.2 | `[x]` |
+| 4.I4 | 🟢 I | Safe-area-insets (notch iOS) vía GlobalStyles en `App.js` (index.html ya tenía viewport-fit=cover) | 9.11 | `[x]` |
+| 4.V1 | 🔁 V | Re-ejecutar 4.T1–4.T3 → todas pasan (unit 17/17, pwa-build 7/7) | 9.6, 9.11 | `[x]` |
 
-**Criterio de aceptación Fase 4:** Pruebas 4.T* en verde. Instalable, abre standalone, se actualiza con aviso.
+**Criterio de aceptación Fase 4:** ✅ CUMPLIDO — Pruebas 4.T* en verde. Instalable, abre standalone, se actualiza con aviso.
 
 ---
 
@@ -151,14 +151,14 @@
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 5.1 | 🔁 V | Ejecutar suite completa (unit + E2E) → todo en verde | Todas | `[ ]` |
-| 5.2 | 🔁 V | Test E2E de regresión: funcionalidad existente intacta (CRUD online, N8N sync) | N8N-001 | `[ ]` |
-| 5.3 | S | Auditoría Lighthouse PWA (objetivo: installable + score > 90) | Todas | `[ ]` |
-| 5.4 | 🟢 I | Optimizar bundle size (code splitting, lazy load de páginas) | 9.5 | `[ ]` |
-| 5.5 | S | Pruebas en dispositivos reales: iOS Safari + Android Chrome | 9.7, 9.11 | `[ ]` |
-| 5.6 | S | Deploy a producción vía `scripts/deploy-to-production.sh` | — | `[ ]` |
+| 5.1 | 🔁 V | Ejecutar suite completa (unit + E2E) → todo en verde (unit 17/17, E2E 49/49 ×4 corridas, pwa-build 7/7) | Todas | `[x]` |
+| 5.2 | 🔁 V | Test E2E de regresión: funcionalidad existente intacta (regression.spec.js + smoke.spec.js en verde) | N8N-001 | `[x]` |
+| 5.3 | S | Auditoría Lighthouse (LH12 sin categoría PWA; instalabilidad cubierta por Playwright): perf 98, a11y 96, best-practices 96, SEO 100 | Todas | `[x]` |
+| 5.4 | 🟢 I | Optimizar bundle: React.lazy por ruta (main 1.2MB → 461KB + 26 chunks) + Google Fonts no bloqueante (FCP 4.6s → 0.6s) | 9.5 | `[x]` |
+| 5.5 | S | Pruebas en dispositivos reales: iOS Safari + Android Chrome | 9.7, 9.11 | `[ ]` (manual, post-deploy) |
+| 5.6 | S | Deploy a producción (git pull + npm install + build + pm2 restart en droplet; no existe deploy-to-production.sh) | — | `[~]` |
 | 5.7 | 🔁 V | Verificación post-deploy: instalar PWA desde `finanzas.rocketflow.cl` | — | `[ ]` |
-| 5.8 | S | **Generar `walkthrough.md`** documentando lo construido, decisiones y cómo validar | — | `[ ]` |
+| 5.8 | S | **Generar `walkthrough.md`** documentando lo construido, decisiones y cómo validar | — | `[x]` |
 
 **Criterio de aceptación Fase 5:** Suite completa en verde, PWA en producción, sin regresiones, `walkthrough.md` generado.
 

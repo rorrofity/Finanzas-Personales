@@ -38,6 +38,13 @@ function registerValidSW(swUrl, config) {
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
+      // Si ya hay un SW esperando (p.ej. recarga con actualización pendiente),
+      // notificar de inmediato para que la UI ofrezca actualizar.
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        if (config && config.onUpdate) {
+          config.onUpdate(registration);
+        }
+      }
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
         if (installingWorker == null) {

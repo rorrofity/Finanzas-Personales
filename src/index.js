@@ -23,5 +23,9 @@ root.render(
 );
 
 // Registro del Service Worker (solo activo en producción).
-// El banner de actualización (Req 9.6) se conectará a onUpdate en la Fase 4.
-serviceWorkerRegistration.register();
+// onUpdate emite el evento global que escucha UpdateBanner (Req 9.6).
+serviceWorkerRegistration.register({
+  onUpdate: (registration) => {
+    window.dispatchEvent(new CustomEvent('swUpdated', { detail: registration }));
+  },
+});
