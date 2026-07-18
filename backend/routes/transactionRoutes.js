@@ -75,22 +75,25 @@ const handleUpload = (req, res, next) => {
   });
 };
 
-// Aplicar middleware de autenticación a todas las rutas
+// Autenticación + resolución del espacio activo (Epic 11, ACL-001)
+const { resolveSpace } = require('../middleware/resolveSpace');
+const { requireEdit, requireDelete } = require('../middleware/requirePermission');
 router.use(auth);
+router.use(resolveSpace);
 
-// Rutas CRUD básicas
-router.post('/', transactionController.createTransaction);
-router.put('/:id', transactionController.updateTransaction);
-router.delete('/:id', transactionController.deleteTransaction);
+// Rutas CRUD básicas (escritura protegida por permisos del espacio)
+router.post('/', requireEdit, transactionController.createTransaction);
+router.put('/:id', requireEdit, transactionController.updateTransaction);
+router.delete('/:id', requireDelete, transactionController.deleteTransaction);
 router.get('/', transactionController.getAllTransactions);
 
 // Rutas especializadas
-router.post('/import', handleUpload, transactionController.importTransactions);
+router.post('/import', requireEdit, handleUpload, transactionController.importTransactions);
 router.get('/summary', transactionController.getTransactions);
 router.get('/category-analysis', transactionController.getCategoryAnalysis);
-router.delete('/', transactionController.deleteMultipleTransactions);
-router.put('/:id/category', transactionController.updateTransactionCategory);
-router.post('/fix-dates', auth, transactionController.fixTransactionDates);
+router.delete('/', requireDelete, transactionController.deleteMultipleTransactions);
+router.put('/:id/category', requireEdit, transactionController.updateTransactionCategory);
+router.post('/fix-dates', requireEdit, transactionController.fixTransactionDates);
 
 // Ruta para debugging de transacciones
 router.get('/debug-last-import', async (req, res) => {

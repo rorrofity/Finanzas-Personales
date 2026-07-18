@@ -21,6 +21,7 @@ const suspiciousRoutes = require('./routes/suspiciousRoutes');
 const financialHealthRoutes = require('./routes/financialHealthRoutes');
 const billingRoutes = require('./routes/billingRoutes');
 const cardRoutes = require('./routes/cardRoutes');
+const spaceRoutes = require('./routes/spaceRoutes');
 
 // Initialize Express app
 const app = express();
@@ -110,6 +111,7 @@ app.use('/api/suspicious', suspiciousRoutes);
 app.use('/api/financial-health', financialHealthRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/cards', cardRoutes);
+app.use('/api/space', spaceRoutes);
 
 // Serve static files from React build (only in production)
 if (process.env.NODE_ENV === 'production') {

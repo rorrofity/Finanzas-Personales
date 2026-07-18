@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
 const db = require('../config/database');
+const spaceMember = require('../models/SpaceMember');
 
 const userModel = new User(db);
 
@@ -25,6 +26,8 @@ const register = async (req, res) => {
 
     // Crear nuevo usuario
     const user = await userModel.create({ nombre, email, password });
+    // Vincular invitaciones de espacio pendientes para este email (Req 11.2)
+    await spaceMember.linkPendingByEmail(user.email, user.id);
     const token = generateToken(user.id);
 
     res.status(201).json({
@@ -163,6 +166,8 @@ const googleAuth = async (req, res) => {
         google_id: googleId,
         profile_picture: picture
       });
+      // Vincular invitaciones de espacio pendientes para este email (Req 11.2)
+      await spaceMember.linkPendingByEmail(user.email, user.id);
     } else {
       // Usuario existente - actualizar foto de perfil si cambió
       if (user.profile_picture !== picture) {

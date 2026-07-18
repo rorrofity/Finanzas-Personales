@@ -12,6 +12,7 @@
     "test": "react-scripts test",
     "test:unit": "react-scripts test --watchAll=false",
     "test:e2e": "playwright test",
+    "test:api": "playwright test --config=playwright.api.config.js",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:pwa": "playwright test --config=playwright.pwa.config.js",
