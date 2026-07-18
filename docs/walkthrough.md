@@ -1,4 +1,38 @@
-# walkthrough.md — Épica PWA: lo construido y cómo validarlo
+# walkthrough.md — Épicas PWA y Espacio Compartido: lo construido y cómo validarlo
+
+---
+
+# PARTE 2 — Epic 11: Espacio Compartido del Hogar (2026-07-18)
+
+## Qué se construyó
+
+**Backend (ACL sobre la cuenta del dueño, principio ACL-001):**
+- Tabla `space_members` (migración 026) + auditoría `created_by/updated_by` en transactions (027)
+- `/api/space`: memberships, members, invitar (máx 2, 409 duplicado, 400 auto-invitación), actualizar permisos, revocar. Invitación pending se vincula al registrarse el email (también vía Google)
+- Middleware [resolveSpace.js](../backend/middleware/resolveSpace.js): valida membresía en BD por request (header `X-Space-Owner`), reescribe `req.user.id` al dueño (controllers sin cambios) y guarda el actor en `req.actorId`
+- Guards [requirePermission.js](../backend/middleware/requirePermission.js): `requireEdit`, `requireDelete`, `requireOwner` (sync/cards/billing config), `requireResolve` (duplicados con action=delete exige can_delete)
+- Montado en TODAS las rutas de datos; sin header el comportamiento es idéntico al previo (retrocompatible)
+
+**Frontend:**
+- [SpaceContext](../src/contexts/SpaceContext.jsx): espacios accesibles, selección persistida por usuario, revocación en vivo (403 SPACE_FORBIDDEN → aviso y vuelta al espacio propio)
+- [SpaceSwitcher](../src/components/SpaceSwitcher.jsx) en AppBar (solo con >1 espacio); cambiar de espacio remonta las páginas (refetch)
+- [SpaceMembersSettings](../src/components/SpaceMembersSettings.jsx): tab "Espacio compartido" en Settings (solo dueño)
+- Gating de permisos en Transactions + SyncButton solo dueño + Settings restringido en espacios ajenos
+- [CreatedByChip](../src/components/CreatedByChip.jsx): quién registró cada transacción (solo en espacios con >1 participante)
+- Caché offline llaveado por espacio (`own|ownerId::key`) y limpiado en logout
+
+## Suites (todas en verde al cierre)
+- Unit 26/26 · **API (nueva capa) 14/14** (`npm run test:api`) · E2E 67/67 · pwa-build 7/7
+
+## Verificación en producción (2026-07-18)
+Flujo completo con 2 cuentas temporales contra finanzas.rocketflow.cl: invitar → el miembro ve el espacio → lectura 200 → escritura sin permiso 403 → sync como miembro 403. Usuarios de prueba eliminados después. **Pendiente manual:** repetir con las cuentas reales de Rodrigo y su pareja.
+
+## Nota operativa de deploy
+El runner `npm run migrate` falla en producción («must be owner of table») porque las tablas históricas pertenecen a `postgres` y no a `finanzas_user`. Las migraciones nuevas se aplicaron directamente: `sudo -u postgres psql -d finanzas_personales -f backend/migrations/02X_*.sql` + `GRANT SELECT, INSERT, UPDATE, DELETE ON space_members TO finanzas_user;`.
+
+---
+
+# PARTE 1 — Épica PWA (completada 2026-07-18)
 
 > Generado al cierre de la implementación (tarea 5.8, 2026-07-18). Documenta lo efectivamente construido en las Fases 0–5 de `tasks.md`, las decisiones tomadas y cómo ejecutar/validar la PWA.
 

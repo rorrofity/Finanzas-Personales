@@ -105,9 +105,9 @@
 |---|---|---|---|---|
 | 5.1 | 🔁 V | Suite completa en verde: unit 26/26, API 14/14, E2E 67/67, pwa-build 7/7 | Todas | `[x]` |
 | 5.2 | 🔁 V | Regresión: usuario sin membresías con UX idéntica (test 3.T4b + suite E2E previa completa) | — | `[x]` |
-| 5.3 | S | Deploy al droplet (git pull + npm install + build + migrate + pm2 restart) | — | `[ ]` |
-| 5.4 | 🔁 V | Verificación en producción con 2 cuentas reales (Rodrigo + pareja): invitar, permisos, espacio Hogar | — | `[ ]` |
-| 5.5 | S | Actualizar `walkthrough.md`, `PROJECT_SUMMARY.md` y memoria | — | `[ ]` |
+| 5.3 | S | Deploy al droplet 2026-07-18 (migraciones 026/027 aplicadas vía psql como postgres + GRANT a finanzas_user — el runner npm falla en prod por ownership de tablas antiguas) | — | `[x]` |
+| 5.4 | 🔁 V | Verificación funcional en producción con 2 cuentas temporales (invitar → memberships → lectura 200 → escritura 403 → sync 403; usuarios eliminados después). Validación con las cuentas reales de Rodrigo + pareja: manual | — | `[x]` |
+| 5.5 | S | Actualizar `walkthrough.md`, `PROJECT_SUMMARY.md` y memoria | — | `[x]` |
 
 ---
 
@@ -135,5 +135,5 @@
 
 ---
 
-*Versión: 2.0.0 (épica Espacio Compartido)*
+*Versión: 2.1.0 — ÉPICA COMPLETADA Y DESPLEGADA (2026-07-18)*
 *Última actualización: 2026-07-18*

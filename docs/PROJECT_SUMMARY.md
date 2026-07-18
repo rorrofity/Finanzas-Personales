@@ -126,7 +126,7 @@ Hay trabajo sin commitear en `main` (PWA/offline/mobile) al momento de esta revi
 ## 6. Roadmap / Próximas Funcionalidades
 
 1. ✅ **Épica PWA completada y desplegada a producción** (2026-07-18).
-2. 🚧 **Espacio Compartido del Hogar (Epic 11)** — *épica actual, especificada el 2026-07-18*: el dueño invita (in-app, sin emails) hasta 2 miembros con permisos granulares (ver / crear+editar / eliminar) activables al instante. Modelo ACL sobre la cuenta del dueño (sin migrar datos), header `X-Space-Owner` + middleware `resolveSpace` (principio ACL-001), auditoría `created_by/updated_by`, sync N8N exclusivo del dueño, caché offline llaveado por espacio. El principio "una persona = un usuario" se mantiene; la enmienda constitucional v1.1 redefinió solo el alcance single-user. Ver spec.md Epic 11, plan.md v2 y tasks.md v2.
+2. ✅ **Espacio Compartido del Hogar (Epic 11) — COMPLETADA Y DESPLEGADA** (2026-07-18): el dueño invita (in-app) hasta 2 miembros con permisos granulares (ver / crear+editar / eliminar) activables al instante; modelo ACL sobre la cuenta del dueño (`space_members` + header `X-Space-Owner` + middleware `resolveSpace`, ACL-001), auditoría `created_by/updated_by`, sync N8N y config exclusivos del dueño, switcher de espacio en la UI, caché offline llaveado por espacio. Verificada funcionalmente en producción. Pendiente: que Rodrigo invite a su pareja con sus cuentas reales. Ver walkthrough.md Parte 2.
 3. Mantener el droplet y el dominio actuales como plataforma productiva.
 
 ---
