@@ -48,12 +48,12 @@
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 3.T1 | 🔴 T | API: `/push/subscribe` guarda suscripción (endpoint único, idempotente); `/push/unsubscribe` la borra | 13.8, 13.12 | `[ ]` |
-| 3.T2 | 🔴 T | API: `/push/vapid-public-key` retorna la pública; nunca expone la privada | 13.8 | `[ ]` |
-| 3.T3 | 🔴 T | Unit: `pushService.sendToUser` envía a todas las subs del usuario; ante 404/410 elimina la sub; sin subs no falla | 13.9, 13.11 | `[ ]` |
-| 3.I1 | 🟢 I | Modelo `PushSubscription.js` + `pushService.js` (web-push, poda) | 13.9, 13.11 | `[ ]` |
-| 3.I2 | 🟢 I | `pushController.js` + `pushRoutes.js` (subscribe/unsubscribe/vapid-public-key/test) | 13.8, 13.12 | `[ ]` |
-| 3.V1 | 🔁 V | 3.T1–3.T3 verdes | — | `[ ]` |
+| 3.T1 | 🔴 T | API: `/push/subscribe` guarda suscripción (endpoint único, idempotente); `/push/unsubscribe` la borra | 13.8, 13.12 | `[x]` |
+| 3.T2 | 🔴 T | API: `/push/vapid-public-key` retorna la pública; nunca expone la privada | 13.8 | `[x]` |
+| 3.T3 | 🔴 T | Unit: `pushService.sendToUser` envía a todas las subs del usuario; ante 404/410 elimina la sub; sin subs no falla | 13.9, 13.11 | `[x]` |
+| 3.I1 | 🟢 I | Modelo `PushSubscription.js` + `pushService.js` (web-push, poda) | 13.9, 13.11 | `[x]` |
+| 3.I2 | 🟢 I | `pushController.js` + `pushRoutes.js` (subscribe/unsubscribe/vapid-public-key/test) | 13.8, 13.12 | `[x]` |
+| 3.V1 | 🔁 V | 3.T1–3.T3 verdes (unit backend 14/14, API 28/28). Nota de diseño: suscripciones son por persona (req.user.id), sin resolveSpace | — | `[x]` |
 
 ## Fase 4: Push frontend / PWA
 
