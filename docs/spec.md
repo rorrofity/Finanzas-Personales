@@ -323,6 +323,51 @@ Los criterios de aceptación usan **notación EARS**:
 
 ---
 
+### Epic 12: Rediseño del Dashboard y Sistema de Diseño Compacto *(Épica Actual — NUEVA)*
+
+**Problema:** El dashboard actual apila verticalmente cards gigantes ($0 ocupando ~200px cada una) y 3+ gráficos a página completa; en el teléfono exige scroll excesivo y no comunica lo importante. Las páginas de datos repiten el mismo patrón (3 cards de totales enormes antes del contenido).
+
+**Objetivo:** Un dashboard que responda en un vistazo las 3 preguntas de las finanzas del hogar — **¿cómo voy este período? · ¿en qué se va la plata? · ¿qué se viene?** — con un sistema de diseño compacto reutilizable en el resto de la app.
+
+**Principios aplicados:** `AUTH-001`, `ACL-001`, `PWA-001`, `TEST-001`
+
+#### 12.A Indicadores (KPIs) del período de facturación seleccionado
+
+| # | KPI | Cálculo (datos existentes) |
+|---|---|---|
+| K1 | **Balance del período** | ingresos CC − (gastos TC facturables + gastos CC) |
+| K2 | **Gasto total del período** + Δ% vs período anterior | suma gastos (excluye `desestimar`) |
+| K3 | **Tasa de ahorro** | (ingresos − gastos) / ingresos, en %; "—" si no hay ingresos |
+| K4 | **Gasto promedio diario** + proyección de cierre | gasto acumulado / días transcurridos × días del período |
+| K5 | **Compromisos próximos** | TC no facturado + cuotas del período siguiente + proyectados (reusa lógica financial-health) |
+| K6 | **Disponible hoy** | saldo cuenta corriente (known balance + movimientos) |
+| K7 | **Top 5 categorías** | % del gasto del período + Δ vs período anterior por categoría |
+
+#### 12.B Requerimientos
+
+| ID | Criterio de Aceptación |
+|---|---|
+| Req 12.1 | El sistema **debe** exponer `GET /api/dashboard/overview?year&month` que retorna K1–K7 en UNA sola respuesta (con `resolveSpace`: funciona en espacio propio y compartido). |
+| Req 12.2 | Cuando el Dashboard cargue, el sistema **debe** mostrar una fila de **stat-cards compactas** (K1, K2, K3, K6): número grande, etiqueta pequeña, delta con flecha y color (verde baja de gasto / rojo alza). Grid: 2 columnas en mobile, 4 en desktop. Altura máxima 96px por card. |
+| Req 12.3 | El sistema **debe** mostrar "Compromisos próximos" (K5) como una card-resumen expandible con el detalle (TC, cuotas, proyectados) colapsado por defecto. |
+| Req 12.4 | El sistema **debe** mostrar el Top 5 de categorías (K7) como lista compacta con barras de progreso horizontales y % — NO treemap en mobile. Tap en una categoría navega a su detalle (drill-down existente). |
+| Req 12.5 | Los gráficos de evolución (historia mensual, evolución por categoría) **deben** vivir bajo un selector de pestañas/segmentos en UNA sola zona de gráfico (no apilados), con altura máxima 260px en mobile. |
+| Req 12.6 | Si un KPI no tiene datos, el sistema **debe** mostrar la card con estado vacío discreto ("Sin datos del período") sin romper la grilla, y las cards con datos deben renderizarse normalmente. |
+| Req 12.7 | Mientras carga, el sistema **debe** mostrar skeletons con la misma geometría de las cards (sin saltos de layout, CLS ≈ 0). |
+| Req 12.8 | El Dashboard **debe** conservar: selector de período, botón Sincronizar (solo dueño), y funcionar con caché offline de lectura por espacio (Reqs 9.3 y 11.14). |
+| Req 12.9 | El sistema de diseño **debe** quedar en componentes reutilizables (`StatCard`, `TrendDelta`, `SectionCard`, `CategoryBar`) con densidad estándar: paddings 12–16px, valores `h5`/`h6`, labels `caption`. |
+| Req 12.10 | Las páginas de transacciones (TC, Intl, Checking, Projected) **deben** reemplazar sus 3 cards gigantes de totales por una fila de stat-cards compactas del mismo sistema (Req 12.9), sin cambiar su lógica. |
+| Req 12.11 | En 375px ninguna vista rediseñada **debe** exceder el ancho del viewport (criterio absoluto, test estilo `mobile-responsive-fixes`). |
+| Req 12.12 | El rediseño **no debe** alterar endpoints existentes ni romper la suite E2E actual (los tests que dependan del layout anterior se ACTUALIZAN en la misma fase, nunca se debilitan). |
+
+**Casos de borde:**
+- Período sin transacciones: stat-cards en 0/vacío + CTA "Importar o sincronizar" (reemplaza al estado vacío actual).
+- Δ% cuando el período anterior es 0: mostrar "—" (no ∞).
+- Miembro invitado sin `can_edit`: los accesos rápidos de escritura siguen el gating de Epic 11.
+- Offline: overview se sirve desde readCache; los skeletons no deben quedar infinitos (timeout → estado vacío).
+
+---
+
 ## 6. Modelo de Datos (PostgreSQL)
 
 ### 6.1 Tablas Principales
@@ -586,5 +631,5 @@ Workbox simplifica el caching, routing, y background sync con APIs probadas y bi
 
 ---
 
-*Versión: 1.1.0 — agrega Epic 11 (Espacio Compartido del Hogar) y principio ACL-001*
+*Versión: 1.2.0 — agrega Epic 12 (Rediseño del Dashboard y Sistema de Diseño Compacto)*
 *Última actualización: 2026-07-18*
