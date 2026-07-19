@@ -72,11 +72,11 @@
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 5.1 | 🔁 V | Suite completa en verde | Todas | `[ ]` |
-| 5.2 | S | Configurar VAPID + TZ en `.env` de producción; aplicar migraciones (vía psql como postgres + GRANT) | — | `[ ]` |
-| 5.3 | S | Deploy al droplet (pull + install + build + pm2 restart); verificar que el scheduler arranca (logs) | 13.6 | `[ ]` |
-| 5.4 | 🔁 V | Verificación real: Rodrigo activa sync programada + notificaciones en su teléfono; `/push/test` llega; observar una corrida en `sync_runs` y su push | 13.7–13.10 | `[ ]` |
-| 5.5 | S | Actualizar walkthrough.md, PROJECT_SUMMARY.md y memoria | — | `[ ]` |
+| 5.1 | 🔁 V | Suite completa en verde: unit 65/65, backend 14/14, API 28/28, E2E 106/106, pwa-build 7/7 | Todas | `[x]` |
+| 5.2 | S | VAPID (par nuevo, exclusivo de prod) + TZ + SYNC_CRON_TIMES en `.env` de producción; migraciones 028-030 aplicadas vía psql como postgres + GRANT a finanzas_user | — | `[x]` |
+| 5.3 | S | Deploy al droplet 2026-07-19 (pull + install + build + pm2 restart); log confirmado: "sincronización programada activa: 0 13 * * * \| 0 22 * * * (America/Santiago)" | 13.6 | `[x]` |
+| 5.4 | 🔁 V | Verificado end-to-end con cuenta temporal (settings GET/PUT, runs, vapid-public-key, subscribe → todos 200/201, luego eliminada). **Pendiente manual: Rodrigo activa sync programada + notificaciones desde su teléfono real** (Settings → Automatización) y confirma que llega el push | 13.7–13.10 | `[~]` |
+| 5.5 | S | Actualizar walkthrough.md, PROJECT_SUMMARY.md y memoria | — | `[x]` |
 
 ## Mapeo Req → Tareas
 
@@ -106,5 +106,5 @@
 
 ---
 
-*Versión: 4.0.0 (épica Sync Programada + Push)*
+*Versión: 4.1.0 — implementación completa y desplegada (backend verificado 2026-07-19); pendiente confirmación manual de Rodrigo en su teléfono*
 *Última actualización: 2026-07-19*

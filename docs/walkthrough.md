@@ -1,4 +1,38 @@
-# walkthrough.md — Épicas PWA, Espacio Compartido y Rediseño Dashboard
+# walkthrough.md — Épicas PWA, Espacio Compartido, Rediseño Dashboard y Sync+Push
+
+---
+
+# PARTE 4 — Epic 13: Sincronización Automática Programada + Push (2026-07-19)
+
+## Qué se construyó
+
+**Backend:**
+- [backend/services/syncService.js](../backend/services/syncService.js) — `runSync(userId, trigger)`: extrae la llamada al webhook de N8N que antes vivía embebida en `POST /sync-emails`. Nunca lanza; cualquier fallo se captura y registra en `sync_runs`. La usan tanto el botón manual como el scheduler.
+- [backend/services/scheduler.js](../backend/services/scheduler.js) — `node-cron` (America/Santiago, horarios en `SYNC_CRON_TIMES`, default 13:00 y 22:00). `runScheduledSync()` itera usuarios con `auto_sync_enabled=true`; tras cada sync con `imported>0` dispara `pushService.notifySync`. Un error por usuario no aborta el resto. Arranca en `server.js` solo si `NODE_ENV=production` o `ENABLE_SCHEDULER=true`.
+- [backend/services/pushService.js](../backend/services/pushService.js) + [backend/models/PushSubscription.js](../backend/models/PushSubscription.js) — Web Push (VAPID) real vía `web-push`; poda automática de suscripciones 404/410 expiradas.
+- Endpoints nuevos: `GET/PUT /api/sync/settings` (opt-in, solo dueño puede activar), `GET /api/sync/runs` (bitácora), `GET /api/push/vapid-public-key`, `POST /api/push/subscribe|unsubscribe|test`.
+- Migraciones 028 (`push_subscriptions`), 029 (`users.auto_sync_enabled`), 030 (`sync_runs`).
+- **Decisión de diseño clave:** las suscripciones push son *por persona* (`req.user.id`), no por espacio activo — no usan `resolveSpace`/`X-Space-Owner`. Un dispositivo notifica a quien lo sostiene, sin importar qué espacio esté viendo en la app.
+
+**Frontend / PWA:**
+- [src/service-worker.js](../src/service-worker.js) — handlers `push` (muestra la notificación) y `notificationclick` (enfoca o abre `/transactions`).
+- [src/services/pushClient.js](../src/services/pushClient.js) + [src/hooks/usePushNotifications.js](../src/hooks/usePushNotifications.js) — suscripción del navegador; el permiso **nunca** se pide automáticamente al montar, solo por acción explícita del usuario.
+- [src/components/NotificationsSettings.jsx](../src/components/NotificationsSettings.jsx) — nueva pestaña "Automatización" en Settings (solo dueño): toggle de sync programada, toggle de notificaciones, botón "Enviar prueba", bitácora de las últimas sincronizaciones, aviso de la limitación real de iOS (push solo con la PWA instalada).
+
+## Suites
+Unit frontend 65/65 · unit backend 14/14 (nuevo runner `npm run test:backend`, Jest separado de `react-scripts test`) · API 28/28 · E2E 106/106 (incluye Chromium real + WebKit para mobile/tablet) · pwa-build 7/7.
+
+## Bugs/hallazgos de testing reales
+- **`navigator.serviceWorker.ready` es un getter nativo en Chromium** (a diferencia de jsdom): una asignación directa en el mock E2E se ignora silenciosamente; hubo que usar `Object.defineProperty`.
+- **Los proyectos `mobile-375`/`tablet-768` corren en el motor WebKit real** (no Chromium emulado) — ahí la Push API no está disponible fuera de una PWA instalada, la misma limitación real de iOS. El test verifica que la UI muestre el aviso "no soporta" en vez de forzar un flujo que no existe en ese motor.
+
+## Verificación en producción (2026-07-19)
+Migraciones aplicadas (`sudo -u postgres psql` + GRANT, mismo patrón que Epic 11). Par de claves VAPID generado **exclusivamente para producción** (no reutiliza el de desarrollo). Deploy confirmado: log `✅ [scheduler] sincronización programada activa: 0 13 * * * | 0 22 * * * (America/Santiago)`. Flujo completo probado con una cuenta temporal (creada y eliminada): `GET/PUT /sync/settings`, `GET /sync/runs`, `GET /push/vapid-public-key`, `POST /push/subscribe` → todos 200/201.
+
+**Pendiente manual (no delegable):** Rodrigo debe activar la sincronización programada y las notificaciones desde **su cuenta real en su teléfono** (Settings → Automatización) y confirmar que el push llega tras una sincronización con transacciones nuevas.
+
+## Nota operativa
+El endpoint `/api/health` del backend responde HTML en producción (lo sombrea el catch-all de servido estático `app.get('*')`) — es un comportamiento preexistente, no introducido por esta épica; Caddy lo considera sano igualmente. No confundir con un fallo real: usar `pm2 list` / logs para confirmar salud del proceso.
 
 ---
 
