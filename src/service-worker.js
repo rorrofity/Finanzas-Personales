@@ -83,3 +83,39 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// Notificaciones Web Push (Epic 13, Reqs 13.9, 13.10).
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: 'Finanzas Personales', body: event.data ? event.data.text() : '' };
+  }
+
+  const title = data.title || 'Finanzas Personales';
+  const options = {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-96.png',
+    data: { url: data.url || '/transactions' },
+    tag: 'sync-summary',
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/transactions';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsList) => {
+      const existing = clientsList.find((c) => new URL(c.url).pathname === targetUrl);
+      if (existing) {
+        return existing.focus();
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});

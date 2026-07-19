@@ -59,14 +59,14 @@
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 4.T1 | 🔴 T | Unit: `pushClient` — urlBase64ToUint8Array correcto; subscribe llama pushManager con la key y postea al backend | 13.8 | `[ ]` |
-| 4.T2 | 🔴 T | Unit: `usePushNotifications` — estados supported/permission/subscribed y acciones | 13.7, 13.12 | `[ ]` |
-| 4.T3 | 🔴 T | E2E: Settings muestra "Automatización" solo al dueño; toggle sync programada llama PUT /sync/settings | 13.3 | `[ ]` |
-| 4.T4 | 🔴 T | E2E: activar notificaciones pide permiso (mock concedido) → subscribe; botón "Enviar prueba" | 13.7, 13.8 | `[ ]` |
-| 4.I1 | 🟢 I | Handlers `push` y `notificationclick` en `src/service-worker.js` | 13.9, 13.10 | `[ ]` |
-| 4.I2 | 🟢 I | `src/services/pushClient.js` + `src/hooks/usePushNotifications.js` | 13.7, 13.8, 13.12 | `[ ]` |
-| 4.I3 | 🟢 I | `NotificationsSettings.jsx` + sección "Automatización" en Settings (solo dueño, explicación iOS) | 13.3, 13.7, 13.12 | `[ ]` |
-| 4.V1 | 🔁 V | 4.T1–4.T4 verdes + suite completa (unit + API + E2E + pwa-build) | 13.x | `[ ]` |
+| 4.T1 | 🔴 T | Unit: `pushClient` — urlBase64ToUint8Array correcto; subscribe llama pushManager con la key y postea al backend | 13.8 | `[x]` |
+| 4.T2 | 🔴 T | Unit: `usePushNotifications` — estados supported/permission/subscribed y acciones | 13.7, 13.12 | `[x]` |
+| 4.T3 | 🔴 T | E2E: Settings muestra "Automatización" solo al dueño; toggle sync programada llama PUT /sync/settings | 13.3 | `[x]` |
+| 4.T4 | 🔴 T | E2E: activar notificaciones pide permiso (mock concedido) → subscribe; botón "Enviar prueba" (Chromium; WebKit valida fallback "no soporta", limitación real de iOS sin PWA instalada) | 13.7, 13.8 | `[x]` |
+| 4.I1 | 🟢 I | Handlers `push` y `notificationclick` en `src/service-worker.js` | 13.9, 13.10 | `[x]` |
+| 4.I2 | 🟢 I | `src/services/pushClient.js` + `src/hooks/usePushNotifications.js` | 13.7, 13.8, 13.12 | `[x]` |
+| 4.I3 | 🟢 I | `NotificationsSettings.jsx` + sección "Automatización" en Settings (solo dueño, explicación iOS) | 13.3, 13.7, 13.12 | `[x]` |
+| 4.V1 | 🔁 V | 4.T1–4.T4 verdes + suite completa: unit 65/65, backend 14/14, API 28/28, E2E 106/106, pwa-build 7/7 | 13.x | `[x]` |
 
 ## Fase 5: Deploy y verificación
 

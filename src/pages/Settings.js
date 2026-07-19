@@ -37,7 +37,9 @@ import {
 import axios from 'axios';
 import Profile from './Profile';
 import GroupIcon from '@mui/icons-material/Group';
+import SyncIcon from '@mui/icons-material/Sync';
 import SpaceMembersSettings from '../components/SpaceMembersSettings';
+import NotificationsSettings from '../components/NotificationsSettings';
 import { useSpace } from '../contexts/SpaceContext';
 
 function TabPanel({ children, value, index, ...other }) {
@@ -178,6 +180,7 @@ const Settings = () => {
           <Tab label="Perfil" />
           {isOwner && <Tab label="Tarjetas de Crédito" icon={<CreditCardIcon />} iconPosition="start" />}
           {isOwner && <Tab label="Espacio compartido" icon={<GroupIcon />} iconPosition="start" />}
+          {isOwner && <Tab label="Automatización" icon={<SyncIcon />} iconPosition="start" />}
         </Tabs>
 
         {!isOwner && (
@@ -194,6 +197,12 @@ const Settings = () => {
         {isOwner && (
         <TabPanel value={tabIndex} index={2}>
           <SpaceMembersSettings />
+        </TabPanel>
+        )}
+
+        {isOwner && (
+        <TabPanel value={tabIndex} index={3}>
+          <NotificationsSettings />
         </TabPanel>
         )}
 
