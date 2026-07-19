@@ -1,5 +1,167 @@
 const db = require('../config/database');
 
+const { computeCommitments } = require('../utils/commitments');
+
+/**
+ * Totales de un mes calendario (mismas definiciones que getMonthlyHistory):
+ * gastos = TC nacional + intl (por fecha) + cargos CC (sin pagos de TC);
+ * ingresos = abonos CC.
+ */
+async function periodTotals(userId, year, month) {
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+
+  const tcNacionalRes = await db.query(`
+    SELECT COALESCE(SUM(ABS(t.monto)), 0) as total
+    FROM transactions t
+    WHERE t.user_id = $1 AND t.tipo = 'gasto'
+      AND t.fecha >= $2::date AND t.fecha <= $3::date
+  `, [userId, startDate, endDate]);
+
+  const tcIntlRes = await db.query(`
+    SELECT COALESCE(SUM(amount_clp), 0) as total
+    FROM intl_unbilled
+    WHERE user_id = $1 AND tipo = 'gasto'
+      AND fecha >= $2::date AND fecha <= $3::date
+  `, [userId, startDate, endDate]);
+
+  const ccCargosRes = await db.query(`
+    SELECT COALESCE(SUM(amount), 0) as total
+    FROM checking_transactions
+    WHERE user_id = $1 AND year = $2 AND month = $3 AND tipo = 'cargo'
+      AND LOWER(descripcion) NOT LIKE '%pago%tarjeta%'
+      AND LOWER(descripcion) NOT LIKE '%pago tc%'
+      AND LOWER(descripcion) NOT LIKE '%cargo por pago tc%'
+      AND LOWER(descripcion) NOT LIKE '%pago tarjeta de credito%'
+  `, [userId, year, month]);
+
+  const ccAbonosRes = await db.query(`
+    SELECT COALESCE(SUM(amount), 0) as total
+    FROM checking_transactions
+    WHERE user_id = $1 AND year = $2 AND month = $3 AND tipo = 'abono'
+  `, [userId, year, month]);
+
+  const gastosTC = Number(tcNacionalRes.rows[0]?.total || 0) + Number(tcIntlRes.rows[0]?.total || 0);
+  const gastosCC = Number(ccCargosRes.rows[0]?.total || 0);
+  const ingresos = Number(ccAbonosRes.rows[0]?.total || 0);
+  const gastos = gastosTC + gastosCC;
+  return { gastosTC, gastosCC, ingresos, gastos, balance: ingresos - gastos, lastDay };
+}
+
+/** Gastos por categoría del mes calendario (TC nacional + intl). */
+async function categoryTotals(userId, year, month) {
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`;
+
+  const result = await db.query(`
+    WITH combined AS (
+      SELECT t.category_id, ABS(t.monto) AS amount
+      FROM transactions t
+      WHERE t.user_id = $1 AND t.tipo = 'gasto'
+        AND t.fecha >= $2::date AND t.fecha <= $3::date
+      UNION ALL
+      SELECT iu.category_id, iu.amount_clp AS amount
+      FROM intl_unbilled iu
+      WHERE iu.user_id = $1 AND iu.tipo = 'gasto'
+        AND iu.fecha >= $2::date AND iu.fecha <= $3::date
+    )
+    SELECT COALESCE(c.name, 'Sin categoría') AS name, SUM(combined.amount) AS total
+    FROM combined
+    LEFT JOIN categories c ON combined.category_id = c.id
+    GROUP BY c.id, c.name
+    ORDER BY total DESC
+  `, [userId, startDate, endDate]);
+  return result.rows.map((r) => ({ name: r.name, total: Number(r.total) }));
+}
+
+const pctDelta = (current, previous) =>
+  previous > 0 ? ((current - previous) / previous) * 100 : null;
+
+// GET /api/dashboard/overview?year&month — Epic 12, Req 12.1 (K1–K7)
+const getOverview = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const year = parseInt(req.query.year, 10);
+    const month = parseInt(req.query.month, 10);
+    if (!year || !month || month < 1 || month > 12) {
+      return res.status(400).json({ error: 'year y month son requeridos' });
+    }
+
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+
+    const [cur, prev, prevCats] = await Promise.all([
+      periodTotals(userId, year, month),
+      periodTotals(userId, prevYear, prevMonth),
+      categoryTotals(userId, prevYear, prevMonth),
+    ]);
+
+    // K4: burn rate solo tiene sentido en el mes calendario en curso
+    const now = new Date();
+    let burnRate = null;
+    if (year === now.getFullYear() && month === now.getMonth() + 1) {
+      const day = now.getDate();
+      const dailyAvg = day > 0 ? cur.gastos / day : 0;
+      burnRate = {
+        dailyAvg: Math.round(dailyAvg),
+        projectedClose: Math.round(dailyAvg * cur.lastDay),
+      };
+    }
+
+    // K6: saldo conocido de cuenta corriente (misma lógica que salud financiera)
+    let disponibleHoy = 0;
+    const curCheckingRes = await db.query(`
+      SELECT COALESCE(known_balance, initial_balance, 0) as saldo
+      FROM checking_balances
+      WHERE user_id = $1 AND year = $2 AND month = $3
+    `, [userId, now.getFullYear(), now.getMonth() + 1]);
+    if (curCheckingRes.rows.length > 0) {
+      disponibleHoy = Number(curCheckingRes.rows[0].saldo) || 0;
+    } else {
+      const fallbackRes = await db.query(`
+        SELECT COALESCE(known_balance, initial_balance, 0) as saldo
+        FROM checking_balances
+        WHERE user_id = $1 AND known_balance IS NOT NULL
+        ORDER BY year DESC, month DESC LIMIT 1
+      `, [userId]);
+      disponibleHoy = Number(fallbackRes.rows[0]?.saldo) || 0;
+    }
+
+    // K5: compromisos del período siguiente al seleccionado
+    const compromisos = await computeCommitments(userId, nextYear, nextMonth);
+
+    // K7: top 5 categorías con % del total y delta vs mes anterior
+    const cats = await categoryTotals(userId, year, month);
+    const totalCat = cats.reduce((acc, c) => acc + c.total, 0);
+    const prevByName = Object.fromEntries(prevCats.map((c) => [c.name, c.total]));
+    const topCategorias = cats.slice(0, 5).map((c) => ({
+      name: c.name,
+      total: c.total,
+      pct: totalCat > 0 ? c.total / totalCat : 0,
+      deltaPct: pctDelta(c.total, prevByName[c.name] || 0),
+    }));
+
+    res.json({
+      period: { year, month },
+      balance: { value: cur.balance, deltaPct: pctDelta(cur.balance, prev.balance) },
+      gastos: { value: cur.gastos, deltaPct: pctDelta(cur.gastos, prev.gastos) },
+      ingresos: { value: cur.ingresos, deltaPct: pctDelta(cur.ingresos, prev.ingresos) },
+      tasaAhorro: cur.ingresos > 0 ? (cur.ingresos - cur.gastos) / cur.ingresos : null,
+      burnRate,
+      disponibleHoy,
+      compromisos,
+      topCategorias,
+    });
+  } catch (error) {
+    console.error('Error en getOverview:', error);
+    res.status(500).json({ error: 'Error al obtener overview del dashboard' });
+  }
+};
+
 const getMonthlySummary = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -714,5 +876,6 @@ module.exports = {
     getCategoryBreakdown,
     getMonthlyHistory,
     getCategoryEvolution,
-    getCategoryTransactions
+    getCategoryTransactions,
+    getOverview
 };

@@ -32,6 +32,21 @@ async function setFixedPeriod(page, period = '2026-06') {
 }
 
 async function mockDashboardData(page) {
+  await page.route('**/api/dashboard/overview**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        period: { year: 2026, month: 6 },
+        balance: { value: 180000, deltaPct: null },
+        gastos: { value: 120000, deltaPct: null },
+        ingresos: { value: 300000, deltaPct: null },
+        tasaAhorro: 0.6, burnRate: null, disponibleHoy: 500000,
+        compromisos: { total: 0, tcNoFacturado: 0, cuotas: 0, intl: 0, proyectados: 0 },
+        topCategorias: [{ name: 'Comida', total: 100000, pct: 1, deltaPct: null }],
+      }),
+    });
+  });
   await page.route('**/api/dashboard/monthly-history**', async (route) => {
     await route.fulfill({
       status: 200,
@@ -159,32 +174,25 @@ test.describe('Offline UX', () => {
     await mockAuthenticatedSession(page);
     await setFixedPeriod(page);
 
-    let historyPayload = [
-      { year: 2026, month: 6, gastosTC: 100000, gastosCC: 20000, ingresosCC: 300000, balance: 180000 },
-    ];
+    // El balance del dashboard ahora viene del endpoint overview (Epic 12)
+    let overviewPayload = {
+      period: { year: 2026, month: 6 },
+      balance: { value: 180000, deltaPct: null },
+      gastos: { value: 120000, deltaPct: null },
+      ingresos: { value: 300000, deltaPct: null },
+      tasaAhorro: 0.6, burnRate: null, disponibleHoy: 500000,
+      compromisos: { total: 0, tcNoFacturado: 0, cuotas: 0, intl: 0, proyectados: 0 },
+      topCategorias: [{ name: 'Comida', total: 100000, pct: 1, deltaPct: null }],
+    };
 
+    await page.route('**/api/dashboard/overview**', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(overviewPayload) });
+    });
     await page.route('**/api/dashboard/monthly-history**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(historyPayload),
-      });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
     });
-
-    await page.route('**/api/dashboard/categories**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([{ category_name: 'Comida', total: 100000 }]),
-      });
-    });
-
     await page.route('**/api/dashboard/category-evolution**', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ data: [], categories: [] }),
-      });
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], categories: [] }) });
     });
 
     await page.goto('/');
@@ -194,9 +202,7 @@ test.describe('Offline UX', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
     await expect(page.getByText(/Sin conexión/i)).toBeVisible();
 
-    historyPayload = [
-      { year: 2026, month: 6, gastosTC: 100000, gastosCC: 20000, ingresosCC: 350000, balance: 230000 },
-    ];
+    overviewPayload = { ...overviewPayload, balance: { value: 230000, deltaPct: null } };
 
     await page.context().setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));

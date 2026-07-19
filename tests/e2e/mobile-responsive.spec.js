@@ -276,6 +276,21 @@ async function mockProjectedPage(page) {
  * @param {import('@playwright/test').Page} page
  */
 async function mockDashboardPage(page) {
+  await page.route('**/api/dashboard/overview**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        period: { year: 2026, month: 6 },
+        balance: { value: 180000, deltaPct: 5 },
+        gastos: { value: 120000, deltaPct: -3 },
+        ingresos: { value: 300000, deltaPct: 2 },
+        tasaAhorro: 0.6, burnRate: null, disponibleHoy: 500000,
+        compromisos: { total: 100000, tcNoFacturado: 100000, cuotas: 0, intl: 0, proyectados: 0 },
+        topCategorias: [{ name: 'Comida', total: 100000, pct: 1, deltaPct: null }],
+      }),
+    });
+  });
   await page.route('**/api/dashboard/monthly-history**', async (route) => {
     await route.fulfill({
       status: 200,

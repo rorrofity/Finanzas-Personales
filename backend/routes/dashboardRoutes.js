@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDashboardData, getMonthlySummary, getCategoryBreakdown, getMonthlyHistory, getCategoryEvolution, getCategoryTransactions } = require('../controllers/dashboardController');
+const { getDashboardData, getMonthlySummary, getCategoryBreakdown, getMonthlyHistory, getCategoryEvolution, getCategoryTransactions, getOverview } = require('../controllers/dashboardController');
 const { auth } = require('../middleware/auth');
 const { resolveSpace } = require('../middleware/resolveSpace');
 
@@ -9,6 +9,7 @@ router.use(auth);
 router.use(resolveSpace);
 
 router.get('/', getDashboardData);
+router.get('/overview', getOverview);
 router.get('/summary', getMonthlySummary);
 router.get('/categories', getCategoryBreakdown);
 router.get('/monthly-history', getMonthlyHistory);
