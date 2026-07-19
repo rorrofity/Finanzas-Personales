@@ -73,6 +73,29 @@ const DashboardLayout = () => {
     }
   };
 
+  // Fix "pantalla ensombrecida al entrar": al reanudar la PWA desde
+  // recientes (bfcache), Android puede restaurar el drawer móvil abierto
+  // con el panel fuera de pantalla — queda solo el backdrop tapando la
+  // app. Al volver a primer plano, cerramos drawer y menú siempre.
+  useEffect(() => {
+    const closeOverlays = () => {
+      setMobileOpen(false);
+      setAnchorEl(null);
+    };
+    const onPageShow = (event) => {
+      if (event.persisted) closeOverlays();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') closeOverlays();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
   const handleProfileMenu = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -152,8 +175,7 @@ const DashboardLayout = () => {
       <Drawer
         variant="temporary"
         open={mobileOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{ keepMounted: true }}
+        onClose={() => setMobileOpen(false)}
         sx={{
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': {
