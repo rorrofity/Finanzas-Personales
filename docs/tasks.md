@@ -15,23 +15,23 @@
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 0.1 | S | Instalar `node-cron` y `web-push` en `backend/package.json` | — | `[ ]` |
-| 0.2 | S | Generar par de claves VAPID; documentar variables `.env` (VAPID_PUBLIC/PRIVATE/SUBJECT, TZ, SYNC_CRON_TIMES, ENABLE_SCHEDULER) | 13.8 | `[ ]` |
-| 0.3 | S | Runner de tests unitarios para `backend/` (Jest, config separada del frontend) + script `test:backend` | — | `[ ]` |
-| 0.4 | S | Migraciones 028 (push_subscriptions), 029 (users.auto_sync_enabled), 030 (sync_runs) + correr en local | 13.2, 13.5, 13.8 | `[ ]` |
-| 0.5 | V | Baseline: `test:backend` corre y las migraciones aplican en local | — | `[ ]` |
+| 0.1 | S | Instalar `node-cron` y `web-push` (en package.json raíz, junto al resto de deps del backend) | — | `[x]` |
+| 0.2 | S | Generar par de claves VAPID; documentar variables `.env`/`.env.example` (VAPID_PUBLIC/PRIVATE/SUBJECT, TZ, SYNC_CRON_TIMES, ENABLE_SCHEDULER) | 13.8 | `[x]` |
+| 0.3 | S | Runner de tests unitarios para `backend/` (`backend/jest.config.js` + script `test:backend`) | — | `[x]` |
+| 0.4 | S | Migraciones 028 (push_subscriptions), 029 (users.auto_sync_enabled), 030 (sync_runs) + correr en local | 13.2, 13.5, 13.8 | `[x]` |
+| 0.5 | V | Baseline: `test:backend` corre y las migraciones aplican en local | — | `[x]` |
 
 ## Fase 1: syncService + bitácora + settings
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 1.T1 | 🔴 T | Unit: `runSync` mockeando axios(N8N) → retorna {imported,skipped}, registra en sync_runs, y ante error de N8N NO lanza (registra error) | 13.4, 13.5 | `[ ]` |
-| 1.T2 | 🔴 T | API: `/sync/settings` GET refleja estado; PUT activa/desactiva (dueño 200, miembro 403) | 13.2, 13.3 | `[ ]` |
-| 1.T3 | 🔴 T | API: `/sync/runs` lista las últimas ejecuciones del usuario | 13.5 | `[ ]` |
-| 1.I1 | 🟢 I | `backend/services/syncService.js` (extraer llamada N8N del endpoint) + modelo/insert en sync_runs | 13.1, 13.5 | `[ ]` |
-| 1.I2 | 🟢 I | Refactor `/sync-emails` para usar `runSync(userId,'manual')` sin cambiar la respuesta | 13.1 | `[ ]` |
-| 1.I3 | 🟢 I | Endpoints `/sync/settings` (GET/PUT) y `/sync/runs` | 13.2, 13.3, 13.5 | `[ ]` |
-| 1.V1 | 🔁 V | 1.T1–1.T3 verdes + suite API previa sin regresiones | — | `[ ]` |
+| 1.T1 | 🔴 T | Unit: `runSync` mockeando axios(N8N) → retorna {imported,skipped}, registra en sync_runs, y ante error de N8N NO lanza (registra error) | 13.4, 13.5 | `[x]` |
+| 1.T2 | 🔴 T | API: `/sync/settings` GET refleja estado; PUT activa/desactiva (dueño 200, miembro 403) | 13.2, 13.3 | `[x]` |
+| 1.T3 | 🔴 T | API: `/sync/runs` lista las últimas ejecuciones del usuario | 13.5 | `[x]` |
+| 1.I1 | 🟢 I | `backend/services/syncService.js` (extraer llamada N8N del endpoint) + modelo/insert en sync_runs | 13.1, 13.5 | `[x]` |
+| 1.I2 | 🟢 I | Refactor `/sync-emails` para usar `runSync(userId,'manual')` sin cambiar la respuesta | 13.1 | `[x]` |
+| 1.I3 | 🟢 I | Endpoints `/sync/settings` (GET/PUT) y `/sync/runs` | 13.2, 13.3, 13.5 | `[x]` |
+| 1.V1 | 🔁 V | 1.T1–1.T3 verdes + suite API previa sin regresiones (unit 5/5, API 23/23, E2E 94/94) | — | `[x]` |
 
 ## Fase 2: Scheduler
 

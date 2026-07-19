@@ -6,6 +6,7 @@ const { auth } = require('../middleware/auth');
 const { pool } = require('../config/database');
 const { resolveSpace } = require('../middleware/resolveSpace');
 const { requireOwner } = require('../middleware/requirePermission');
+const { runSync } = require('../services/syncService');
 
 /**
  * Calcula el período de facturación basándose en la fecha de transacción.
@@ -61,128 +62,36 @@ function calculateBillingPeriod(fecha) {
 router.post('/sync-emails', auth, resolveSpace, requireOwner, async (req, res) => {
   const userId = req.user.id;
   const startTime = Date.now();
-  
+
   console.log(`📧 [${new Date().toISOString()}] Sync iniciado para usuario: ${userId}`);
-  
-  try {
-    // Validar que el usuario existe
-    const userCheck = await pool.query(
-      'SELECT id, nombre FROM users WHERE id = $1',
-      [userId]
-    );
-    
-    if (userCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Usuario no encontrado'
-      });
-    }
-    
-    // Determinar URL de N8N
-    // En producción: N8N corre en el mismo servidor (localhost:5678)
-    // En desarrollo: Usar N8N_WEBHOOK_URL del .env o túnel SSH
-    const n8nUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/sync-bank-emails';
-    
-    // Llamar a N8N
-    let n8nResponse;
-    try {
-      console.log(`🔄 Llamando a N8N: ${n8nUrl}`);
-      n8nResponse = await axios.post(
-        n8nUrl,
-        {
-          userId: userId,
-          timestamp: new Date().toISOString(),
-          userName: userCheck.rows[0].nombre
-        },
-        {
-          timeout: 60000, // 60 segundos
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      console.log(`✅ N8N respondió: ${JSON.stringify(n8nResponse.data)}`);
-    } catch (n8nError) {
-      console.error('❌ Error llamando N8N:', n8nError.message);
-      
-      if (n8nError.code === 'ECONNREFUSED') {
-        return res.status(503).json({
-          success: false,
-          message: 'Servicio de sincronización no disponible. Verifica que N8N esté corriendo.',
-          error: 'Service unavailable',
-          details: 'N8N no está respondiendo en el puerto 5678'
-        });
-      }
-      
-      if (n8nError.code === 'ETIMEDOUT' || n8nError.code === 'ECONNABORTED') {
-        return res.status(504).json({
-          success: false,
-          message: 'La sincronización tardó demasiado. Intenta nuevamente.',
-          error: 'Timeout'
-        });
-      }
-      
-      return res.status(500).json({
-        success: false,
-        message: 'Error comunicándose con el servicio de sincronización',
-        error: n8nError.message
-      });
-    }
-    
-    // Extraer resultado - N8N puede devolver en varios formatos
-    let result = n8nResponse.data || {};
-    
-    // Si es un array (formato de webhook con múltiples outputs), extraer el primer item
-    if (Array.isArray(result)) {
-      // Buscar el primer item que tenga datos de importación
-      for (const item of result.flat(2)) {
-        if (item && (item.imported !== undefined || item.success !== undefined)) {
-          result = item;
-          break;
-        }
-        if (item && item.json && (item.json.imported !== undefined || item.json.success !== undefined)) {
-          result = item.json;
-          break;
-        }
-      }
-    }
-    
-    // Si result tiene una propiedad json, usar esa
-    if (result.json && typeof result.json === 'object') {
-      result = result.json;
-    }
-    
-    console.log('📦 Resultado parseado de N8N:', JSON.stringify(result));
-    
-    const imported = result.imported || 0;
-    const skipped = result.skipped || 0;
-    const errors = result.errors || [];
-    
-    const duration = Date.now() - startTime;
-    
-    console.log(`📊 Resultado: ${imported} importadas, ${skipped} omitidas, ${errors.length} errores en ${duration}ms`);
-    
-    // Responder al frontend
-    res.json({
-      success: true,
-      message: imported > 0 
-        ? `Se importaron ${imported} transacción${imported !== 1 ? 'es' : ''} nueva${imported !== 1 ? 's' : ''}` 
-        : 'No se encontraron transacciones nuevas',
-      imported: imported,
-      skipped: skipped,
-      errors: errors,
-      duration: `${duration}ms`
-    });
-    
-  } catch (error) {
-    console.error('❌ Error en sincronización:', error);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Error al sincronizar transacciones',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
-    });
+
+  // La llamada a N8N vive en syncService.runSync (Epic 13) para que la
+  // comparta este endpoint manual y el scheduler programado. runSync nunca
+  // lanza: cualquier fallo vuelve como { error: '<mensaje>' }.
+  const result = await runSync(userId, 'manual');
+  const duration = Date.now() - startTime;
+
+  if (result.error) {
+    const message = /ECONNREFUSED/.test(result.error)
+      ? 'Servicio de sincronización no disponible. Verifica que N8N esté corriendo.'
+      : /ETIMEDOUT|ECONNABORTED/.test(result.error)
+        ? 'La sincronización tardó demasiado. Intenta nuevamente.'
+        : 'Error comunicándose con el servicio de sincronización';
+    const status = /ECONNREFUSED/.test(result.error) ? 503 : /ETIMEDOUT|ECONNABORTED/.test(result.error) ? 504 : 500;
+    return res.status(status).json({ success: false, message, error: result.error });
   }
+
+  const { imported, skipped, errors } = result;
+  res.json({
+    success: true,
+    message: imported > 0
+      ? `Se importaron ${imported} transacción${imported !== 1 ? 'es' : ''} nueva${imported !== 1 ? 's' : ''}`
+      : 'No se encontraron transacciones nuevas',
+    imported,
+    skipped,
+    errors,
+    duration: `${duration}ms`
+  });
 });
 
 /**
@@ -665,6 +574,71 @@ router.post('/sync-save-intl', async (req, res) => {
     });
   } finally {
     client.release();
+  }
+});
+
+/**
+ * GET /api/sync/settings — Epic 13, Req 13.2/13.3
+ * Estado del opt-in a la sincronización programada del espacio activo.
+ */
+router.get('/settings', auth, resolveSpace, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT auto_sync_enabled FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    res.json({ autoSyncEnabled: result.rows[0]?.auto_sync_enabled || false });
+  } catch (error) {
+    console.error('Error obteniendo sync settings:', error);
+    res.status(500).json({ error: 'Error al obtener configuración de sincronización' });
+  }
+});
+
+/**
+ * PUT /api/sync/settings — Epic 13, Req 13.3
+ * Activa/desactiva la sincronización programada. Exclusivo del dueño
+ * (no delegable a un miembro invitado, igual que sync-emails).
+ */
+router.put('/settings', auth, resolveSpace, requireOwner, async (req, res) => {
+  try {
+    const { autoSyncEnabled } = req.body || {};
+    const result = await pool.query(
+      'UPDATE users SET auto_sync_enabled = $2 WHERE id = $1 RETURNING auto_sync_enabled',
+      [req.user.id, !!autoSyncEnabled]
+    );
+    res.json({ autoSyncEnabled: result.rows[0].auto_sync_enabled });
+  } catch (error) {
+    console.error('Error actualizando sync settings:', error);
+    res.status(500).json({ error: 'Error al actualizar configuración de sincronización' });
+  }
+});
+
+/**
+ * GET /api/sync/runs — Epic 13, Req 13.5
+ * Bitácora de las últimas ejecuciones de sincronización (manual/programada).
+ */
+router.get('/runs', auth, resolveSpace, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT trigger, imported, skipped, error, created_at
+       FROM sync_runs
+       WHERE user_id = $1
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [req.user.id]
+    );
+    res.json({
+      runs: result.rows.map((r) => ({
+        trigger: r.trigger,
+        imported: r.imported,
+        skipped: r.skipped,
+        error: r.error,
+        createdAt: r.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Error obteniendo sync runs:', error);
+    res.status(500).json({ error: 'Error al obtener bitácora de sincronización' });
   }
 });
 
