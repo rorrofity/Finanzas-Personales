@@ -38,6 +38,7 @@ import { Add, Edit, Delete, FileUpload, CheckCircle, Close } from '@mui/icons-ma
 import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
 import { usePeriod } from '../contexts/PeriodContext';
+import StatCard from '../components/ui/StatCard';
 
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
@@ -225,33 +226,16 @@ export default function Checking() {
         <MonthPicker />
       </Box>
 
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
-            <CardContent>
-              <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>Saldo Actual</Typography>
-              <Typography variant="h4" fontWeight="bold">{currency(globalBalance)}</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>Según última cartola importada</Typography>
-            </CardContent>
-          </Card>
+      {/* Totales compactos (Epic 12, Req 12.10) */}
+      <Grid container spacing={1} sx={{ mb: 2 }} data-testid="totals-row">
+        <Grid item xs={4}>
+          <StatCard label="Saldo Actual" value={globalBalance} short accent="primary.main" />
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2" color="success.main">Total Abonos ({monthLabel})</Typography>
-              <Typography variant="h5" color="success.main">{currency(totals.abonos)}</Typography>
-              <Typography variant="caption">{totals.countAbonos} transacciones</Typography>
-            </CardContent>
-          </Card>
+        <Grid item xs={4}>
+          <StatCard label="Total Abonos" value={totals.abonos} short accent="success.main" />
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2" color="error.main">Total Cargos ({monthLabel})</Typography>
-              <Typography variant="h5" color="error.main">{currency(totals.cargos)}</Typography>
-              <Typography variant="caption">{totals.countCargos} transacciones</Typography>
-            </CardContent>
-          </Card>
+        <Grid item xs={4}>
+          <StatCard label="Total Cargos" value={totals.cargos} short accent="error.main" />
         </Grid>
       </Grid>
 

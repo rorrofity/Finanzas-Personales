@@ -10,6 +10,8 @@ import { formatCLP, formatCLPShort } from '../../utils/format';
 const StatCard = ({
   label,
   value,
+  valueText,      // override del texto (p.ej. USD) — ignora el formato CLP
+  subtext,        // segunda línea opcional (p.ej. equivalente en CLP)
   deltaPct,
   positiveIsGood = true,
   short = false,
@@ -17,7 +19,8 @@ const StatCard = ({
   accent = 'primary.main',
   emptyText = 'Sin datos del período',
 }) => {
-  const isEmpty = value === null || value === undefined;
+  const isEmpty = valueText === undefined && (value === null || value === undefined);
+  const displayText = valueText !== undefined ? valueText : short ? formatCLPShort(value) : formatCLP(value);
 
   return (
     <Card
@@ -41,14 +44,21 @@ const StatCard = ({
             {emptyText}
           </Typography>
         ) : (
-          <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 0.5 }}>
-            <Typography variant="h6" fontWeight={700} noWrap>
-              {short ? formatCLPShort(value) : formatCLP(value)}
-            </Typography>
-            {deltaPct !== undefined && (
-              <TrendDelta value={deltaPct} positiveIsGood={positiveIsGood} />
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 0.5 }}>
+              <Typography variant="h6" fontWeight={700} noWrap>
+                {displayText}
+              </Typography>
+              {deltaPct !== undefined && (
+                <TrendDelta value={deltaPct} positiveIsGood={positiveIsGood} />
+              )}
+            </Box>
+            {subtext && (
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                {subtext}
+              </Typography>
             )}
-          </Box>
+          </>
         )}
       </CardContent>
     </Card>

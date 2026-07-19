@@ -57,6 +57,7 @@ import { usePeriod } from '../contexts/PeriodContext';
 import { useOfflineContext } from '../contexts/OfflineContext';
 import { useSpace } from '../contexts/SpaceContext';
 import CreatedByChip from '../components/CreatedByChip';
+import StatCard from '../components/ui/StatCard';
 import { fetchWithCache } from '../services/readCache';
 
 const Transactions = () => {
@@ -586,34 +587,16 @@ const Transactions = () => {
         </Box>
       </Box>
 
-      {/* Cards de totales */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
-          <Card variant="outlined" sx={{ borderLeft: '4px solid', borderLeftColor: 'error.main' }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="error.main">Total Gastos ({monthLabel})</Typography>
-              <Typography variant="h5" fontWeight="bold" color="error.main">{formatAmount(totals.totalGastos)}</Typography>
-              <Typography variant="caption" color="text.secondary">{totals.countGastos} transacciones</Typography>
-            </CardContent>
-          </Card>
+      {/* Totales compactos (Epic 12, Req 12.10) */}
+      <Grid container spacing={1} sx={{ mb: 2.5 }} data-testid="totals-row">
+        <Grid item xs={4}>
+          <StatCard label="Total Gastos" value={totals.totalGastos} short accent="error.main" />
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Card variant="outlined" sx={{ borderLeft: '4px solid', borderLeftColor: 'success.main' }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="success.main">Total Pagos ({monthLabel})</Typography>
-              <Typography variant="h5" fontWeight="bold" color="success.main">{formatAmount(totals.totalPagos)}</Typography>
-              <Typography variant="caption" color="text.secondary">{totals.countPagos} transacciones</Typography>
-            </CardContent>
-          </Card>
+        <Grid item xs={4}>
+          <StatCard label="Total Pagos" value={totals.totalPagos} short accent="success.main" />
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Card variant="outlined" sx={{ borderLeft: '4px solid', borderLeftColor: 'primary.main' }}>
-            <CardContent>
-              <Typography variant="subtitle2" color="primary.main">Balance ({monthLabel})</Typography>
-              <Typography variant="h5" fontWeight="bold" color="primary.main">{formatAmount(totals.totalGastos - totals.totalPagos)}</Typography>
-              <Typography variant="caption" color="text.secondary">Gastos - Pagos</Typography>
-            </CardContent>
-          </Card>
+        <Grid item xs={4}>
+          <StatCard label="Balance" value={totals.totalGastos - totals.totalPagos} short accent="primary.main" />
         </Grid>
       </Grid>
 
