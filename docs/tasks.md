@@ -37,12 +37,12 @@
 
 | # | Tipo | Tarea | Req | Estado |
 |---|---|---|---|---|
-| 2.T1 | 🔴 T | Unit: `runScheduledSync` itera SOLO usuarios con `auto_sync_enabled`; llama runSync por cada uno | 13.1, 13.2 | `[ ]` |
-| 2.T2 | 🔴 T | Unit: tras runSync con imported>0 llama a pushService.notifySync; con imported=0 NO | 13.9, 13.13 | `[ ]` |
-| 2.T3 | 🔴 T | Unit: un error en un usuario no aborta el resto (error-safe) | 13.4 | `[ ]` |
-| 2.I1 | 🟢 I | `backend/services/scheduler.js` (node-cron TZ Santiago, times configurables) + `runScheduledSync` | 13.1 | `[ ]` |
-| 2.I2 | 🟢 I | `server.js`: start del scheduler solo en prod / `ENABLE_SCHEDULER=true` | 13.6 | `[ ]` |
-| 2.V1 | 🔁 V | 2.T1–2.T3 verdes | — | `[ ]` |
+| 2.T1 | 🔴 T | Unit: `runScheduledSync` itera SOLO usuarios con `auto_sync_enabled`; llama runSync por cada uno | 13.1, 13.2 | `[x]` |
+| 2.T2 | 🔴 T | Unit: tras runSync con imported>0 llama a pushService.notifySync; con imported=0 NO | 13.9, 13.13 | `[x]` |
+| 2.T3 | 🔴 T | Unit: un error en un usuario no aborta el resto (error-safe) | 13.4 | `[x]` |
+| 2.I1 | 🟢 I | `backend/services/scheduler.js` (node-cron TZ Santiago, times configurables) + `runScheduledSync` | 13.1 | `[x]` |
+| 2.I2 | 🟢 I | `server.js`: start del scheduler solo en prod / `ENABLE_SCHEDULER=true` | 13.6 | `[x]` |
+| 2.V1 | 🔁 V | 2.T1–2.T3 verdes (unit backend 9/9, API 23/23) | — | `[x]` |
 
 ## Fase 3: Push backend
 

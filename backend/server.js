@@ -161,4 +161,11 @@ app.listen(PORT, () => {
   console.log(`Health check disponible en http://localhost:${PORT}/api/health`);
 });
 
+// Scheduler de sincronización programada (Epic 13, Req 13.6).
+// Solo corre en producción, salvo activación explícita en dev/test
+// (ENABLE_SCHEDULER=true) — evita llamar a N8N por accidente al developear.
+if (process.env.NODE_ENV === 'production' || process.env.ENABLE_SCHEDULER === 'true') {
+  require('./services/scheduler').start();
+}
+
 module.exports = app;
