@@ -61,11 +61,17 @@ Para evitar la sobre-ingeniería, **NO** se debe implementar lo siguiente:
 - **Patrón:** Service Worker + IndexedDB + Background Sync API.
 - **Justificación:** Acceso a datos financieros en cualquier momento, incluso sin internet.
 
-### N8N-001 — Automatización Controlada
+### N8N-001 — Automatización Controlada *(enmendado 2026-07-19)*
 - **Nivel:** MUST (Obligatorio)
-- **Restricción:** La sincronización desde emails DEBE ser on-demand (botón), no automática periódica.
-- **Patrón:** Webhook de backend a N8N, N8N responde con datos parseados.
-- **Justificación:** Control del usuario sobre cuándo sincronizar; evita sobrecarga de APIs.
+- **Restricción:** La sincronización desde emails puede ser **on-demand (botón)** y/o **programada (recurrente)**, pero SIEMPRE bajo control del dueño: la programación es **opt-in** (el dueño la activa) y con horarios acotados; nunca se sincroniza en nombre de un miembro invitado.
+- **Patrón:** Webhook de backend a N8N (mismo webhook para manual y programado); un scheduler del backend dispara la sync recurrente. N8N responde con datos parseados.
+- **Justificación:** El usuario quiere recibir sus movimientos sin recordar sincronizar manualmente; se mantiene el control (activar/desactivar, horarios) y se evita sobrecarga limitando la frecuencia.
+
+### PUSH-001 — Notificaciones Push Consentidas
+- **Nivel:** MUST (Obligatorio)
+- **Restricción:** Las notificaciones push solo se envían a dispositivos que hayan **otorgado permiso explícito** y estén suscritos; una suscripción pertenece a un usuario y solo recibe notificaciones de ese usuario. Las claves privadas (VAPID, web-push) viven en el servidor y NUNCA se exponen al cliente.
+- **Patrón:** Web Push estándar (VAPID) + Service Worker; suscripciones almacenadas por usuario; envío desde el backend con `web-push`.
+- **Justificación:** Respeto por el consentimiento del usuario y por la privacidad de datos financieros (DATA-001).
 
 ### SEC-001 — Headers de Seguridad
 - **Nivel:** MUST (Obligatorio)
@@ -368,6 +374,53 @@ Los criterios de aceptación usan **notación EARS**:
 
 ---
 
+### Epic 13: Sincronización Automática Programada + Notificaciones Push *(Épica Actual — NUEVA)*
+
+**Problema:** Hoy Rodrigo debe acordarse de pulsar "Sincronizar Emails" para traer sus cargos de tarjeta. Quiere que ocurra solo, dos veces al día, y que le avise para ir a categorizar lo nuevo.
+
+**Flujo:** Un scheduler del backend ejecuta la sincronización automáticamente en horarios configurables (por defecto **13:00 y 22:00 America/Santiago**), reutilizando el mismo webhook de N8N que la sync manual. Si la sincronización trae transacciones nuevas, el backend envía una **notificación push** a los dispositivos del dueño con un recordatorio para categorizarlas; al tocarla, la PWA abre la vista de transacciones.
+
+**Decisiones de diseño (2026-07-19):**
+- **Scheduler en el backend** (`node-cron`, zona horaria America/Santiago), no en N8N: mantiene al backend como orquestador, permite decidir el push según el resultado y es testeable. El webhook de N8N no cambia.
+- **Opt-in por dueño:** la sync programada se activa/desactiva desde Configuración (`auto_sync_enabled`); si está desactivada, nada ocurre automáticamente (comportamiento actual).
+- **Push solo si hay novedades:** se notifica únicamente cuando `imported > 0` (evita ruido).
+- **Web Push estándar (VAPID):** funciona en la PWA instalada (iOS 16.4+ agregada a inicio, Android Chrome). Requiere permiso explícito del usuario.
+- **Solo el dueño** sincroniza y recibe push de su espacio (coherente con N8N-001 y Epic 11); un miembro invitado no dispara sync ni recibe estas notificaciones.
+
+**Principios aplicados:** `N8N-001`, `PUSH-001`, `AUTH-001`, `DATA-001`, `SEC-001`
+
+#### 13.A Sincronización programada
+
+| ID | Criterio de Aceptación |
+|---|---|
+| Req 13.1 | El sistema **debe** ejecutar la sincronización automáticamente en los horarios configurados (default 13:00 y 22:00 America/Santiago), reutilizando el flujo de N8N de la sync manual. |
+| Req 13.2 | La sincronización programada **debe** ejecutarse solo para usuarios con `auto_sync_enabled = true`; si nadie la tiene activa, no se llama a N8N. |
+| Req 13.3 | El dueño **debe** poder activar/desactivar la sincronización programada desde Configuración, con efecto en la próxima ejecución. |
+| Req 13.4 | Si N8N falla o no responde, el scheduler **debe** registrar el error y continuar (no romper el proceso ni reintentar en loop); la próxima ejecución programada procede normalmente. |
+| Req 13.5 | La sincronización programada **debe** registrar su resultado (timestamp, importadas, omitidas, error) consultable para diagnóstico. |
+| Req 13.6 | El scheduler **no debe** ejecutarse en entornos de desarrollo/test salvo activación explícita (evita llamadas accidentales a N8N). |
+
+#### 13.B Notificaciones push
+
+| ID | Criterio de Aceptación |
+|---|---|
+| Req 13.7 | Cuando la PWA esté instalada y el usuario no haya decidido aún, el sistema **debe** poder solicitar permiso de notificaciones de forma no intrusiva (acción del usuario, no pop-up automático al cargar). |
+| Req 13.8 | Al conceder permiso, el sistema **debe** suscribir el dispositivo (Web Push/VAPID) y persistir la suscripción asociada al usuario (`POST /api/push/subscribe`). |
+| Req 13.9 | Tras una sincronización programada con `imported > 0`, el sistema **debe** enviar una notificación push a las suscripciones del dueño con un resumen ("Se sincronizaron N transacciones nuevas — toca para categorizar"). |
+| Req 13.10 | Al tocar la notificación, la PWA **debe** enfocarse/abrirse en la vista de transacciones para categorizar. |
+| Req 13.11 | Si el envío a una suscripción devuelve 404/410 (expirada), el sistema **debe** eliminarla para no reintentar. |
+| Req 13.12 | El usuario **debe** poder desactivar las notificaciones (desuscribir) desde Configuración; una suscripción eliminada no vuelve a recibir push. |
+| Req 13.13 | Si `imported = 0`, el sistema **no debe** enviar notificación (sin ruido). |
+
+**Casos de borde:**
+- Sin suscripciones push: la sync programada corre igual, sin enviar push.
+- Permiso denegado por el navegador: la UI lo refleja y no reintenta automáticamente; el usuario puede reintentar desde Configuración.
+- Dos dispositivos del mismo dueño: ambos reciben la notificación (todas sus suscripciones).
+- El scheduler y el push **no** aplican a miembros invitados (solo dueño).
+- iOS: el push solo funciona con la PWA **instalada** (agregada a pantalla de inicio); en Safari normal no. La UI debe explicarlo si el permiso no está disponible.
+
+---
+
 ## 6. Modelo de Datos (PostgreSQL)
 
 ### 6.1 Tablas Principales
@@ -440,6 +493,31 @@ Restricciones: `UNIQUE(owner_user_id, invited_email)`; máx. 2 filas por `owner_
 
 #### Auditoría en `transactions` *(Epic 11)*
 Se agregan `created_by UUID NULL` y `updated_by UUID NULL` (FK → users). Histórico queda NULL (se muestra como registrado por el dueño).
+
+#### `push_subscriptions` *(Nueva, Epic 13)*
+| Atributo | Tipo | Rol | Notas |
+|---|---|---|---|
+| `id` | UUID | **PK** | gen_random_uuid() |
+| `user_id` | UUID | **FK** | → users(id) ON DELETE CASCADE |
+| `endpoint` | TEXT | Único | URL del push service del navegador |
+| `p256dh` | TEXT | — | Clave pública del cliente (encriptación) |
+| `auth` | TEXT | — | Secreto de autenticación del cliente |
+| `user_agent` | TEXT | Nullable | Para que el usuario identifique el dispositivo |
+| `created_at` | TIMESTAMPTZ | — | DEFAULT NOW() |
+
+#### `auto_sync_enabled` en `users` *(Epic 13)*
+Se agrega `auto_sync_enabled BOOLEAN NOT NULL DEFAULT false`: opt-in del dueño a la sincronización programada.
+
+#### `sync_runs` *(Nueva, Epic 13 — bitácora)*
+| Atributo | Tipo | Descripción |
+|---|---|---|
+| `id` | UUID | PK |
+| `user_id` | UUID | FK → users |
+| `trigger` | VARCHAR(12) | `manual` / `scheduled` |
+| `imported` | INTEGER | Transacciones nuevas |
+| `skipped` | INTEGER | Omitidas (duplicadas) |
+| `error` | TEXT | Nullable (mensaje si falló) |
+| `created_at` | TIMESTAMPTZ | DEFAULT NOW() |
 
 #### `pending_sync` *(Nueva, Epic 9)*
 Tabla para operaciones offline pendientes (o almacenamiento en IndexedDB del frontend).
@@ -524,6 +602,23 @@ users ||--o{ intl_unbilled : "1:N"
 | DELETE | `/members/:id` | JWT (dueño) | Revocar membresía/invitación |
 
 Todos los endpoints de datos existentes (7.2–7.5) aceptan el header **`X-Space-Owner: <uuid>`** para operar sobre un espacio compartido (validado por `resolveSpace`, ACL-001). Sin el header operan sobre el espacio propio.
+
+### 7.8 Notificaciones Push (`/api/push`) *(Epic 13)*
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| GET | `/vapid-public-key` | JWT | Clave pública VAPID para suscribir el navegador |
+| POST | `/subscribe` | JWT | Guardar la suscripción `{endpoint, keys:{p256dh, auth}}` del dispositivo |
+| POST | `/unsubscribe` | JWT | Eliminar la suscripción `{endpoint}` |
+| POST | `/test` | JWT (dueño) | Enviar una push de prueba a los dispositivos del usuario |
+
+### 7.9 Sincronización programada (`/api/sync`) *(Epic 13, extiende 7.3)*
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| GET | `/settings` | JWT | Estado de `auto_sync_enabled` y horarios |
+| PUT | `/settings` | JWT (dueño) | Activar/desactivar `auto_sync_enabled` |
+| GET | `/runs` | JWT | Últimas ejecuciones (bitácora `sync_runs`) |
+
+El scheduler del backend (`node-cron`, America/Santiago) no es un endpoint: corre en el proceso Express (solo en producción o con `ENABLE_SCHEDULER=true`).
 
 ### 7.7 PWA Offline Sync (`/api/pwa`)
 | Método | Endpoint | Auth | Descripción |
@@ -631,5 +726,5 @@ Workbox simplifica el caching, routing, y background sync con APIs probadas y bi
 
 ---
 
-*Versión: 1.2.0 — agrega Epic 12 (Rediseño del Dashboard y Sistema de Diseño Compacto)*
-*Última actualización: 2026-07-18*
+*Versión: 1.3.0 — agrega Epic 13 (Sincronización Automática Programada + Push) y principio PUSH-001*
+*Última actualización: 2026-07-19*

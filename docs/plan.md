@@ -1,95 +1,128 @@
-# plan.md — Plan de Arquitectura Técnica: Rediseño del Dashboard (Epic 12)
+# plan.md — Plan de Arquitectura Técnica: Sync Programada + Push (Epic 13)
 
-> **Subordinación:** subordinado a `constitution.md` v1.1 y `spec.md` v1.2.0 (Epic 12).
-> Planes anteriores archivados en `archive/` (PWA, Espacio Compartido).
+> **Subordinación:** subordinado a `constitution.md` v1.2 y `spec.md` v1.3.0 (Epic 13).
+> Planes anteriores archivados en `docs/archive/`.
 
 ---
 
-## 1. Diseño de la vista (mobile-first)
+## 1. Arquitectura (visión general)
 
 ```
-┌─────────────────────────────────┐
-│ [Período ▾]        [⟳ Sync]    │  ← header compacto en una fila
-├─────────────────────────────────┤
-│ ┌─────────┐ ┌─────────┐        │
-│ │ BALANCE │ │ GASTOS  │        │  ← stat-cards 2×2 (mobile)
-│ │ $520.000│ │ $1.8M   │        │    número h5 + delta ▲▼ + label
-│ │ ▲ 12%   │ │ ▼ 5%    │        │    (K1, K2, K3, K6) máx 96px
-│ └─────────┘ └─────────┘        │
-│ ┌─────────┐ ┌─────────┐        │
-│ │ AHORRO  │ │DISPONIBLE│       │
-│ └─────────┘ └─────────┘        │
-├─────────────────────────────────┤
-│ ▸ Compromisos próximos  $2.1M  │  ← K5 colapsable (Accordion denso)
-├─────────────────────────────────┤
-│ EN QUÉ SE VA (Top categorías)  │  ← K7: barras horizontales
-│ Cuentas        ████████░ 38%   │    tap → drill-down existente
-│ Compras casa   █████░░░░ 22%   │
-│ ...                            │
-├─────────────────────────────────┤
-│ [Evolución] [Por categoría]    │  ← tabs segmentados, UN gráfico
-│ ┌───────────────────────────┐  │    altura ≤260px mobile
-│ │   gráfico activo          │  │
-│ └───────────────────────────┘  │
-└─────────────────────────────────┘
+        ┌──────────────── Backend (Express + PM2) ────────────────┐
+        │                                                          │
+ node-cron (America/Santiago)         POST /api/push/subscribe     │
+   13:00 y 22:00                       (guarda suscripción)        │
+        │                                    ▲                     │
+        ▼                                    │                     │
+  runScheduledSync()                         │                     │
+   • para cada user con auto_sync_enabled    │                     │
+   • runSync(userId)  ─────────────► webhook N8N (existente)       │
+        │                             (Gmail → parse → sync-save)  │
+        │  ◄──── {imported, skipped} ────────                      │
+        ▼                                                          │
+  registra en sync_runs                                           │
+        │                                                          │
+   if imported > 0 → sendPush(userId, resumen) ──► web-push ──────┼──► Push Service ──► 📱 SW push event
+        │                                                          │                        │
+        └──────────────────────────────────────────────────────────┘                        ▼
+                                                                                  showNotification → tap → abre /transactions
 ```
 
-Desktop: stat-cards 4×1, compromisos y top categorías lado a lado (Grid md=6), zona de gráfico full-width.
+**Idea central:** extraer la lógica de llamada a N8N (hoy embebida en el endpoint `/sync-emails`) a una función reutilizable `runSync(userId, trigger)`. El endpoint manual y el scheduler la comparten. El push se decide en el scheduler según el resultado.
 
-## 2. Backend — un solo endpoint agregado
+## 2. Backend
 
-`GET /api/dashboard/overview?year&month` (`dashboardController.getOverview`):
-- Reusa las queries existentes (summary, categorías, historia) + compromisos (misma lógica de financialHealth) en UNA respuesta:
-```json
-{
-  "period": {"year":2026,"month":8},
-  "balance": {"value":520000,"deltaPct":12.3},
-  "gastos": {"value":1800000,"deltaPct":-5.1},
-  "ingresos": {"value":2300000},
-  "tasaAhorro": 0.22,
-  "burnRate": {"dailyAvg":58000,"projectedClose":1950000},
-  "disponibleHoy": 1031242,
-  "compromisos": {"total":2100000,"tcNoFacturado":1200000,"cuotas":600000,"proyectados":300000},
-  "topCategorias": [{"id":1,"name":"Cuentas","total":700000,"pct":0.38,"deltaPct":4.0}]
-}
-```
-- Montado tras `auth` + `resolveSpace` (funciona en espacio compartido). Deltas contra el período anterior; divisor 0 → `deltaPct: null`.
-- Sin migraciones. Endpoints existentes intactos (Req 12.12).
+### 2.1 Migraciones (nuevas, sin tocar datos existentes)
+- `028_create_push_subscriptions.sql`: tabla `push_subscriptions` (endpoint único).
+- `029_add_auto_sync_to_users.sql`: `ALTER TABLE users ADD COLUMN auto_sync_enabled BOOLEAN NOT NULL DEFAULT false`.
+- `030_create_sync_runs.sql`: bitácora `sync_runs`.
 
-## 3. Frontend — sistema de diseño compacto
-
-| Componente nuevo | Rol |
+### 2.2 Dependencias nuevas (`backend/package.json`)
+| Paquete | Rol |
 |---|---|
-| `src/components/ui/StatCard.jsx` | Card compacta: label caption + valor h5 + `TrendDelta` + estado vacío/skeleton integrados |
-| `src/components/ui/TrendDelta.jsx` | ▲/▼ + % con color semántico (para gasto: bajar=verde) y `null` → "—" |
-| `src/components/ui/SectionCard.jsx` | Contenedor de sección con título overline y padding denso |
-| `src/components/ui/CategoryBar.jsx` | Fila categoría: nombre + barra % + monto, clickeable |
-| `src/components/ui/ChartTabs.jsx` | Tabs segmentados que alternan el gráfico visible |
+| `node-cron` | Scheduler in-process (soporta timezone) |
+| `web-push` | Envío de notificaciones Web Push (VAPID) |
 
-- `Dashboard.js` se reescribe consumiendo `fetchWithCache('dashboard:overview:<periodo>', …)` (offline + espacio ✓, Req 12.8).
-- Drill-down de categoría se conserva (reusa `CategoryDetailDrawer`).
-- Req 12.10: `Transactions/TransactionsIntl/Checking/Projected` reemplazan sus 3 cards de totales por `<StatCard>` en grid 3 columnas (una fila), sin tocar su lógica de datos.
-- Skeletons: `@mui/material Skeleton` dentro de StatCard/SectionCard con la misma geometría (Req 12.7).
+### 2.3 Archivos nuevos
+| Archivo | Responsabilidad |
+|---|---|
+| `backend/services/syncService.js` | `runSync(userId, trigger)` — extrae la llamada a N8N del endpoint; registra en `sync_runs`; retorna `{imported, skipped, error}` |
+| `backend/services/scheduler.js` | Registra los cron (13:00, 22:00 TZ Santiago); `runScheduledSync()` itera usuarios con `auto_sync_enabled` y, tras cada sync con `imported>0`, llama a `pushService.notifySync` |
+| `backend/services/pushService.js` | `sendToUser(userId, payload)` con `web-push`; poda suscripciones 404/410; `notifySync(userId, imported)` arma el mensaje |
+| `backend/controllers/pushController.js` | vapid-public-key / subscribe / unsubscribe / test |
+| `backend/routes/pushRoutes.js` | `/api/push/*` (JWT) |
+| `backend/models/PushSubscription.js` | CRUD de suscripciones |
+
+### 2.4 Cambios en código existente
+- `syncRoutes.js`: `/sync-emails` refactorizado para usar `syncService.runSync(req.user.id, 'manual')` (mismo comportamiento visible). Agrega `/settings` (GET/PUT) y `/runs` (GET).
+- `server.js`: `require('./services/scheduler').start()` solo si `NODE_ENV==='production'` o `ENABLE_SCHEDULER==='true'` (Req 13.6).
+- `.env` (prod): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (mailto), `SYNC_CRON_TIMES` opcional (default "0 13 * * *,0 22 * * *"), `TZ=America/Santiago`.
+
+### 2.5 Seguridad (PUSH-001, DATA-001)
+- Claves VAPID privadas solo en `.env` del servidor. El endpoint `/vapid-public-key` expone únicamente la pública.
+- Cada suscripción se asocia a `user_id` (del JWT); el envío filtra por usuario. Un miembro no recibe push del espacio del dueño.
+- Scheduler y push: solo para el dueño (`auto_sync_enabled` es del usuario dueño; el flujo de sync ya es owner-only).
+
+## 3. Frontend / PWA
+
+### 3.1 Service Worker (`src/service-worker.js`)
+Agregar handlers (fuera de Workbox):
+```js
+self.addEventListener('push', (event) => {
+  const data = event.data?.json() || {};
+  event.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body, icon: '/icons/icon-192.png', badge: '/icons/icon-96.png',
+    data: { url: data.url || '/transactions' }, tag: 'sync-summary',
+  }));
+});
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(clients.matchAll({ type: 'window' }).then((wins) => {
+    const url = event.notification.data?.url || '/transactions';
+    const open = wins.find((w) => w.url.includes(url));
+    return open ? open.focus() : clients.openWindow(url);
+  }));
+});
+```
+
+### 3.2 Archivos nuevos
+| Archivo | Rol |
+|---|---|
+| `src/services/pushClient.js` | `getPermission`, `subscribe` (usa `registration.pushManager.subscribe` con la VAPID pública), `unsubscribe`, POST/DELETE al backend; utilidades urlBase64ToUint8Array |
+| `src/hooks/usePushNotifications.js` | estado: `supported`, `permission`, `subscribed`; acciones enable/disable |
+| `src/components/NotificationsSettings.jsx` | sección en Settings (solo dueño): activar sync programada + activar/probar notificaciones + explicación iOS |
+
+### 3.3 Cambios en código existente
+- `Settings.js`: nueva pestaña/sección "Automatización" (solo dueño) con: toggle sync programada (`PUT /api/sync/settings`), toggle notificaciones (permiso + subscribe), botón "Enviar prueba".
+- Sin pop-up automático: el permiso se pide al tocar el toggle (Req 13.7).
 
 ## 4. Estrategia de Pruebas (TEST-001)
 
 | Capa | Cobertura |
 |---|---|
-| API (Playwright request) | overview: shape completo, deltas correctos con datos sembrados, delta null con período anterior 0, 403 espacio ajeno sin membresía, 200 como miembro |
-| Unit (Jest/RTL) | StatCard (valor/delta/vacío/skeleton), TrendDelta (signos, colores, null), CategoryBar (%), ChartTabs (alternancia) |
-| E2E | Dashboard renderiza stat-cards con datos mockeados; tabs alternan gráficos; top categorías navega al drill-down; ancho ≤ viewport en 375 (patrón absoluto de mobile-responsive-fixes); regresión de páginas con nuevos totales compactos |
+| **API** (Playwright request) | subscribe/unsubscribe (persistencia, endpoint único), vapid-public-key, `/sync/settings` GET/PUT (solo dueño 200; miembro 403), `/sync/runs`, `/push/test` |
+| **Unit backend** (nuevo runner Jest para `backend/`) | `syncService.runSync` (mock axios N8N → registra sync_run, retorna counts, maneja error sin lanzar); `scheduler.runScheduledSync` (mock: itera solo `auto_sync_enabled`, push solo si imported>0); `pushService` (poda 404/410, no envía si no hay subs) |
+| **Unit frontend** (Jest/RTL) | `pushClient` (urlBase64, subscribe llama pushManager con la key), `usePushNotifications` (estados), gating de la sección a dueño |
+| **E2E** (Playwright, mock API) | Settings muestra Automatización solo al dueño; activar toggle sync; flujo de permiso de notificaciones mockeado (permiso concedido → subscribe llamado); push handler del SW: cubierto en pwa-build o manual |
+
+> **Nota:** El envío real de push y el disparo del cron NO se testean end-to-end automáticamente (dependen de N8N/Gmail/push service reales). Se validan en producción con `/push/test` y una corrida programada observada en `sync_runs`.
 
 ## 5. Fases (detalle en tasks.md)
 
-0. Tests API de overview (RED) → 1. Backend `getOverview` (GREEN)
-2. Componentes UI base con unit tests (RED→GREEN)
-3. Rediseño de `Dashboard.js` + E2E (actualizando los E2E que asuman el layout viejo — nunca debilitados, reescritos para el nuevo contrato)
-4. Req 12.10: totales compactos en las 4 páginas de transacciones + regresión completa
-5. Deploy + verificación en producción + walkthrough
+0. Infra: deps (node-cron, web-push), generar VAPID, runner de tests backend, migraciones.
+1. `syncService.runSync` (refactor del endpoint manual) + `sync_runs` + `/sync/settings` + `/sync/runs`.
+2. Scheduler (node-cron) + `runScheduledSync` (opt-in, error-safe, guard de entorno).
+3. Push backend: `pushService` + `pushController` + rutas + poda de expiradas.
+4. Push frontend/PWA: SW handlers + pushClient + hook + sección Settings.
+5. Deploy + verificación en producción (VAPID en .env, `/push/test` real, corrida programada) + walkthrough.
 
-**Riesgos:** (a) los E2E existentes de Dashboard asumen el layout viejo — se actualizan en Fase 3 junto al cambio; (b) el cálculo de compromisos duplica lógica de financial-health → extraer a helper compartido `backend/utils/commitments.js` para no divergir.
+**Riesgos / notas:**
+- **N8N-001 (enmendado):** el webhook de N8N no cambia; solo se automatiza el disparo. Si el usuario quiere que el workflow además traiga "facturadas", eso es un ajuste del workflow en N8N (visual), fuera de este código — se documenta como dependencia.
+- **iOS push** solo con PWA instalada; la UI lo explica.
+- **Backend sin runner de tests aún:** se agrega Jest para `backend/` (Fase 0); no interferir con `react-scripts test` del frontend (configs separadas).
+- **Doble ejecución del cron:** una sola instancia PM2 (fork) — sin riesgo de doble disparo. Documentar no escalar a cluster sin un lock.
 
 ---
 
-*Versión: 3.0.0 (épica Rediseño Dashboard)*
-*Última actualización: 2026-07-18*
+*Versión: 4.0.0 (épica Sync Programada + Push)*
+*Última actualización: 2026-07-19*

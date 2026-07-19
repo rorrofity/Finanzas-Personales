@@ -24,9 +24,12 @@ Crear una herramienta de gestión financiera personal que:
 - Autenticación propia + Google OAuth opcional
 
 ### 2. Automatización Inteligente
-- Sincronización on-demand desde emails bancarios vía N8N
+- Sincronización desde emails bancarios vía N8N: **on-demand (botón) y/o programada** (el dueño puede activar una sincronización automática recurrente, p.ej. dos veces al día)
+- Notificaciones push al dispositivo tras una sincronización programada que trae transacciones nuevas (recordatorio para categorizar)
 - Detección automática de duplicados
 - Proyecciones automáticas de gastos fijos y cuotas
+
+*(Enmienda 2026-07-19: originalmente la sincronización era exclusivamente on-demand y estaba prohibida la automática periódica. Se redefine para permitir sincronización programada controlada por el dueño — ver Epic 13 en spec.md.)*
 
 ### 3. Simplicidad Operativa
 - **Una persona = un usuario**: cada quien se autentica con su propia cuenta; nunca se comparten credenciales
@@ -210,7 +213,9 @@ Crear una herramienta de gestión financiera personal que:
 3. ✅ Sincronización emails vía N8N
 4. ✅ Dashboard de salud financiera
 5. ✅ **Conversión a PWA** (desplegada a producción 2026-07-18)
-6. 🚧 **Espacio compartido del hogar (multi-usuario)** — épica actual: el dueño invita a un miembro con permisos granulares (Epic 11, enmienda constitucional aplicada 2026-07-18)
+6. ✅ **Espacio compartido del hogar** (Epic 11, desplegada 2026-07-18)
+7. ✅ **Rediseño del Dashboard** (Epic 12, desplegada 2026-07-18)
+8. 🚧 **Sincronización automática programada + notificaciones push** — épica actual: sync recurrente (2×/día) que dispara notificación push para categorizar (Epic 13, enmienda constitucional 2026-07-19)
 
 ### Mediano Plazo (3-6 meses)
 1. Presupuestos por categoría con alertas
@@ -249,5 +254,5 @@ Crear una herramienta de gestión financiera personal que:
 
 ---
 
-*Última actualización: 2026-07-18*
-*Versión de la constitución: 1.1 (enmienda: espacio compartido del hogar — principio 3 y límites del sistema)*
+*Última actualización: 2026-07-19*
+*Versión de la constitución: 1.2 (enmienda: sincronización programada + push — principio 2 "Automatización Inteligente")*
