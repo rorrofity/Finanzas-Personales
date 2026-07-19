@@ -1,4 +1,33 @@
-# walkthrough.md — Épicas PWA y Espacio Compartido: lo construido y cómo validarlo
+# walkthrough.md — Épicas PWA, Espacio Compartido y Rediseño Dashboard
+
+---
+
+# PARTE 3 — Epic 12: Rediseño del Dashboard (2026-07-18)
+
+## Qué se construyó
+
+**Backend (sin migraciones):**
+- `GET /api/dashboard/overview?year&month` ([dashboardController.getOverview](../backend/controllers/dashboardController.js)): agrega 7 KPIs en una respuesta — balance, gastos (+Δ% vs mes anterior), tasa de ahorro, burn rate (solo mes en curso), disponible hoy, compromisos próximos (con desglose), top 5 categorías (% + Δ). Montado tras `auth` + `resolveSpace` → funciona en espacio compartido (Epic 11).
+- Helper [backend/utils/commitments.js](../backend/utils/commitments.js): lógica de compromisos extraída de financial-health para no divergir.
+
+**Sistema de diseño compacto** ([src/components/ui/](../src/components/ui/)): `StatCard` (valor/delta/vacío/skeleton/valueText/subtext), `TrendDelta` (color semántico invertible, null→"—"), `CategoryBar`, `SectionCard`, `ChartTabs`. Formato CLP compartido en [utils/format.js](../src/utils/format.js).
+
+**Dashboard rediseñado** ([Dashboard.js](../src/pages/Dashboard.js)): stat-cards 2×2 en mobile (≤96px) en vez de cards gigantes apiladas; compromisos colapsables; "En qué se va la plata" con barras y drill-down; gráficos de evolución bajo tabs (uno visible, ≤240px) en vez de 3 apilados; estado vacío con CTA. Consume `fetchWithCache` por espacio (offline + Epic 11).
+
+**Totales compactos (Req 12.10):** Transactions, Checking, ProjectedTransactions y TransactionsIntl reemplazan sus 3 cards gigantes por una fila de 3 stat-cards (una fila incluso en 375px).
+
+## Suites
+- Unit 42/42 · API 17/17 (incluye `dashboard-overview.spec.js`) · E2E 94/94 (incluye `dashboard-redesign.spec.js` y `compact-totals.spec.js`) · pwa-build 7/7
+
+## Verificación
+Endpoint overview responde 401 sin auth (correcto), app y N8N 200, nuevo dashboard renderizado en viewport móvil con el usuario de prueba (estados vacíos correctos). **Pendiente:** que Rodrigo lo confirme con su cuenta real (datos reales) en su teléfono — tras el banner "Nueva versión disponible" → Actualizar.
+
+## Nota de diseño
+Las stat-cards del dashboard usan monto CLP completo (finanzas: el usuario quiere el peso exacto); los totales secundarios de las páginas de datos usan formato abreviado ($1,8M) por caber 3 en una fila de 375px.
+
+---
+
+# PARTE 1 y 2 — Épicas PWA y Espacio Compartido: lo construido y cómo validarlo
 
 ---
 
