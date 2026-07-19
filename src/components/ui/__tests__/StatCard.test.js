@@ -29,8 +29,8 @@ describe('StatCard', () => {
     expect(screen.getByText(/5%/)).toBeInTheDocument();
   });
 
-  test('usa formato abreviado con short', () => {
+  test('usa formato abreviado con resolución de mil (short)', () => {
     render(<StatCard label="Gastos" value={1800000} short />);
-    expect(screen.getByText('$1.8M')).toBeInTheDocument();
+    expect(screen.getByText('$1.800K')).toBeInTheDocument();
   });
 });

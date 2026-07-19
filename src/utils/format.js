@@ -25,6 +25,20 @@ export function formatCLPShort(amount) {
   return formatCLP(n);
 }
 
+/**
+ * Resolución hasta el mil, para stat-cards: 2.543.678 → "$2.544K",
+ * 47.997 → "$48K", 950 → "$950". Muestra el valor en miles con separadores
+ * es-CL y sufijo K (más informativo que M/K de un decimal).
+ */
+export function formatCLPThousands(amount) {
+  const n = Number(amount) || 0;
+  const abs = Math.abs(n);
+  if (abs < 1000) return formatCLP(n);
+  const sign = n < 0 ? '-' : '';
+  const thousands = Math.round(abs / 1000);
+  return `${sign}$${new Intl.NumberFormat('es-CL').format(thousands)}K`;
+}
+
 /** 0.223 → "22%" (o "—" si es null/undefined). */
 export function formatPct(ratio) {
   if (ratio === null || ratio === undefined || Number.isNaN(Number(ratio))) {

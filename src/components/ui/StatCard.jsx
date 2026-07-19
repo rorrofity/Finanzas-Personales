@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Card, CardContent, Skeleton, Typography } from '@mui/material';
 import TrendDelta from './TrendDelta';
-import { formatCLP, formatCLPShort } from '../../utils/format';
+import { formatCLP, formatCLPThousands } from '../../utils/format';
 
 /**
  * Stat-card compacta del sistema de diseño (Epic 12, Reqs 12.2/12.6/12.7/12.9).
@@ -20,7 +20,7 @@ const StatCard = ({
   emptyText = 'Sin datos del período',
 }) => {
   const isEmpty = valueText === undefined && (value === null || value === undefined);
-  const displayText = valueText !== undefined ? valueText : short ? formatCLPShort(value) : formatCLP(value);
+  const displayText = valueText !== undefined ? valueText : short ? formatCLPThousands(value) : formatCLP(value);
 
   return (
     <Card
