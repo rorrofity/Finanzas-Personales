@@ -43,7 +43,9 @@ import { useSpace } from '../contexts/SpaceContext';
 function TabPanel({ children, value, index, ...other }) {
   return (
     <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
+      {/* px compensa los márgenes negativos de Grid spacing en contenido
+          embebido (evita overflow horizontal en mobile) */}
+      {value === index && <Box sx={{ py: 2, px: 1 }}>{children}</Box>}
     </div>
   );
 }
@@ -169,6 +171,8 @@ const Settings = () => {
         <Tabs
           value={tabIndex}
           onChange={(_, v) => setTabIndex(v)}
+          variant="scrollable"
+          allowScrollButtonsMobile
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
           <Tab label="Perfil" />

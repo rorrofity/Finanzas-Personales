@@ -47,11 +47,12 @@ const InstallPrompt = () => {
     <Snackbar
       open={Boolean(installEvent)}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      sx={{ maxWidth: 'calc(100vw - 16px)' }}
     >
       <Alert
         severity="info"
         icon={<InstallMobileIcon />}
-        sx={{ alignItems: 'center' }}
+        sx={{ alignItems: 'center', flexWrap: 'wrap' }}
         action={
           <Stack direction="row" spacing={1}>
             <Button color="inherit" size="small" onClick={handleDismiss}>

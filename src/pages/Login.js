@@ -136,10 +136,11 @@ const Login = () => {
             <Divider sx={{ my: 2 }}>O</Divider>
             
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              {/* Sin useOneTap: el prompt One Tap oscurece toda la pantalla
+                  en móvil al entrar (scrim) y confunde; basta el botón. */}
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={handleGoogleError}
-                useOneTap
                 text="signin_with"
                 shape="rectangular"
                 theme="outline"

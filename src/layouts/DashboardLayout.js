@@ -247,6 +247,10 @@ const DashboardLayout = () => {
         component="main"
         sx={{
           flexGrow: 1,
+          // minWidth 0: sin esto, el flex item no puede encogerse bajo el
+          // ancho de su contenido y cualquier tabla ancha desborda el
+          // viewport en mobile (la página entera queda "des-ajustada")
+          minWidth: 0,
           p: { xs: 1, sm: 2 },
           backgroundColor: theme.palette.background.default,
           minHeight: '100vh',

@@ -116,9 +116,18 @@ const Categories = () => {
   };
 
   return (
-    <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Gestión de Categorías</Typography>
+    <Box p={{ xs: 1.5, sm: 3 }}>
+      <Box
+        display="flex"
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between"
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={1.5}
+        mb={3}
+      >
+        <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+          Gestión de Categorías
+        </Typography>
         <Button
           variant="contained"
           color="primary"

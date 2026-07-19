@@ -52,6 +52,7 @@ const UpdateBanner = () => {
     <Snackbar
       open={Boolean(waitingWorker)}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      sx={{ maxWidth: 'calc(100vw - 16px)' }}
     >
       <Alert
         severity="info"
@@ -66,7 +67,7 @@ const UpdateBanner = () => {
             {updating ? 'Actualizando…' : 'Actualizar'}
           </Button>
         }
-        sx={{ alignItems: 'center' }}
+        sx={{ alignItems: 'center', flexWrap: 'wrap' }}
       >
         Nueva versión disponible
       </Alert>
