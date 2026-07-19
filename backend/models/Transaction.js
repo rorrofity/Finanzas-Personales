@@ -7,12 +7,16 @@ class Transaction {
 
   async removeUniqueConstraint() {
     try {
-      const query = `
-        ALTER TABLE transactions 
+      // La app deduplica en código y permite cargos idénticos legítimos
+      // (dos compras iguales el mismo día). Eliminamos tanto el constraint
+      // antiguo como el ÍNDICE único `ux_...` que reintrodujo el bloqueo y
+      // causaba abortos de importación (ver bug de carga parcial).
+      await this.query(`
+        ALTER TABLE transactions
         DROP CONSTRAINT IF EXISTS transactions_user_id_fecha_descripcion_monto_key;
-      `;
-      await this.query(query);
-      console.log('Restricción de unicidad eliminada con éxito');
+      `);
+      await this.query(`DROP INDEX IF EXISTS ux_transactions_user_fecha_desc_monto;`);
+      console.log('Restricción/índice de unicidad eliminados con éxito');
     } catch (error) {
       console.error('Error al eliminar la restricción de unicidad:', error);
       // No lanzamos el error aquí para permitir que la importación continúe incluso si la restricción ya no existe
@@ -48,7 +52,10 @@ class Transaction {
         // Formatear la fecha para que coincida con el formato de las nuevas transacciones
         const fecha = t.fecha instanceof Date ? t.fecha : new Date(t.fecha);
         const fechaStr = fecha.toISOString().split('T')[0];
-        const key = `${fechaStr}-${t.descripcion}-${t.monto}`;
+        // Normalizar el monto (la BD devuelve NUMERIC como "4499.00"; el
+        // archivo lo parsea como 4499) para que el pre-check detecte
+        // duplicados de re-importación sin depender del índice único.
+        const key = `${fechaStr}-${t.descripcion}-${Number(t.monto)}`;
         existingTransactions.add(key);
       });
 
@@ -70,8 +77,9 @@ class Transaction {
             transaction.monto : 
             parseFloat(transaction.monto);
 
-          // Crear una clave única para esta transacción
-          const transactionKey = `${fechaStr}-${transaction.descripcion}-${monto}`;
+          // Crear una clave única para esta transacción (monto normalizado
+          // para que coincida con las claves de la BD)
+          const transactionKey = `${fechaStr}-${transaction.descripcion}-${Number(monto)}`;
           console.log('Clave de transacción:', transactionKey);
 
           // Solo verificar contra las transacciones que existían antes de comenzar
@@ -182,12 +190,14 @@ class Transaction {
           results.push(insertedTx);
           insertedCount++;
         } catch (error) {
-          console.error('Error procesando transacción:', error);
-          if (error.code === '23505') { // Error de duplicado
+          // IMPORTANTE: este catch NUNCA debe lanzar (usar solo variables en
+          // scope: `transaction`, no `fechaStr`/`monto` que son del try).
+          // Un throw aquí abortaría toda la importación (bug de carga parcial).
+          if (error.code === '23505') { // Error de duplicado en BD
             console.log('Transacción duplicada detectada, saltando:', {
-              fecha: fechaStr,
+              fecha: transaction.fecha,
               descripcion: transaction.descripcion,
-              monto: monto
+              monto: transaction.monto
             });
             skippedCount++;
           } else {
