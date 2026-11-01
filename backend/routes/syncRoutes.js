@@ -7,6 +7,7 @@ const { pool } = require('../config/database');
 const { resolveSpace } = require('../middleware/resolveSpace');
 const { requireOwner } = require('../middleware/requirePermission');
 const { runSync } = require('../services/syncService');
+const { checkStatementEmail, lockStatementEmailBatch } = require('../services/cardStatementEmailGuard');
 
 /**
  * Calcula el período de facturación basándose en la fecha de transacción.
@@ -124,6 +125,7 @@ router.post('/sync-save', async (req, res) => {
   
   try {
     await client.query('BEGIN');
+    await lockStatementEmailBatch(client, userId);
     
     // Verificar que el usuario existe
     const userCheck = await client.query(
@@ -177,6 +179,18 @@ router.post('/sync-save', async (req, res) => {
           continue;
         }
         
+        // Honor statement evidence before the legacy duplicate checks or any INSERT.
+        const statementCheck = await checkStatementEmail(client, userId, txn);
+        if (statementCheck.decision === 'duplicate') {
+          skipped++;
+          importedEmailIds.push(txn.email_id);
+          continue;
+        }
+        if (statementCheck.decision === 'review') {
+          errors.push({ transaction: txn.descripcion, error: 'El aviso puede corresponder a un cargo ya conciliado o eliminado. Revisa Estados de tarjetas antes de incorporarlo.' });
+          continue;
+        }
+
         // Calcular período de facturación automáticamente
         const billingPeriod = calculateBillingPeriod(txn.fecha);
         
@@ -454,6 +468,7 @@ router.post('/sync-save-intl', async (req, res) => {
   
   try {
     await client.query('BEGIN');
+    await lockStatementEmailBatch(client, userId);
     
     // Verificar que el usuario existe
     const userCheck = await client.query(
@@ -489,6 +504,18 @@ router.post('/sync-save-intl', async (req, res) => {
           continue;
         }
         
+        // Honor statement evidence before the legacy duplicate checks or any INSERT.
+        const statementCheck = await checkStatementEmail(client, userId, { ...txn, is_international: true });
+        if (statementCheck.decision === 'duplicate') {
+          skipped++;
+          importedEmailIds.push(txn.email_id);
+          continue;
+        }
+        if (statementCheck.decision === 'review') {
+          errors.push({ transaction: txn.descripcion, error: 'El aviso puede corresponder a un cargo ya conciliado o eliminado. Revisa Estados de tarjetas antes de incorporarlo.' });
+          continue;
+        }
+
         // Verificar duplicado por email_id
         const duplicateCheck = await client.query(
           `SELECT id FROM intl_unbilled 

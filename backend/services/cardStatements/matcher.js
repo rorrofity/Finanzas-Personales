@@ -64,6 +64,7 @@ function matchStatement(document, sources, { revisionConflict = false } = {}) {
           && Math.abs(Date.parse(other.date+'T00:00:00Z')-Date.parse(source.date+'T00:00:00Z'))<=86400000;
       });
       if(competing.length>1)return {...item,finding:finding('review','ambiguous_multiplicity',descriptions,mismatch)};
+      if(source.identityConflict===true)return {...item,finding:finding('review','network_evidence_conflict',descriptions,mismatch)};
       if(source.providerKnown===false)return {...item,finding:finding('review','bank_identity_missing',descriptions,mismatch)};
       if (!source.network || !document.network) return { ...item, finding: finding('review', 'network_unknown', descriptions, mismatch) };
       if (!item.cardLastFour || !source.cardLastFour) return { ...item, finding: finding('review', 'card_identity_missing', descriptions, mismatch) };

@@ -1,0 +1,227 @@
+{
+  "data": "exclusively fictitious",
+  "build": "finanzas-csn-ui-final",
+  "realDatabaseAccess": false,
+  "realBankRequests": 0,
+  "cases": [
+    {
+      "name": "desktop-card-statements-light-1440",
+      "mode": "light",
+      "pageWidth": 1440,
+      "pageScrollWidth": 1440,
+      "panels": [
+        {
+          "client": 1206,
+          "scroll": 1206
+        }
+      ],
+      "jsErrors": [],
+      "unexpectedApi": [],
+      "writes": [],
+      "statementRequests": [
+        {
+          "path": "/api/card-statements",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "dashboard-desktop-usd-pending-light",
+      "mode": "light",
+      "width": 1440,
+      "scroll": 1440,
+      "jsErrors": [],
+      "unexpectedApi": [],
+      "writes": [],
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "name": "dashboard-desktop-usd-pending-dark",
+      "mode": "dark",
+      "width": 1440,
+      "scroll": 1440,
+      "jsErrors": [],
+      "unexpectedApi": [],
+      "writes": [],
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "name": "mobile-card-statements-light-375",
+      "mode": "light",
+      "pageWidth": 375,
+      "pageScrollWidth": 375,
+      "panels": [
+        {
+          "client": 357,
+          "scroll": 357
+        }
+      ],
+      "jsErrors": [],
+      "unexpectedApi": [],
+      "writes": [],
+      "statementRequests": [
+        {
+          "path": "/api/card-statements",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mobile-card-statements-dark-375",
+      "mode": "dark",
+      "pageWidth": 375,
+      "pageScrollWidth": 375,
+      "panels": [
+        {
+          "client": 357,
+          "scroll": 357
+        }
+      ],
+      "jsErrors": [],
+      "unexpectedApi": [],
+      "writes": [],
+      "statementRequests": [
+        {
+          "path": "/api/card-statements",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "5"
+          }
+        }
+      ]
+    },
+    {
+      "name": "dashboard-mobile-usd-pending-light",
+      "mode": "light",
+      "width": 375,
+      "scroll": 375,
+      "jsErrors": [],
+      "unexpectedApi": [],
+      "writes": [],
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "name": "dashboard-mobile-usd-pending-dark",
+      "mode": "dark",
+      "width": 375,
+      "scroll": 375,
+      "jsErrors": [],
+      "unexpectedApi": [],
+      "writes": [],
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        }
+      ]
+    }
+  ]
+}

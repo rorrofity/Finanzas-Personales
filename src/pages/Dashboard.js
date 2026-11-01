@@ -70,6 +70,8 @@ export default function Dashboard() {
   const nextPeriod = new Date(year, month, 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
   const report = result?.data;
   const overview = overviewResult?.data;
+  const pendingConversions = Number.isSafeInteger(overview?.compromisos?.conversionPendingCount) && overview.compromisos.conversionPendingCount > 0 ? overview.compromisos.conversionPendingCount : 0;
+  const amountsPartial = overview?.compromisos?.amountsPartial === true || pendingConversions > 0;
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 1.5, md: 3 }, minWidth: 0 }}>
       <Stack spacing={{ xs: 2, md: 3 }} sx={{ minWidth: 0 }}>
@@ -112,10 +114,11 @@ export default function Dashboard() {
           {overview && <>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>Liquidez consultada: {new Date(overviewResult.cachedAt).toLocaleString('es-CL')}</Typography>
             {overviewResult.origin === 'cache' && <Alert severity="info" sx={{ mb: 1.5 }}>Consulta guardada de liquidez; no se pudo actualizar. {isOffline ? 'Sin conexión.' : 'Los importes corresponden a la fecha de consulta indicada.'}</Alert>}
+            {amountsPartial && <Alert severity="warning" data-testid="liquidity-partial-warning" sx={{ mb: 1.5 }}>{pendingConversions > 0 ? `${pendingConversions} ${pendingConversions === 1 ? 'movimiento' : 'movimientos'} USD sin conversión.` : 'Hay movimientos USD sin conversión.'} Los compromisos en CLP son parciales hasta conocer el cambio correspondiente.</Alert>}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap', mb: 1.5 }}><Typography variant="body2">Disponible hoy</Typography><Typography variant="body1" fontWeight={600}>{formatCLP(overview.disponibleHoy)}</Typography></Box>
             <Accordion disableGutters elevation={0} sx={{ border: '1px solid', borderColor: 'divider', '&:before': { display: 'none' }, boxShadow: 'none' }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}><Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, width: '100%', pr: 1 }}><Typography variant="body2" fontWeight={600}>Compromisos próximos</Typography><Typography variant="body2" fontWeight={600}>{formatCLP(overview.compromisos?.total || 0)}</Typography></Box></AccordionSummary>
-              <AccordionDetails><Stack spacing={1}><Typography variant="caption" color="text.secondary">Proyección para {nextPeriod}</Typography><CommitmentRow label="TC no facturado" value={overview.compromisos?.tcNoFacturado} /><CommitmentRow label="Cuotas del período" value={overview.compromisos?.cuotas} /><CommitmentRow label="Internacional" value={overview.compromisos?.intl} /><CommitmentRow label="Gastos proyectados" value={overview.compromisos?.proyectados} /></Stack></AccordionDetails>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}><Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, width: '100%', pr: 1 }}><Typography variant="body2" fontWeight={600}>Compromisos próximos{amountsPartial ? ' · importe parcial' : ''}</Typography><Typography variant="body2" fontWeight={600}>{formatCLP(overview.compromisos?.total || 0)}</Typography></Box></AccordionSummary>
+              <AccordionDetails><Stack spacing={1}><Typography variant="caption" color="text.secondary">Proyección para {nextPeriod}</Typography><CommitmentRow label="TC no facturado" value={overview.compromisos?.tcNoFacturado} /><CommitmentRow label="Cuotas del período" value={overview.compromisos?.cuotas} /><CommitmentRow label={amountsPartial ? 'Internacional · importe parcial' : 'Internacional'} value={overview.compromisos?.intl} /><CommitmentRow label="Gastos proyectados" value={overview.compromisos?.proyectados} /></Stack></AccordionDetails>
             </Accordion>
           </>}
           <Button component={RouterLink} to="/financial-health" sx={{ mt: 1 }}>Ver salud financiera</Button>

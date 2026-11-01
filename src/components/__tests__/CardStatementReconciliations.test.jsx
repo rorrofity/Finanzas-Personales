@@ -94,3 +94,34 @@ test('un archivo fallido sin cabecera se muestra como observación sin romper el
  fixtures(statement({network:null,statementDate:null,period:{since:null,until:null},dueDate:null,status:'invalid',validation:{valid:false,issues:['STATEMENT_EXTRACTION_FAILED']},sections:[]}));mount();
  expect(await screen.findByText('Documento con observaciones')).toBeInTheDocument();expect(screen.getByText('No se identificaron secciones válidas en el archivo.')).toBeInTheDocument();expect(screen.queryByText('No se pudieron verificar los estados recibidos.')).not.toBeInTheDocument();
 });
+
+const reconciliation = patch => ({officialTotal:'15500',statementCharges:'15500',matchedCharges:'12500',unresolvedCharges:'3000',extraCharges:'0',difference:'3000',extraCount:0,uncertainCount:0,complete:false,...patch});
+test('la cartola es total oficial separado de cobertura y diferencias del historial',async()=>{
+ const s=statement();s.sections[0].reconciliation=reconciliation();fixtures(s);mount();const region=await screen.findByRole('region');
+ expect(region).toHaveTextContent('Total oficial de la cartola');expect(region).toHaveTextContent('Cargos de la cartola');expect(region).toHaveTextContent('Cargos coincidentes');expect(region).toHaveTextContent('Diferencia de cargos');expect(region).toHaveTextContent('$3.000');expect(region).toHaveTextContent('El total a pagar incluye saldos, pagos y traspasos; no es la suma de gastos.');
+});
+test.each([{extraCount:1,extraCharges:'3000',difference:'0',unresolvedCharges:'3000'},{uncertainCount:1,difference:'0',unresolvedCharges:'0'},{extraCount:0,difference:'0',unresolvedCharges:'0'}])('diferencias compensadas, identidad incierta o complete falso no anuncian cierre (%j)',async patch=>{
+ const s=statement({status:'ready'});s.sections=[{...s.sections[0],counts:{matched:1,missing:0,review:0,informational:0},reconciliation:reconciliation(patch)}];fixtures(s);mount();expect(await screen.findByText('Por revisar')).toBeInTheDocument();expect(screen.queryByText('Conciliación completa')).not.toBeInTheDocument();
+});
+test('extras del historial permanecen visibles y no hay acciones para borrarlos',async()=>{
+ const s=statement();s.sections[0].reconciliation=reconciliation({extraCount:2,extraCharges:'5000',difference:'-2000',uncertainCount:1});fixtures(s);mount();const region=await screen.findByRole('region');expect(region).toHaveTextContent('Cargos extra del historial: 2');expect(region).toHaveTextContent('Identidad pendiente: 1');expect(region).toHaveTextContent('-$2.000');expect(within(region).queryByRole('button',{name:/eliminar|ajustar|cuadrar/i})).not.toBeInTheDocument();
+});
+test('cierre completo exige comprobaciones explícitas además de diferencia cero',async()=>{
+ const s=statement({status:'ready'});s.sections=[{...s.sections[0],counts:{matched:1,missing:0,review:0,informational:1},reconciliation:reconciliation({matchedCharges:'15500',unresolvedCharges:'0',difference:'0',complete:true})}];fixtures(s);mount();expect(await screen.findByText('Conciliación completa')).toBeInTheDocument();
+});
+test('complete contradictorio con pendientes no anuncia cierre',async()=>{
+ const s=statement({status:'ready'});s.sections=[{...s.sections[0],reconciliation:reconciliation({matchedCharges:'15500',unresolvedCharges:'0',difference:'0',complete:true})}];fixtures(s);mount();expect(await screen.findByText('Por revisar')).toBeInTheDocument();expect(screen.queryByText('Conciliación completa')).not.toBeInTheDocument();
+});
+test('importes y contadores de conciliación inválidos rechazan toda la respuesta',async()=>{
+ const s=statement();s.sections[0].reconciliation=reconciliation({extraCount:-1,difference:3000});fixtures(s);mount();expect(await screen.findByRole('alert')).toHaveTextContent('No se pudieron verificar');
+});
+test.each(['15501',null])('la deuda oficial del documento prevalece sobre un resumen incoherente (%s)',async value=>{
+ const s=statement({status:'ready'});s.sections=[{...s.sections[0],counts:{matched:1,missing:0,review:0,informational:0},reconciliation:reconciliation({officialTotal:value,matchedCharges:'15500',unresolvedCharges:'0',difference:'0',complete:true})}];fixtures(s);mount();expect(await screen.findByText('Por revisar')).toBeInTheDocument();expect(screen.getByTestId('official-total-CLP')).toHaveTextContent('$15.500');expect(screen.queryByText('Conciliación completa')).not.toBeInTheDocument();
+});
+test('detalle identifica cargos extra existentes sin exponer IDs ni ofrecer cambios',async()=>{
+ const d=detail();d.sections[0].extras=[{sourceType:'transaction',sourceId:OTHER,date:'2030-04-09',description:'Cargo histórico extra ficticio',amount:'3000',reason:'extra_in_history'},{sourceType:'installment',sourceId:ID,date:null,description:'Cuota extra ficticia',amount:'2000',reason:'extra_in_history'}];fixtures(statement(),d);mount();fireEvent.click(await screen.findByRole('button',{name:'Ver detalle Visa'}));const dialog=await screen.findByRole('dialog');
+ expect(await within(dialog).findByText('Cargos del historial por revisar')).toBeInTheDocument();expect(within(dialog).getByText('Cargo histórico extra ficticio')).toBeInTheDocument();expect(within(dialog).getByText('Cuota extra ficticia')).toBeInTheDocument();expect(within(dialog).getByText('$3.000')).toBeInTheDocument();expect(within(dialog).getByText('Sin fecha en el historial')).toBeInTheDocument();expect(dialog).not.toHaveTextContent(OTHER);expect(within(dialog).queryByRole('button',{name:/eliminar|editar|cuadrar/i})).not.toBeInTheDocument();
+});
+test('extras con importes no válidos rechazan el detalle sin mostrar su contenido',async()=>{
+ const d=detail();d.sections[0].extras=[{sourceType:'transaction',sourceId:OTHER,date:null,description:'PRIVATE inválido',amount:3000,reason:'extra_in_history'}];fixtures(statement(),d);mount();fireEvent.click(await screen.findByRole('button',{name:'Ver detalle Visa'}));const dialog=await screen.findByRole('dialog');expect(await within(dialog).findByRole('alert')).toHaveTextContent('No se pudo consultar el detalle');expect(dialog).not.toHaveTextContent('PRIVATE');
+});

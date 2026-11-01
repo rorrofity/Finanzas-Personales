@@ -26,10 +26,31 @@ function amountLabel(value, currency) {
 const validValidation = data => typeof data?.valid === 'boolean' && Array.isArray(data.issues)
   && data.issues.every(code => typeof code === 'string' && code.length <= 200);
 const validCounts = data => data && ['matched', 'missing', 'review', 'informational'].every(key => Number.isSafeInteger(data[key]) && data[key] >= 0 && data[key] <= 10000);
+const RECONCILIATION_AMOUNTS = ['officialTotal', 'statementCharges', 'matchedCharges', 'unresolvedCharges', 'extraCharges', 'difference'];
+const validReconciliation = (data, currency) => data && typeof data.complete === 'boolean'
+  && RECONCILIATION_AMOUNTS.every(key => data[key] === null || money(data[key], currency))
+  && ['extraCount', 'uncertainCount'].every(key => Number.isSafeInteger(data[key]) && data[key] >= 0 && data[key] <= 100000);
+const isZero = value => typeof value === 'string' && /^-?0(?:\.00)?$/.test(value);
+const officialTotal = section => section.currency === 'CLP' ? section.totals.billedTotal ?? section.totals.totalBilled : section.totals.debtTotal;
+function reconciliationComplete(section) {
+  const value = section.reconciliation;
+  return Boolean(value && validReconciliation(value, section.currency) && value.complete && section.validation.valid
+    && value.officialTotal !== null && value.officialTotal === officialTotal(section)
+    && isZero(value.difference) && isZero(value.unresolvedCharges) && isZero(value.extraCharges)
+    && value.matchedCharges === value.statementCharges && value.extraCount === 0 && value.uncertainCount === 0
+    && section.counts.missing === 0 && section.counts.review === 0);
+}
+
 function validSection(section, detailed) {
   if (!['national', 'international'].includes(section?.scope) || section.currency !== (section.scope === 'national' ? 'CLP' : 'USD')
     || !validValidation(section.validation) || !validCounts(section.counts) || !section.totals || typeof section.totals !== 'object' || Array.isArray(section.totals)
-    || !Object.values(section.totals).every(value => value === null || money(value, section.currency))) return false;
+    || !Object.values(section.totals).every(value => value === null || money(value, section.currency))
+    || (section.reconciliation !== undefined && !validReconciliation(section.reconciliation, section.currency))) return false;
+  if (section.extras !== undefined && (!Array.isArray(section.extras) || section.extras.length > 10000 || !section.extras.every(item => (
+    ['transaction', 'international', 'installment'].includes(item?.sourceType) && typeof item.sourceId === 'string' && item.sourceId.length > 0 && item.sourceId.length <= 250
+    && (item.date === null || isoDay(item.date)) && typeof item.description === 'string' && item.description.length <= 2000
+    && money(item.amount, section.currency) && typeof item.reason === 'string' && item.reason.length <= 200
+  )))) return false;
   return !detailed || (Array.isArray(section.items) && section.items.length <= 10000 && section.items.every(item => (
     typeof item?.rowKey === 'string' && item.rowKey.length <= 250 && isoDay(item.date)
     && typeof item.description === 'string' && item.description.length <= 2000 && item.currency === section.currency
@@ -66,6 +87,7 @@ const TOTAL_LABELS = {
 function reasonLabel(finding) {
   if (finding.periodMismatch) return '';
   const labels = {
+    previously_applied: 'Este movimiento ya fue incorporado desde la cartola.', deleted_source: 'El registro fue eliminado y se conserva para revisión, sin recrearlo.',
     unique_identity_match: 'Coincide con un cargo registrado.', exact_match: 'Coincide con un cargo registrado.', exact: 'Coincide con un cargo registrado.', compatible_match: 'Coincide con un cargo registrado.',
     not_found: 'No se encontró un cargo coincidente en el historial.', no_candidate: 'No se encontró un cargo coincidente en el historial.', missing: 'No se encontró un cargo coincidente en el historial.',
     ambiguous_multiplicity: 'Hay movimientos iguales que requieren una revisión individual.', multiple_candidates: 'Hay varias coincidencias posibles en el historial.', description_difference: 'La descripción del cargo registrado difiere de la del estado.', bank_identity_missing: 'No se pudo confirmar el banco del cargo registrado.', network_unknown: 'No se pudo confirmar si el cargo es Visa o Mastercard.', card_identity_missing: 'No se pudo confirmar la tarjeta de este movimiento.', posting_date_difference: 'La fecha del cargo registrado difiere de la del estado.', billing_period_difference: 'El período del cargo registrado difiere del estado.', manually_excluded: 'El cargo está desestimado en tu historial y se conserva así.', invalid_item: 'No se pudo validar toda la información del movimiento.', ambiguous_candidates: 'Hay varias coincidencias posibles en el historial.', ambiguous: 'Hay varias coincidencias posibles en el historial.',
@@ -78,7 +100,7 @@ function reasonLabel(finding) {
 }
 function effectiveStatus(run) {
   if (!run.validation.valid || run.sections.some(section => !section.validation.valid) || run.status === 'invalid') return 'invalid';
-  return run.revisionConflict || run.status === 'review' || run.sections.some(section => section.counts.missing || section.counts.review) ? 'review' : 'ready';
+  return run.revisionConflict || run.status === 'review' || run.sections.some(section => section.counts.missing || section.counts.review || (section.reconciliation !== undefined && !reconciliationComplete(section))) ? 'review' : 'ready';
 }
 function Counts({ counts }) {
   return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 1, mt: 1.5 }}>
@@ -88,13 +110,13 @@ function Counts({ counts }) {
   </Box>;
 }
 function Totals({ section }) {
-  const primary = section.currency === 'CLP' ? section.totals.billedTotal ?? section.totals.totalBilled : section.totals.debtTotal;
+  const primary = officialTotal(section);
   const label = section.currency === 'CLP' ? 'Total facturado' : 'Deuda internacional';
   return <>
-    <Typography variant="h6" component="p" sx={{ mt: 1, fontWeight: 700, overflowWrap: 'anywhere', fontVariantNumeric: 'tabular-nums' }}>
+    <Typography variant="h6" component="p" data-testid={`official-total-${section.currency}`} sx={{ mt: 1, fontWeight: 700, overflowWrap: 'anywhere', fontVariantNumeric: 'tabular-nums' }}>
       {primary === null || primary === undefined ? `${label}: no informado` : amountLabel(primary, section.currency)}
     </Typography>
-    {primary !== null && primary !== undefined && <Typography variant="caption" color="text.secondary">{label} del documento</Typography>}
+    {primary !== null && primary !== undefined && <Typography variant="caption" color="text.secondary">Total oficial de la cartola · {label.toLowerCase()}</Typography>}
     <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, columnGap: 2, rowGap: 0.5 }}>
       {Object.entries(section.totals).filter(([key]) => TOTAL_LABELS[key]).map(([key, value]) => <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
         <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>{key === 'purchases' && section.currency === 'USD' ? 'Compras' : TOTAL_LABELS[key]}</Typography>
@@ -102,6 +124,26 @@ function Totals({ section }) {
       </Box>)}
     </Box>
   </>;
+}
+function Reconciliation({ section }) {
+  const value = section.reconciliation;
+  if (!value) return <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>Falta comprobar la cobertura completa del historial.</Typography>;
+  const labels = { statementCharges: 'Cargos de la cartola', matchedCharges: 'Cargos coincidentes', unresolvedCharges: 'Cargos pendientes de resolver', extraCharges: 'Cargos extra del historial', difference: 'Diferencia de cargos' };
+  return <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+    <Typography variant="caption" component="p" color="text.secondary">El total a pagar incluye saldos, pagos y traspasos; no es la suma de gastos.</Typography>
+    <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 0.5 }}>
+      {Object.entries(labels).map(([key, label]) => <Box key={key} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
+        <Typography variant="caption" sx={{ overflowWrap: 'anywhere', fontWeight: key === 'difference' ? 700 : 400 }}>{label}</Typography>
+        <Typography variant="caption" sx={{ flexShrink: 0, fontWeight: key === 'difference' ? 700 : 400, fontVariantNumeric: 'tabular-nums' }}>{amountLabel(value[key], section.currency)}</Typography>
+      </Box>)}
+    </Box>
+    {(value.extraCount > 0 || value.uncertainCount > 0) && <Alert severity="warning" sx={{ mt: 1 }}>
+      <Typography variant="caption" component="p">Cargos extra del historial: {value.extraCount}</Typography>
+      <Typography variant="caption" component="p">Identidad pendiente: {value.uncertainCount}</Typography>
+      <Typography variant="caption" component="p">Se conservan para revisión.</Typography>
+    </Alert>}
+    {!reconciliationComplete(section) && <Typography variant="caption" color="warning.main" component="p" sx={{ mt: 1 }}>La conciliación sigue abierta hasta resolver todos los movimientos, aunque la diferencia neta sea cero.</Typography>}
+  </Box>;
 }
 function Movement({ item }) {
   const finding = item.finding, reason = reasonLabel(finding);
@@ -120,6 +162,18 @@ function Movement({ item }) {
     {reason && <Typography variant="body2" sx={{ mt: 1 }}>{reason}</Typography>}
     {finding.periodMismatch && <Alert severity="warning" sx={{ mt: 1 }}>El período del cargo registrado difiere del estado.</Alert>}
     {finding.candidateCount > 1 && <Typography variant="caption" color="text.secondary">Coincidencias posibles: {finding.candidateCount}</Typography>}
+  </Paper>;
+}
+
+function HistoryExtra({ item, currency }) {
+  return <Paper component="article" variant="outlined" sx={{ p: 1.5, minWidth: 0, overflowWrap: 'anywhere', bgcolor: 'background.default' }}>
+    <Stack direction="row" justifyContent="space-between" spacing={1}>
+      <Typography variant="caption" color="text.secondary">{item.date ? dayLabel(item.date) : 'Sin fecha en el historial'}</Typography>
+      <Chip size="small" label={item.sourceType === 'installment' ? 'Cuota del historial' : 'Cargo del historial'} color="warning" />
+    </Stack>
+    <Typography variant="body2" fontWeight={650} sx={{ mt: 1 }}>{item.description}</Typography>
+    <Typography variant="h6" component="p" sx={{ mt: 0.5, fontVariantNumeric: 'tabular-nums' }}>{amountLabel(item.amount, currency)}</Typography>
+    <Typography variant="body2" sx={{ mt: 1 }}>No tiene correspondencia confirmada en esta cartola. Se conserva sin cambios.</Typography>
   </Paper>;
 }
 
@@ -173,7 +227,7 @@ export default function CardStatementReconciliations({ year, month }) {
       {visible.items.map(run => { const status = effectiveStatus(run); return <Paper key={run.id} component="section" role="region" aria-label={`Estado ${networkLabel(run.network)} del ${dayLabel(run.statementDate)}`} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, minWidth: 0, overflowWrap: 'anywhere', borderTop: '3px solid', borderTopColor: status === 'ready' ? 'success.main' : 'warning.main' }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }}>
           <Box><Typography variant="h6" component="h2" fontWeight={700}>{networkLabel(run.network)}</Typography><Typography variant="caption" color="text.secondary">Estado del {dayLabel(run.statementDate)}</Typography></Box>
-          <Chip label={status === 'invalid' ? 'Documento con observaciones' : status === 'review' ? 'Por revisar' : 'Sin diferencias en cargos'} color={status === 'ready' ? 'success' : 'warning'} size="small" sx={{ maxWidth: '100%', height: 'auto', minHeight: 24, '& .MuiChip-label': { whiteSpace: 'normal' } }} />
+          <Chip label={status === 'invalid' ? 'Documento con observaciones' : status === 'review' ? 'Por revisar' : run.sections.length > 0 && run.sections.every(reconciliationComplete) ? 'Conciliación completa' : 'Sin diferencias en cargos'} color={status === 'ready' ? 'success' : 'warning'} size="small" sx={{ maxWidth: '100%', height: 'auto', minHeight: 24, '& .MuiChip-label': { whiteSpace: 'normal' } }} />
         </Stack>
         <Typography variant="body2" sx={{ mt: 1.5 }}>Período: {run.period ? `${dayLabel(run.period.since)} al ${dayLabel(run.period.until)}` : 'Sin período identificado'}</Typography>
         <Typography variant="body2" fontWeight={600}>Vencimiento: {dayLabel(run.dueDate)}</Typography>
@@ -181,7 +235,7 @@ export default function CardStatementReconciliations({ year, month }) {
         {run.revisionConflict && <Alert severity="warning" sx={{ mt: 1 }}>Se recibió otra versión del mismo estado. Revisa sus diferencias antes de considerar el cierre.</Alert>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: run.sections.length > 1 ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)' }, gap: 1.5, mt: 2 }}>
           {run.sections.map((section, index) => <Paper key={`${section.scope}-${index}`} variant="outlined" sx={{ p: 1.5, minWidth: 0 }}>
-            <Typography variant="subtitle2" component="h3">{sectionLabel(section)}</Typography><Totals section={section} /><Counts counts={section.counts} />
+            <Typography variant="subtitle2" component="h3">{sectionLabel(section)}</Typography><Totals section={section} /><Reconciliation section={section} /><Counts counts={section.counts} />
             {!section.validation.valid && <Typography variant="caption" color="warning.main" component="p" sx={{ mt: 1 }}>Esta sección tiene observaciones de lectura o totales.</Typography>}
           </Paper>)}
         </Box>
@@ -203,7 +257,11 @@ export default function CardStatementReconciliations({ year, month }) {
           <Stack spacing={3}>{shownDetail.run.sections.map((section, sectionIndex) => { const items = section.items.filter(item => filter === 'all' || ['missing', 'review'].includes(item.finding.status)); return <Box key={`${section.scope}-${sectionIndex}`} sx={{ minWidth: 0 }}>
             <Typography variant="subtitle1" component="h3" fontWeight={700}>{sectionLabel(section)}</Typography><Divider sx={{ my: 1 }} />
             <Stack spacing={1.25}>{items.map((item, index) => <Movement key={`${item.rowKey}-${index}`} item={item} />)}</Stack>
-            {!items.length && <Typography variant="body2" color="text.secondary">{filter === 'all' ? 'Esta sección no tiene movimientos detallados.' : 'No hay cargos pendientes de revisión en esta sección.'}</Typography>}
+            {!items.length && <Typography variant="body2" color="text.secondary">{filter === 'all' ? 'Esta sección no tiene movimientos detallados.' : 'No hay cargos de la cartola pendientes de revisión en esta sección.'}</Typography>}
+            {section.extras?.length > 0 && <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" component="h4" sx={{ mb: 1 }}>Cargos del historial por revisar</Typography>
+              <Stack spacing={1.25}>{section.extras.map((item, index) => <HistoryExtra key={`${item.sourceType}-${item.sourceId}-${index}`} item={item} currency={section.currency} />)}</Stack>
+            </Box>}
           </Box>; })}</Stack>
         </>}
       </DialogContent>

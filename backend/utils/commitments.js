@@ -47,14 +47,16 @@ async function computeCommitments(userId, targetYear, targetMonth) {
     else if (row.brand === 'mastercard') mcInstallments = amount;
   }
 
-  let visaIntl = 0, mcIntl = 0;
+  let visaIntl = 0, mcIntl = 0, conversionPendingCount = 0;
   const intlRes = await db.query(`
-    SELECT LOWER(brand) as brand, SUM(amount_clp) as total
+    SELECT LOWER(brand) as brand, SUM(amount_clp) as total,
+      COUNT(*) FILTER (WHERE amount_clp IS NULL) as conversion_pending_count
     FROM intl_unbilled
     WHERE user_id = $1 AND period_year = $2 AND period_month = $3 AND tipo = 'gasto'
     GROUP BY LOWER(brand)
   `, [userId, targetYear, targetMonth]);
   for (const row of intlRes.rows) {
+    conversionPendingCount += Number(row.conversion_pending_count) || 0;
     const amount = Number(row.total) || 0;
     if (row.brand === 'visa') visaIntl = amount;
     else if (row.brand === 'mastercard') mcIntl = amount;
@@ -81,6 +83,8 @@ async function computeCommitments(userId, targetYear, targetMonth) {
     intl: visaIntl + mcIntl,
     proyectados,
     total,
+    conversionPendingCount,
+    amountsPartial: conversionPendingCount > 0,
   };
 }
 

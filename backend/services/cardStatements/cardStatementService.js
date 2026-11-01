@@ -1,7 +1,9 @@
 const crypto=require('crypto');
 const path=require('path');
 const {CardStatementError,error}=require('./errors');
-const {matchStatement,normalizeDescription}=require('./matcher');
+const {normalizeDescription}=require('./matcher');
+const {analyzeStatement}=require('./settlement');
+const {createSettlementService}=require('./settlementService');
 const SENDER='enviodigital@bancochile.cl',SUBJECT='Estado de Cuenta Tarjeta de Crédito';
 const KINDS=new Set(['purchase','installment','payment','fee','debt_transfer','other_credit']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -73,30 +75,42 @@ function createCardStatementService({db,extractor,env=process.env,now=()=>new Da
  const configuredOwner=()=>env.CARD_STATEMENTS_OWNER_USER_ID||env.FINTOC_OWNER_USER_ID;
  function owner(actor){const id=configuredOwner();if(!id||actor!==id)throw error(403,'FORBIDDEN');return id;}
  function storage(failure){if(failure instanceof CardStatementError)throw failure;throw error(500,'STORAGE_ERROR');}
- async function sources(userId){
+ async function evidence(userId,executor=pool){const rows=(await executor.query('SELECT a.*,a.created_at::text AS created_at FROM card_statement_actions a WHERE a.user_id=$1 ORDER BY a.fingerprint',[userId])).rows;return rows.map(row=>({...row,bank_snapshot:typeof row.bank_snapshot==='string'?JSON.parse(row.bank_snapshot):row.bank_snapshot,financial_snapshot:typeof row.financial_snapshot==='string'?JSON.parse(row.financial_snapshot):row.financial_snapshot}));}
+ async function sources(userId,executor=pool,evidenceRows){
   const [national,international,installments]=await Promise.all([
-   pool.query(`SELECT t.id::text,t.fecha::text AS date,t.descripcion AS description,t.monto::text AS amount,t.tipo AS type,t.billing_year,t.billing_month,
+   executor.query(`SELECT t.id::text,t.fecha::text AS date,t.descripcion AS description,t.monto::text AS amount,t.tipo AS type,t.billing_year,t.billing_month,row_to_json(t)::text AS immutable_snapshot,
     COALESCE(i.network,t.metadata->>'tipo_tarjeta',t.metadata->>'network') AS network,
     COALESCE(t.metadata->>'tarjeta_ultimos_4',t.metadata->>'card_last_four') AS card_last_four,
-    i.provider,t.metadata->>'banco' AS source_bank FROM transactions t LEFT JOIN imports i ON i.id=t.import_id AND i.user_id=t.user_id WHERE t.user_id=$1`,[userId]),
-   pool.query(`SELECT id::text,COALESCE(original_fecha,fecha)::text AS date,descripcion AS description,amount_usd::text AS amount,tipo AS type,brand AS network,period_year AS billing_year,period_month AS billing_month FROM intl_unbilled WHERE user_id=$1`,[userId]),
-   pool.query(`SELECT o.id::text,p.descripcion AS description,o.amount::text AS amount,p.brand AS network,o.year AS billing_year,o.month AS billing_month,o.installment_number,(o.active AND p.active) AS active FROM installment_occurrences o JOIN installment_plans p ON p.id=o.plan_id AND p.user_id=o.user_id WHERE o.user_id=$1`,[userId])]);
+    i.network AS import_network,COALESCE(t.metadata->>'tipo_tarjeta',t.metadata->>'network') AS metadata_network,i.provider,t.metadata->>'banco' AS source_bank FROM transactions t LEFT JOIN imports i ON i.id=t.import_id AND i.user_id=t.user_id WHERE t.user_id=$1`,[userId]),
+   executor.query(`SELECT id::text,COALESCE(original_fecha,fecha)::text AS date,descripcion AS description,amount_usd::text AS amount,tipo AS type,brand AS network,period_year AS billing_year,period_month AS billing_month,row_to_json(intl_unbilled)::text AS immutable_snapshot FROM intl_unbilled WHERE user_id=$1`,[userId]),
+   executor.query(`SELECT o.id::text,p.descripcion AS description,o.amount::text AS amount,p.brand AS network,o.year AS billing_year,o.month AS billing_month,o.installment_number,(o.active AND p.active) AS active,row_to_json(o)::text AS immutable_snapshot,row_to_json(p)::text AS plan_immutable_snapshot FROM installment_occurrences o JOIN installment_plans p ON p.id=o.plan_id AND p.user_id=o.user_id WHERE o.user_id=$1`,[userId])]);
   const network=value=>['visa','mastercard'].includes(String(value||'').toLowerCase())?String(value).toLowerCase():null;
-  const common=row=>({id:String(row.id),date:row.date||null,description:row.description,amount:String(row.amount),type:row.type||'gasto',network:network(row.network),cardLastFour:lastFour(row.card_last_four),billingYear:row.billing_year,billingMonth:row.billing_month});
+  const common=row=>({id:String(row.id),date:row.date||null,description:row.description,amount:String(row.amount),type:row.type||'gasto',network:network(row.network),cardLastFour:lastFour(row.card_last_four),billingYear:row.billing_year,billingMonth:row.billing_month,immutableSnapshot:row.immutable_snapshot,planImmutableSnapshot:row.plan_immutable_snapshot,identityConflict:Boolean(network(row.import_network)&&network(row.metadata_network)&&network(row.import_network)!==network(row.metadata_network))});
   const origins=row=>[row.provider,row.source_bank].map(value=>normalizeDescription(value||'')).filter(Boolean);
   const chile=value=>['banco chile','banco de chile','bancochile','chile'].includes(value);
-  return national.rows.filter(row=>origins(row).every(chile)).map(row=>({...common(row),sourceType:'transaction',currency:'CLP',providerKnown:origins(row).length>0}))
+  const records=national.rows.filter(row=>origins(row).every(chile)).map(row=>({...common(row),sourceType:'transaction',currency:'CLP',providerKnown:origins(row).length>0}))
    .concat(international.rows.map(row=>({...common(row),sourceType:'international',currency:'USD'})))
    .concat(installments.rows.map(row=>({...common(row),sourceType:'installment',currency:'CLP',installmentNumber:row.installment_number,type:row.active===false?'desestimar':'gasto'})));
+  const actions=evidenceRows||await evidence(userId,executor);
+  return records.map(source=>{const action=actions.find(a=>a.source_type===source.sourceType&&String(a.source_id)===source.id);if(!action)return source;const bank=action.bank_snapshot||{};return{...source,network:source.network||network(bank.network),cardLastFour:source.cardLastFour||lastFour(bank.cardLastFour),...(action.decision==='insert'&&source.providerKnown===false?{providerKnown:true}:{})};});
+ }
+ async function documentFor(row,executor=pool){
+  const header=typeof row.document_header==='string'?JSON.parse(row.document_header):row.document_header;
+  const payload={...header,sections:header.sections.map(section=>({...section,items:[]}))};
+  const stored=(await executor.query('SELECT section_index,ordinal,item FROM card_statement_items WHERE run_id=$1 ORDER BY section_index,ordinal',[row.id])).rows;
+  for(const item of stored)if(payload.sections[item.section_index])payload.sections[item.section_index].items.push(typeof item.item==='string'?JSON.parse(item.item):item.item);
+  return payload;
+ }
+ async function loadSettlement(executor,userId,id){
+  const row=(await executor.query(RUN_SELECT+' AND r.id=$2',[userId,id])).rows[0];if(!row)throw error(404,'NOT_FOUND');
+  const actions=await evidence(userId,executor);const document=await documentFor(row,executor);const sourceRows=await sources(userId,executor,actions);const cards=(await executor.query('SELECT last_four,network,is_active FROM credit_cards WHERE user_id=$1 ORDER BY last_four',[userId])).rows;
+  return{runId:String(row.id),document,sources:sourceRows,evidence:actions,cards,revisionConflict:row.revision_conflict===true};
  }
  async function materialize(row,withItems=true,sourceRows){
-  const document=typeof row.document_header==='string'?JSON.parse(row.document_header):row.document_header;
-  const payload={...document,sections:document.sections.map(section=>({...section,items:[]}))};
-  const stored=(await pool.query('SELECT section_index,ordinal,item FROM card_statement_items WHERE run_id=$1 ORDER BY section_index,ordinal',[row.id])).rows;
-  for(const item of stored)if(payload.sections[item.section_index])payload.sections[item.section_index].items.push(typeof item.item==='string'?JSON.parse(item.item):item.item);
-  const result=matchStatement(payload,sourceRows||await sources(row.user_id),{revisionConflict:row.revision_conflict===true});
+  const payload=await documentFor(row);
+  const result=analyzeStatement(payload,sourceRows||await sources(row.user_id),{revisionConflict:row.revision_conflict===true});
   return{id:String(row.id),network:result.network,statementDate:result.statementDate,period:result.period,dueDate:result.dueDate,validation:result.validation,status:result.status,revisionConflict:result.revisionConflict,
-   sections:result.sections.map(section=>({scope:section.scope,currency:section.currency,totals:section.totals,validation:section.validation,counts:section.counts,...(withItems?{items:section.items}:{})}))};
+   sections:result.sections.map(section=>({scope:section.scope,currency:section.currency,totals:section.totals,validation:section.validation,counts:section.counts,reconciliation:section.reconciliation,...(withItems?{items:section.items,extras:section.extras}:{})}))};
  }
  async function detail(actor,id){const userId=owner(actor);if(!UUID.test(String(id)))throw error(400,'INVALID_ID');try{const row=(await pool.query(RUN_SELECT+' AND r.id=$2',[userId,id])).rows[0];if(!row)throw error(404,'NOT_FOUND');return await materialize(row);}catch(e){return storage(e)}}
  async function list(actor,input={}){const userId=owner(actor);if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!['year','month'].includes(key))||typeof input.year!=='string'||!/^\d{4}$/.test(input.year)||Number(input.year)<2000||Number(input.year)>2100||typeof input.month!=='string'||!/^([1-9]|1[0-2])$/.test(input.month))throw error(400,'INVALID_QUERY');
@@ -130,11 +144,14 @@ function createCardStatementService({db,extractor,env=process.env,now=()=>new Da
     await client.query('INSERT INTO card_statement_sources(user_id,message_id,attachment_id,run_id,filename) VALUES($1,$2,$3,$4,$5) ON CONFLICT(user_id,message_id,attachment_id) DO NOTHING',[userId,input.messageId,input.attachmentId,resultId,input.filename]);
     await client.query('COMMIT');
    }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
-   const result=await detail(userId,resultId);return{...result,sections:result.sections.map(({scope,currency,validation,counts})=>({scope,currency,validation,counts})),duplicate};
+   let applied;
+   if(env.CARD_STATEMENTS_AUTO_POST==='true'){const preview=await settlement.preview(userId,resultId);applied=await settlement.apply(userId,resultId,{digest:preview.digest});}
+   const result=await detail(userId,resultId);return{...result,sections:result.sections.map(({scope,currency,validation,counts})=>({scope,currency,validation,counts})),duplicate,...(applied?{settlement:{inserted:applied.inserted,linked:applied.linked,held:applied.held}}:{})};
   }catch(e){return storage(e)}
  }
- return{ingest,list,detail};
+ const settlement=createSettlementService({pool,load:loadSettlement,owner,now});
+ return{ingest,list,detail,previewSettlement:settlement.preview,applySettlement:settlement.apply};
 }
 let defaultService;
 function getDefault(){if(!defaultService){const {createPdfExtractor}=require('./pdfExtractor');defaultService=createCardStatementService({db:require('../../config/database'),extractor:createPdfExtractor(),env:process.env})}return defaultService;}
-module.exports={createCardStatementService,cleanDocument,validEnvelope,ingest:input=>getDefault().ingest(input),list:(actor,input)=>getDefault().list(actor,input),detail:(actor,id)=>getDefault().detail(actor,id)};
+module.exports={createCardStatementService,cleanDocument,validEnvelope,ingest:input=>getDefault().ingest(input),list:(actor,input)=>getDefault().list(actor,input),detail:(actor,id)=>getDefault().detail(actor,id),previewSettlement:(actor,id)=>getDefault().previewSettlement(actor,id),applySettlement:(actor,id,input)=>getDefault().applySettlement(actor,id,input)};

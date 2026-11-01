@@ -164,12 +164,13 @@ const getSummary = async (req, res) => {
 
     // 4. Obtener transacciones internacionales del mes objetivo
     // period_year/period_month ya representan el mes de facturación
-    let visaIntl = 0, mcIntl = 0;
+    let visaIntl = 0, mcIntl = 0, conversionPendingCount = 0;
     try {
       const intlRes = await db.query(`
         SELECT 
           LOWER(brand) as brand,
-          SUM(amount_clp) as total
+          SUM(amount_clp) as total,
+          COUNT(*) FILTER (WHERE amount_clp IS NULL) as conversion_pending_count
         FROM intl_unbilled
         WHERE user_id = $1 
           AND period_year = $2 
@@ -179,6 +180,7 @@ const getSummary = async (req, res) => {
       `, [userId, targetYear, targetMonth]);
       
       for (const row of intlRes.rows) {
+        conversionPendingCount += Number(row.conversion_pending_count) || 0;
         const amount = Number(row.total) || 0;
         if (row.brand === 'visa') visaIntl = amount;
         else if (row.brand === 'mastercard') mcIntl = amount;
@@ -294,7 +296,9 @@ const getSummary = async (req, res) => {
         totalCommitments,
         projectedBalance,
         healthScore,
-        healthStatus
+        healthStatus,
+        conversionPendingCount,
+        amountsPartial: conversionPendingCount > 0
       },
       alerts
     });

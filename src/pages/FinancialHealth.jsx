@@ -151,6 +151,9 @@ const FinancialHealth = () => {
   }
 
   const { checking, creditCards, projected, summary, alerts } = data || {};
+  const pendingConversions = Number.isSafeInteger(summary?.conversionPendingCount) && summary.conversionPendingCount > 0 ? summary.conversionPendingCount : 0;
+  const amountsPartial = summary?.amountsPartial === true || pendingConversions > 0;
+  const evaluationColor = amountsPartial ? theme.palette.warning.main : getHealthColor(summary?.healthStatus);
   
   // Calculate totals for flow section
   const totalIncome = (projected?.income || 0);
@@ -160,7 +163,7 @@ const FinancialHealth = () => {
   const commitmentPercent = totalIncome > 0 ? (totalCommitments / totalIncome) * 100 : null;
   const commitmentLabel = commitmentPercent === null
     ? 'Sin ingresos de referencia'
-    : `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 }).format(commitmentPercent)}% comprometido`;
+    : `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 }).format(commitmentPercent)}% comprometido${amountsPartial ? ' · parcial' : ''}`;
   
   // Month name for display
   const monthName = new Date(year, month - 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
@@ -188,6 +191,8 @@ const FinancialHealth = () => {
           </Tooltip>
         </Box>
       </Box>
+
+      {amountsPartial && <Alert severity="warning" data-testid="financial-partial-warning" sx={{ mb: 2 }}>{pendingConversions > 0 ? `${pendingConversions} ${pendingConversions === 1 ? 'movimiento' : 'movimientos'} USD sin conversión.` : 'Hay movimientos USD sin conversión.'} Los compromisos, la evaluación y la proyección en CLP son parciales; no representan un saldo definitivo.</Alert>}
 
       {/* Alerts Section */}
       {alerts && alerts.length > 0 && (
@@ -234,7 +239,7 @@ const FinancialHealth = () => {
                       size={80}
                       thickness={5}
                       sx={{ 
-                        color: getHealthColor(summary?.healthStatus),
+                        color: evaluationColor,
                         position: 'absolute',
                         left: 0,
                         '& .MuiCircularProgress-circle': { strokeLinecap: 'round' }
@@ -261,12 +266,12 @@ const FinancialHealth = () => {
                       py: 0.25, 
                       borderRadius: 1,
                       display: 'inline-block',
-                      bgcolor: alpha(getHealthColor(summary?.healthStatus), 0.15),
-                      color: getHealthColor(summary?.healthStatus),
+                      bgcolor: alpha(evaluationColor, 0.15),
+                      color: evaluationColor,
                       fontWeight: 600
                     }}
                   >
-                    {getHealthLabel(summary?.healthStatus)}
+                    {amountsPartial ? 'Evaluación parcial' : getHealthLabel(summary?.healthStatus)}
                   </Typography>
                 </Box>
               </Grid>
@@ -293,7 +298,7 @@ const FinancialHealth = () => {
                     <TrendingDownIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.error.main, mb: 0.5 }} />
                   )}
                   <Typography variant="caption" color="text.secondary" display="block">
-                    Proyección fin de mes
+                    {amountsPartial ? 'Proyección parcial fin de mes' : 'Proyección fin de mes'}
                   </Typography>
                   <Typography 
                     variant="h6" 
@@ -358,7 +363,7 @@ const FinancialHealth = () => {
                   {/* Compromisos - Top 4 por monto */}
                   <Grid item xs={12} md={4}>
                     <Box sx={{ p: 2, borderRadius: 2, bgcolor: alpha(theme.palette.error.main, 0.08), height: '100%', minHeight: 180 }}>
-                      <Typography variant="body2" color="text.secondary" fontWeight={600}>COMPROMISOS</Typography>
+                      <Typography variant="body2" color="text.secondary" fontWeight={600}>{amountsPartial ? 'COMPROMISOS PARCIALES' : 'COMPROMISOS'}</Typography>
                       <Box sx={{ minHeight: 100 }}>
                         {displayedCommitments.map((item, idx) => (
                           <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
@@ -400,7 +405,7 @@ const FinancialHealth = () => {
                     }}>
                       {/* Neteo del mes (sin saldo inicial) */}
                       <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                        NETEO DEL MES
+                        NETEO DEL MES{amountsPartial ? ' · PARCIAL' : ''}
                       </Typography>
                       <Typography 
                         variant="h6" 
@@ -413,7 +418,7 @@ const FinancialHealth = () => {
                       
                       {/* Resultado proyectado (con saldo inicial) */}
                       <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                        RESULTADO PROYECTADO
+                        RESULTADO PROYECTADO{amountsPartial ? ' PARCIAL' : ''}
                       </Typography>
                       <Typography 
                         variant="h5" 
@@ -466,7 +471,7 @@ const FinancialHealth = () => {
           <Box sx={{ flex: 1, minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 2, border: `1px solid ${theme.palette.divider}`, height: '100%' }}>
             <Typography variant="overline" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-              Composición de compromisos
+              {amountsPartial ? 'Composición parcial de compromisos' : 'Composición de compromisos'}
             </Typography>
             
             {categoryData.length > 0 ? (

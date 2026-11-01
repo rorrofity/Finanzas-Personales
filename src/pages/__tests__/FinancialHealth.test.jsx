@@ -70,3 +70,7 @@ test('un error del resumen se informa sin inventar datos de compromisos', async 
   expect(screen.queryByTestId('commitment-chart')).not.toBeInTheDocument();
   warning.mockRestore();
 });
+
+test('con USD pendientes la evaluación y proyección se presentan como parciales',async()=>{
+  const data=fixture();data.summary={...data.summary,conversionPendingCount:1,amountsPartial:true};axios.get.mockResolvedValue({data});renderPage();expect(await screen.findByText(/1 movimiento USD sin conversión/)).toBeInTheDocument();expect(screen.getByText('Proyección parcial fin de mes')).toBeInTheDocument();expect(screen.getByText('Evaluación parcial')).toBeInTheDocument();expect(screen.queryByText('Excelente')).not.toBeInTheDocument();expect(screen.getByText(/200% comprometido · parcial/)).toBeInTheDocument();expect(axios.get).toHaveBeenCalledTimes(1);
+});

@@ -50,6 +50,10 @@ import { usePeriod } from '../contexts/PeriodContext';
 import StatCard from '../components/ui/StatCard';
 import axios from 'axios';
 
+const hasConversion = row => row.amount_clp !== null && row.amount_clp !== undefined
+  && row.exchange_rate !== null && row.exchange_rate !== undefined
+  && Number.isFinite(Number(row.amount_clp)) && Number.isFinite(Number(row.exchange_rate)) && Number(row.exchange_rate) > 0;
+
 const TransactionsIntl = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -156,7 +160,7 @@ const TransactionsIntl = () => {
     }
   };
 
-  const formatCurrency = (n) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(n||0));
+  const formatCurrency = (n) => n === null || n === undefined ? 'Conversión pendiente' : new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(n));
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -171,7 +175,7 @@ const TransactionsIntl = () => {
       fecha: row.fecha?.split('T')[0] || row.fecha,
       descripcion: row.descripcion,
       amount_usd: String(row.amount_usd),
-      exchange_rate: String(row.exchange_rate),
+      exchange_rate: row.exchange_rate === null || row.exchange_rate === undefined ? '' : String(row.exchange_rate),
       tipo: row.tipo,
       category_id: row.category_id || ''
     });
@@ -186,15 +190,21 @@ const TransactionsIntl = () => {
 
   const submitEdit = async (e) => {
     e?.preventDefault?.();
+    const rateText = formData.exchange_rate.trim(), amountText = formData.amount_usd.trim();
+    if ((rateText !== '' && (!Number.isFinite(Number(rateText)) || Number(rateText) <= 0))
+      || (rateText === '' && editing.exchange_rate !== null && editing.exchange_rate !== undefined)) {
+      setSnackbar({ open: true, message: 'Ingresa un tipo de cambio positivo o déjalo pendiente.', severity: 'error' });
+      return;
+    }
+    if (amountText === '' || !Number.isFinite(Number(amountText))) {
+      setSnackbar({ open: true, message: 'Ingresa un monto USD válido.', severity: 'error' });
+      return;
+    }
+    const payload = { fecha: formData.fecha, descripcion: formData.descripcion, tipo: formData.tipo, category_id: formData.category_id || null };
+    if (Number(amountText) !== Number(editing.amount_usd)) payload.amount_usd = Number(amountText);
+    if (rateText !== '' && (editing.exchange_rate === null || editing.exchange_rate === undefined || Number(rateText) !== Number(editing.exchange_rate))) payload.exchange_rate = Number(rateText);
     try {
-      await axios.put(`/api/intl-unbilled/${editing.id}`, {
-        fecha: formData.fecha,
-        descripcion: formData.descripcion,
-        amount_usd: Number(formData.amount_usd),
-        exchange_rate: Number(formData.exchange_rate),
-        tipo: formData.tipo,
-        category_id: formData.category_id || null
-      });
+      await axios.put(`/api/intl-unbilled/${editing.id}`, payload);
       setSnackbar({ open: true, message: 'Transacción actualizada', severity: 'success' });
       handleCloseEdit();
       await fetchRows();
@@ -265,14 +275,21 @@ const TransactionsIntl = () => {
     const pagos = filteredRows.filter(r => r.tipo === 'pago');
     return {
       totalUSD: gastos.reduce((sum, r) => sum + Number(r.amount_usd || 0), 0),
-      totalCLP: gastos.reduce((sum, r) => sum + Number(r.amount_clp || 0), 0),
+      totalCLP: gastos.filter(hasConversion).reduce((sum, r) => sum + Number(r.amount_clp), 0),
+      pendingGastos: gastos.filter(r => !hasConversion(r)).length,
+      convertedGastos: gastos.filter(hasConversion).length,
       countGastos: gastos.length,
       pagosUSD: pagos.reduce((sum, r) => sum + Number(r.amount_usd || 0), 0),
-      pagosCLP: pagos.reduce((sum, r) => sum + Number(r.amount_clp || 0), 0),
+      pagosCLP: pagos.filter(hasConversion).reduce((sum, r) => sum + Number(r.amount_clp), 0),
+      pendingPagos: pagos.filter(r => !hasConversion(r)).length,
+      convertedPagos: pagos.filter(hasConversion).length,
       countPagos: pagos.length,
       countTotal: filteredRows.length
     };
   }, [filteredRows]);
+
+  const conversionSummary = (total, pending, converted) => pending > 0 ? converted > 0 ? `${formatCurrency(total)} parcial` : 'CLP pendiente' : formatCurrency(total);
+  const pendingConversions = totals.pendingGastos + totals.pendingPagos;
 
   const formatUSD = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(n||0));
 
@@ -297,15 +314,17 @@ const TransactionsIntl = () => {
       {/* Totales compactos (Epic 12, Req 12.10) */}
       <Grid container spacing={1} sx={{ mb: 2.5 }} data-testid="totals-row">
         <Grid item xs={4}>
-          <StatCard label="Total Gastos" valueText={formatUSD(totals.totalUSD)} subtext={formatCurrency(totals.totalCLP)} accent="error.main" />
+          <StatCard label="Total Gastos" valueText={formatUSD(totals.totalUSD)} subtext={conversionSummary(totals.totalCLP, totals.pendingGastos, totals.convertedGastos)} accent="error.main" />
         </Grid>
         <Grid item xs={4}>
-          <StatCard label="Total Pagos" valueText={formatUSD(totals.pagosUSD)} subtext={formatCurrency(totals.pagosCLP)} accent="success.main" />
+          <StatCard label="Total Pagos" valueText={formatUSD(totals.pagosUSD)} subtext={conversionSummary(totals.pagosCLP, totals.pendingPagos, totals.convertedPagos)} accent="success.main" />
         </Grid>
         <Grid item xs={4}>
-          <StatCard label="Balance" valueText={formatUSD(totals.totalUSD - totals.pagosUSD)} subtext={formatCurrency(totals.totalCLP - totals.pagosCLP)} accent="primary.main" />
+          <StatCard label="Balance" valueText={formatUSD(totals.totalUSD - totals.pagosUSD)} subtext={conversionSummary(totals.totalCLP - totals.pagosCLP, pendingConversions, totals.convertedGastos + totals.convertedPagos)} accent="primary.main" />
         </Grid>
       </Grid>
+
+      {pendingConversions > 0 && <Alert severity="info" sx={{ mb: 2 }}>{pendingConversions} {pendingConversions === 1 ? 'movimiento sin conversión' : 'movimientos sin conversión'}. Los importes USD se conservan; los totales en CLP son parciales hasta contar con el cambio correspondiente.</Alert>}
 
       <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
         {titleBrandLabel} ({filteredRows.length} registros)
@@ -425,7 +444,7 @@ const TransactionsIntl = () => {
                             {Number(r.amount_usd).toFixed(2)} USD
                           </Typography>
                           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            {formatCurrency(r.amount_clp)}
+                            {hasConversion(r) ? formatCurrency(r.amount_clp) : 'Conversión pendiente'}
                           </Typography>
                         </Box>
                       </Box>
@@ -453,7 +472,7 @@ const TransactionsIntl = () => {
                           <MenuItem value="pago">Pago</MenuItem>
                           <MenuItem value="desestimar">Desest.</MenuItem>
                         </Select>
-                        <IconButton size="small" onClick={() => handleOpenEdit(r)}>
+                        <IconButton size="small" aria-label="Editar transacción internacional" onClick={() => handleOpenEdit(r)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                         <IconButton size="small" onClick={() => handleDelete(r.id)}>
@@ -499,7 +518,7 @@ const TransactionsIntl = () => {
                         {r.tipo === 'desestimar' && (<Chip size="small" label="Desestimado" color="warning" sx={{ ml: 1 }} />)}
                       </TableCell>
                       <TableCell align="right">{Number(r.amount_usd).toFixed(2)}</TableCell>
-                      <TableCell align="right">{formatCurrency(r.amount_clp)}</TableCell>
+                      <TableCell align="right">{hasConversion(r) ? formatCurrency(r.amount_clp) : 'Conversión pendiente'}</TableCell>
                       <TableCell>
                         <Select size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
                           <MenuItem value="gasto">Gasto</MenuItem>

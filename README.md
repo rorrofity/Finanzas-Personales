@@ -306,3 +306,5 @@ MIT
 ---
 
 **Última actualización**: 2026-07-18
+
+- [Revisión nocturna y conciliación con cartola oficial (CSN)](docs/implementation/card-statement-nightly-settlement-contract.md) · [plan y pruebas](docs/implementation/card-statement-nightly-settlement-plan.md).

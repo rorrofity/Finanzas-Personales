@@ -90,4 +90,9 @@ describe('Dashboard: selección coordinada del alcance (DCE-14/17)',()=>{
     fireEvent.change(screen.getByRole('combobox',{name:'Ventana'}),{target:{value:'3'}});
     await waitFor(()=>expect(screen.getByTestId('expense-trend')).toHaveAttribute('aria-label','Tendencia de Transporte'));
   });
+
+  test('compromisos con USD sin convertir muestran importe parcial sin alterar los gastos históricos', async()=>{
+    readExpenseLiquidity.mockResolvedValueOnce({data:{disponibleHoy:321,compromisos:{total:200,conversionPendingCount:2,amountsPartial:true}},origin:'network',stale:false,cachedAt:Date.UTC(2026,9,31,12)});
+    renderPage();expect(await screen.findByText(/2 movimientos USD sin conversión/)).toBeInTheDocument();expect(screen.getByRole('button',{name:/Compromisos próximos/})).toHaveTextContent('importe parcial');expect(screen.getByTestId('expense-current-total')).toHaveTextContent('$500');expect(screen.getByText('$321')).toBeInTheDocument();
+  });
 });

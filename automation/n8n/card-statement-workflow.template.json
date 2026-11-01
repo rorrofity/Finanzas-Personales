@@ -13,25 +13,41 @@
       "parameters": {}
     },
     {
-      "id": "csr-gmail-trigger",
-      "name": "Recibir estado Banco de Chile",
-      "type": "n8n-nodes-base.gmailTrigger",
+      "id": "csr-schedule",
+      "name": "Revisar cartolas del 25 al 30",
+      "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
         0,
         0
       ],
       "parameters": {
-        "pollTimes": {
-          "item": [
+        "rule": {
+          "interval": [
             {
-              "mode": "everyMinute"
+              "field": "cronExpression",
+              "expression": "0 0 23 25-30 * *"
             }
           ]
-        },
+        }
+      }
+    },
+    {
+      "id": "csr-scheduled-recent",
+      "name": "Buscar cartolas recientes",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": true,
         "simple": true,
         "filters": {
-          "q": "from:enviodigital@bancochile.cl subject:\"Estado de Cuenta Tarjeta de Crédito\" has:attachment filename:pdf",
+          "q": "from:enviodigital@bancochile.cl subject:\"Estado de Cuenta Tarjeta de Crédito\" has:attachment filename:pdf newer_than:40d",
           "readStatus": "both"
         }
       },
@@ -206,7 +222,18 @@
         ]
       ]
     },
-    "Recibir estado Banco de Chile": {
+    "Revisar cartolas del 25 al 30": {
+      "main": [
+        [
+          {
+            "node": "Buscar cartolas recientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar cartolas recientes": {
       "main": [
         [
           {
