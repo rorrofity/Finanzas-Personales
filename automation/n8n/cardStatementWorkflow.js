@@ -47,7 +47,7 @@ function createCardStatementWorkflow({gmailCredential={id:'__GMAIL_CREDENTIAL_ID
   const gmail={gmailOAuth2:{id:gmailCredential.id,name:gmailCredential.name}};
   const nodes=[
     {id:'csr-manual',name:'Revisar dos últimos estados',type:'n8n-nodes-base.manualTrigger',typeVersion:1,position:[0,260],parameters:{}},
-    {id:'csr-schedule',name:'Revisar cartolas del 25 al 30',type:'n8n-nodes-base.scheduleTrigger',typeVersion:1.3,position:[0,0],parameters:{rule:{interval:[{field:'cronExpression',expression:'0 0 23 25-30 * *'}]}}},
+    {id:'csr-schedule',name:'Revisar cartolas del 25 al 30',type:'n8n-nodes-base.scheduleTrigger',typeVersion:1.3,position:[0,0],parameters:{rule:{interval:[{field:'cronExpression',expression:'0 10 23 25-30 * *'}]}}},
     {id:'csr-scheduled-recent',name:'Buscar cartolas recientes',type:'n8n-nodes-base.gmail',typeVersion:2.1,position:[240,0],parameters:{resource:'message',operation:'getAll',returnAll:true,simple:true,filters:{q:query+' newer_than:40d',readStatus:'both'}},credentials:gmail},
     {id:'csr-recent',name:'Buscar dos últimos estados',type:'n8n-nodes-base.gmail',typeVersion:2.1,position:[240,260],parameters:{resource:'message',operation:'getAll',returnAll:false,limit:2,simple:true,filters:{q:query,readStatus:'both'}},credentials:gmail},
     {id:'csr-download',name:'Descargar mensaje y adjuntos',type:'n8n-nodes-base.gmail',typeVersion:2.1,position:[500,0],parameters:{resource:'message',operation:'get',messageId:'={{ $json.id }}',simple:false,options:{downloadAttachments:true,dataPropertyAttachmentsPrefixName:'attachment_'}},credentials:gmail},

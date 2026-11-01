@@ -35,11 +35,14 @@ let scheduledTasks = [];
 
 /**
  * Registra los cron jobs (Req 13.1). Horarios configurables vía
- * SYNC_CRON_TIMES (coma-separado, formato cron), default 13:00 y 22:00.
+ * SYNC_CRON_TIMES (coma-separado, formato cron), default cada hora de
+ * 08:00 a 00:00 inclusive (17 ejecuciones diarias).
  * Zona horaria fija a America/Santiago independiente del TZ del proceso.
  */
 function start() {
-  const times = (process.env.SYNC_CRON_TIMES || '0 13 * * *,0 22 * * *')
+  if (scheduledTasks.length > 0) return;
+
+  const times = (process.env.SYNC_CRON_TIMES || '0 8-23 * * *,0 0 * * *')
     .split(',')
     .map((t) => t.trim())
     .filter(Boolean);
@@ -47,13 +50,13 @@ function start() {
   scheduledTasks = times.map((expr) =>
     cron.schedule(
       expr,
-      () => {
+      async () => {
         console.log(`⏰ [scheduler] ejecutando sincronización programada (${expr})`);
-        runScheduledSync().catch((error) =>
+        await runScheduledSync().catch((error) =>
           console.error('❌ [scheduler] error inesperado en runScheduledSync:', error.message)
         );
       },
-      { timezone: 'America/Santiago' }
+      { timezone: 'America/Santiago', noOverlap: true }
     )
   );
 

@@ -1,0 +1,15 @@
+# Contrato HSM — sincronización horaria y mantenimiento seguro
+
+Especificación previa al código. Solicitud autorizada el 2026-11-01, America/Santiago. Sustituye únicamente los horarios anteriores de sincronización de emails y conciliación mensual.
+
+1. **HSM-01:** Ejecutar el flujo existente de emails bancarios a las 08:00, 09:00, …, 23:00 y 00:00, todos los días: 17 oportunidades diarias. Zona America/Santiago, conservando la preferencia auto_sync_enabled de cada usuario. No ejecutar de 01:00 a 07:00.
+2. **HSM-02:** El valor predeterminado y la configuración productiva serán `0 8-23 * * *,0 0 * * *`. El separador de expresiones sigue siendo la coma; conservar horarios personalizados válidos. Registrar una sola instancia de cada tarea y esperar su promesa para impedir solapamientos del mismo disparador. Mantener el aislamiento por usuario y avisos únicamente cuando se importen novedades.
+3. **HSM-03:** Mover exclusivamente el disparador mensual de cartolas a `0 10 23 25-30 * *`, America/Santiago. Conservar días, credenciales, procesamiento secuencial, conciliación, idempotencia y demás workflows. Mantener N8N con concurrencia productiva uno.
+4. **HSM-04:** Actualizar la configuración de ejemplo y el texto de Automatización para comunicar la ventana horaria. No modificar preferencias ni activar usuarios deshabilitados. Fintoc diario a las 07:00 conserva su programación.
+5. **HSM-05:** No escribir, reclasificar, borrar ni migrar gastos o categorías durante el despliegue y la verificación. No ejecutar importaciones reales para probar. Comparar huellas privadas de las filas financieras antes y después; pruebas con datos ficticios.
+6. **HSM-06:** Liberar únicamente espacio previamente identificado: comprimir el respaldo SQLite antiguo de N8N y compactar sus páginas libres. Conservar un respaldo recuperable de cada archivo original; comprobar SHA-256 de la descompresión antes de retirar copias sin comprimir. La compactación requiere pausa breve de N8N, integridad SQLite y equivalencia lógica de todas sus tablas/esquema antes/después. Conservar propietarios/permisos y restaurar el servicio. No borrar credenciales, workflows, PDFs, respaldos financieros ni datos PostgreSQL.
+7. **HSM-07:** TDD obligatorio: observar pruebas nuevas fallando antes del código, verificar luego backend, interfaz y plantilla mensual. Documentar evidencia pública sin credenciales ni datos financieros. Desplegar el commit probado, comprobar salud y programación efectiva, actualizar repositorio remoto y servidor. Preservar cambios de documentación preexistentes del usuario.
+
+## Validación
+
+Pruebas de cron sobre horas reales (incluido cambio de día), zona, configuración alternativa, registro único y espera de ejecución; prueba de interfaz; prueba de plantilla publicada a las 23:10. En producción: huellas financieras privadas, integridad/equivalencia SQLite offline, horarios publicados y logs de arranque, estado PM2/N8N/HTTP y espacio disponible antes/después. La activación del horario autoriza las importaciones automáticas futuras normales, sin ejecutar cargas manuales durante este cambio.

@@ -103,8 +103,8 @@ const NotificationsSettings = () => {
         Automatización
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Sincroniza tus emails bancarios automáticamente dos veces al día
-        (13:00 y 22:00) y recibe una notificación cuando lleguen movimientos
+        Sincroniza tus emails bancarios automáticamente cada hora, de 08:00 a 00:00
+        (America/Santiago), y recibe una notificación cuando lleguen movimientos
         nuevos para categorizar.
       </Typography>
 
@@ -128,7 +128,7 @@ const NotificationsSettings = () => {
               disabled={loadingSync}
             />
           }
-          label="Sincronizar automáticamente (2 veces al día)"
+          label="Sincronizar automáticamente (cada hora de 08:00 a 00:00)"
         />
 
         {!push.supported && (
