@@ -1,0 +1,4 @@
+# Tested native-PDF text extraction; no OCR or external AI service.
+pdfplumber==0.11.9
+pdfminer.six==20251230
+cryptography==50.0.2

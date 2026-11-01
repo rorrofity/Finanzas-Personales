@@ -69,6 +69,7 @@ Abre: http://localhost:3000
 - **[Consulta Fintoc: contrato](./docs/implementation/fintoc-readonly-contract.md)** - Cuenta propia, aislamiento por dueño y consulta sin modificar registros
 - **[Consulta Fintoc: activación privada](./docs/implementation/fintoc-readonly-activation.md)** - Condiciones gratuitas y configuración exclusiva del servidor
 - **[Sincronización diaria: contrato](./docs/implementation/fintoc-daily-sync-contract.md)** - Novedades de cuenta corriente, conciliación inicial sin reimportar historia y TC sin cambios
+- **[Estados de tarjetas por correo](./docs/implementation/card-statement-reconciliation-contract.md)** - Flujo N8N de PDF protegido y contraste de cargos CLP/USD sin modificar gastos
 - **[Saldo bancario y clasificación](./docs/implementation/fintoc-balance-classification-contract.md)** - Saldo disponible exacto, fecha bancaria y clasificación conservadora por historial
 - **[Conciliación inicial: contrato](./docs/implementation/fintoc-initial-reconciliation-contract.md)** - Revisión explícita e incorporación de faltantes con protección de historial y clasificaciones
 - **[Sincronización diaria: evidencia](./docs/implementation/fintoc-daily-sync-plan.md)** - SDD/TDD, pruebas y despliegue en el servidor

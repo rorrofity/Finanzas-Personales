@@ -58,3 +58,6 @@ server_pass
 /*.xlsx
 
 db_backup.sql
+# Local Python statement-reader caches
+__pycache__/
+*.py[cod]

@@ -17,6 +17,7 @@ const installmentsRoutes = require('./routes/installmentsRoutes');
 const intlUnbilledRoutes = require('./routes/intlUnbilledRoutes');
 const checkingRoutes = require('./routes/checkingRoutes');
 const fintocRoutes = require('./routes/fintocRoutes');
+const { createCardStatementRouter } = require('./routes/cardStatementRoutes');
 const syncRoutes = require('./routes/syncRoutes');
 const suspiciousRoutes = require('./routes/suspiciousRoutes');
 const financialHealthRoutes = require('./routes/financialHealthRoutes');
@@ -114,6 +115,7 @@ app.use('/api/suspicious', suspiciousRoutes);
 app.use('/api/financial-health', financialHealthRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/cards', cardRoutes);
+app.use('/api/card-statements', createCardStatementRouter());
 app.use('/api/space', spaceRoutes);
 app.use('/api/push', pushRoutes);
 

@@ -47,3 +47,11 @@ test('no registra escrituras del dashboard ni otro prefijo parecido', () => {
   expect(routeFor('/api/dashboard/expense-evolution', 'POST')).toBeUndefined();
   expect(routeFor('/api/dashboard/expense-evolution-other').handler.strategy).toBe('NetworkFirst');
 });
+
+test.each(['/api/card-statements', '/api/card-statements?year=2030&month=5', '/api/card-statements/11111111-1111-4111-8111-111111111111'])('%s mantiene estados de tarjetas fuera de la caché offline', path => {
+  expect(routeFor(path).handler.strategy).toBe('NetworkOnly');
+});
+test('los estados no registran ni encolan escrituras; prefijos parecidos siguen su estrategia previa', () => {
+  expect(routeFor('/api/card-statements/ingest', 'POST')).toBeUndefined();
+  expect(routeFor('/api/card-statements-other').handler.strategy).toBe('NetworkFirst');
+});

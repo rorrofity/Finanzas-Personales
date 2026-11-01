@@ -778,3 +778,8 @@ La cobertura corresponde a cuenta corriente CLP. No trae compras de tarjeta de c
 **Solicitud:** 2026-11-01. Mostrar el saldo disponible que informa el banco, exacto y con fecha, separado del saldo calculado desde el historial. Guardar el snapshot solo en integración aditiva; no ajustar gastos ni checking_balances. Clasificar exclusivamente incorporaciones Fintoc aún sin categoría por coincidencias completas y unánimes del historial manual del titular; contradicciones o falta de evidencia permanecen NULL. [Contrato previo FBA/FHC](implementation/fintoc-balance-classification-contract.md) y [plan](implementation/fintoc-balance-classification-plan.md).
 
 **Resultado FBA/FHC:** implementado y desplegado el 2026-11-01. Saldo disponible y contable de snapshot bancario, cálculo histórico identificado aparte y clasificación explícita de importados NULL por historial unánime. Fechas, importes, notas, clasificaciones previas y saldos guardados conservados. [Evidencia](implementation/fintoc-balance-classification-deployment.json).
+
+
+### Enmienda CSR — estados de tarjeta por correo
+
+**Solicitud:** 2026-11-01. Nuevo flujo N8N del remitente/asunto autorizados, PDF protegido leído localmente sin IA/OCR externo, ambas monedas y conciliación viva contra cargos/cuotas existentes. La ingesta solo escribe evidencia aditiva; no altera gastos, categorías, períodos o saldos. Faltantes/diferencias quedan visibles para revisión. [Contrato CSR-01–16 previo al código](implementation/card-statement-reconciliation-contract.md) y [plan](implementation/card-statement-reconciliation-plan.md).

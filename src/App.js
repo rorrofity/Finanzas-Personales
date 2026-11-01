@@ -30,6 +30,7 @@ const ProjectedTransactions = lazy(() => import('./pages/ProjectedTransactions')
 const TransactionsIntl = lazy(() => import('./pages/TransactionsIntl'));
 const Installments = lazy(() => import('./pages/Installments'));
 const Checking = lazy(() => import('./pages/Checking'));
+const CardStatements = lazy(() => import('./pages/CardStatements'));
 const ReviewDuplicates = lazy(() => import('./pages/ReviewDuplicates'));
 const FinancialHealth = lazy(() => import('./pages/FinancialHealth'));
 
@@ -93,6 +94,7 @@ function App() {
                   <Route path="transactions-intl" element={<TransactionsIntl />} />
                   <Route path="installments" element={<Installments />} />
                   <Route path="checking" element={<Checking />} />
+                  <Route path="card-statements" element={<CardStatements />} />
                   <Route path="projected-transactions" element={<ProjectedTransactions />} />
                   <Route path="categories" element={<Categories />} />
                   <Route path="review-duplicates" element={<ReviewDuplicates />} />

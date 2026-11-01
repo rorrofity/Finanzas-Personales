@@ -1,0 +1,262 @@
+{
+  "name": "Finanzas - Conciliar estados Visa y Mastercard",
+  "nodes": [
+    {
+      "id": "csr-manual",
+      "name": "Revisar dos últimos estados",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        260
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "csr-gmail-trigger",
+      "name": "Recibir estado Banco de Chile",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "q": "from:enviodigital@bancochile.cl subject:\"Estado de Cuenta Tarjeta de Crédito\" has:attachment filename:pdf",
+          "readStatus": "both"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__GMAIL_CREDENTIAL_ID__",
+          "name": "Gmail existente"
+        }
+      }
+    },
+    {
+      "id": "csr-recent",
+      "name": "Buscar dos últimos estados",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        260
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 2,
+        "simple": true,
+        "filters": {
+          "q": "from:enviodigital@bancochile.cl subject:\"Estado de Cuenta Tarjeta de Crédito\" has:attachment filename:pdf",
+          "readStatus": "both"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__GMAIL_CREDENTIAL_ID__",
+          "name": "Gmail existente"
+        }
+      }
+    },
+    {
+      "id": "csr-download",
+      "name": "Descargar mensaje y adjuntos",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        500,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "__GMAIL_CREDENTIAL_ID__",
+          "name": "Gmail existente"
+        }
+      }
+    },
+    {
+      "id": "csr-pdfs",
+      "name": "Validar correo y separar PDF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return (function splitStatementAttachments(items) {\n  const sender='enviodigital@bancochile.cl';\n  const expectedSubject='Estado de Cuenta Tarjeta de Crédito';\n  const result=[];\n  function header(json,name){\n    const headers=json.payload?.headers||json.headers;\n    if(Array.isArray(headers))return headers.find(h=>String(h.name).toLowerCase()===name)?.value;\n    if(headers&&typeof headers==='object'){const key=Object.keys(headers).find(k=>k.toLowerCase()===name);return key?headers[key]:undefined}\n    return undefined;\n  }\n  function address(value){\n    if(value&&typeof value==='object'){\n      if(Array.isArray(value.value))return value.value.length===1?String(value.value[0].address||'').trim().toLowerCase():'';\n      return typeof value.address==='string'?value.address.trim().toLowerCase():'';\n    }\n    if(typeof value!=='string')return '';\n    const match=value.match(/^[^<>]*<([^<>]+)>\\s*$/);\n    const candidate=(match?match[1]:value).trim().toLowerCase();\n    return /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+$/.test(candidate)?candidate:'';\n  }\n  for(const item of items||[]){\n    const json=item.json||{};\n    const from=address(json.from||json.From||header(json,'from'));\n    const subject=String(json.subject||json.Subject||header(json,'subject')||'').normalize('NFC').trim();\n    const messageId=typeof json.id==='string'?json.id:'';\n    if(from!==sender||subject!==expectedSubject||!messageId)continue;\n    for(const [key,binary]of Object.entries(item.binary||{})){\n      if(!binary||typeof binary!=='object')continue;\n      const filename=String(binary.fileName||'statement.pdf');\n      if(binary.mimeType!=='application/pdf'&&!/\\.pdf$/i.test(filename))continue;\n      result.push({json:{messageId,attachmentId:String(binary.attachmentId||key),filename,from,subject},binary:{data:binary}});\n    }\n  }\n  return result;\n})($input.all());"
+      }
+    },
+    {
+      "id": "csr-ingest",
+      "name": "Conciliar en Finanzas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://finanzas.rocketflow.cl/api/card-statements/ingest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "messageId",
+              "value": "={{ $json.messageId }}"
+            },
+            {
+              "name": "attachmentId",
+              "value": "={{ $json.attachmentId }}"
+            },
+            {
+              "name": "filename",
+              "value": "={{ $json.filename }}"
+            },
+            {
+              "name": "from",
+              "value": "={{ $json.from }}"
+            },
+            {
+              "name": "subject",
+              "value": "={{ $json.subject }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "__INGEST_CREDENTIAL_ID__",
+          "name": "Finanzas - Ingesta de estados"
+        }
+      }
+    },
+    {
+      "id": "csr-summary",
+      "name": "Resultado de conciliación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return (function summarizeResults(items){\n  return(items||[]).map(item=>{const value=item.json?.statement||item.json?.result||item.json||{};\n    return{json:{statementId:value.id||null,status:value.status||'received',network:value.network||null,\n      duplicate:value.duplicate===true,\n      sections:Array.isArray(value.sections)?value.sections.map(section=>({scope:section.scope,currency:section.currency,counts:section.counts||{}})):[]}};\n  });\n})($input.all());"
+      }
+    }
+  ],
+  "connections": {
+    "Revisar dos últimos estados": {
+      "main": [
+        [
+          {
+            "node": "Buscar dos últimos estados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar dos últimos estados": {
+      "main": [
+        [
+          {
+            "node": "Descargar mensaje y adjuntos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recibir estado Banco de Chile": {
+      "main": [
+        [
+          {
+            "node": "Descargar mensaje y adjuntos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar mensaje y adjuntos": {
+      "main": [
+        [
+          {
+            "node": "Validar correo y separar PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar correo y separar PDF": {
+      "main": [
+        [
+          {
+            "node": "Conciliar en Finanzas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conciliar en Finanzas": {
+      "main": [
+        [
+          {
+            "node": "Resultado de conciliación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "America/Santiago",
+    "executionOrder": "v1",
+    "saveExecutionProgress": false,
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "executionTimeout": 180
+  }
+}

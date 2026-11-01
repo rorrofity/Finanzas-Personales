@@ -51,6 +51,8 @@ registerRoute(
     || url.pathname === '/api/dashboard/overview'
     || url.pathname === '/api/checking/fintoc'
     || url.pathname.startsWith('/api/checking/fintoc/')
+    || url.pathname === '/api/card-statements'
+    || url.pathname.startsWith('/api/card-statements/')
   ),
   new NetworkOnly(),
   'GET'
