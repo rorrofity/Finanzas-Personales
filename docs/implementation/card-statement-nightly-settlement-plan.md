@@ -11,10 +11,10 @@ Estado: implementación y validación completas; despliegue pendiente. Contrato 
 
 ## Validación completada
 
-- Backend: **649 pruebas / 31 suites**; frontend: **270 / 31 suites**; navegador: **141 aprobadas / 13 omisiones previstas por viewport**; PWA: **7**; lector PDF local sin cambios: **40**. Total: **1107 pruebas aprobadas**.
+- Backend: **651 pruebas / 31 suites**; frontend: **270 / 31 suites**; navegador: **141 aprobadas / 13 omisiones previstas por viewport**; PWA: **7**; lector PDF local sin cambios: **40**. Total: **1109 pruebas aprobadas**.
 - PostgreSQL efímero CSN UTF-8: 13 bloques, con esquema real y migraciones repetidas. Verifica importación CLP/USD sin conversión inventada, inmutabilidad campo a campo de originales y categorías/notas/timestamps, replay/reenvío/tombstones/ciclos/versiones, importes editados, digests obsoletos, compensación monetaria engañosa, rollback por trigger y concurrencia real con writers legacy y guarda de correo.
 - Barrera 035: RED mostró copia con snapshot antiguo; GREEN rechaza copias CLP/USD, fechas próximas y CLP de signo opuesto que el legado cuenta por ABS. Permite otros bancos/tarjetas/comercios/importes/manuales sin procedencia. Contexto interno revalidado permite cargos bancarios legítimos y se borra tras COMMIT/ROLLBACK; metadata no puede falsificarlo.
-- Workflow TDD: 4 RED antes del cambio, 20 casos finales GREEN; ScheduleTrigger 2.7.5, búsqueda completa de 40 días, rama manual preservada y descarga explícita. Sin nodos de envío o mutación de correo y retención deshabilitada.
+- Workflow TDD: 4 RED antes del cambio, 22 casos finales GREEN; ScheduleTrigger 2.7.5, búsqueda completa de 40 días, rama manual preservada y descarga explícita. Sin nodos de envío o mutación de correo y retención deshabilitada.
 - Reauditoría corrigió bloqueos excesivos entre meses, fechas de encabezado incompatibles, identidad de red contradictoria, CLP negativos y lock al inicio del lote legacy. Sin debilitar las garantías anteriores; la integración CSR de solo lectura también pasa con 034/035.
 - UI de total oficial/cobertura/diferencias/extras y USD pendientes. Liquidez y salud financiera identifican proyecciones CLP parciales; evolución ya identifica conversiones excluidas. QA ficticia móvil claro/oscuro, 320/375/768/1440 px, sin escrituras, errores ni scroll lateral. [Evidencia visual](card-statement-nightly-qa/evidence.json).
 
@@ -24,8 +24,10 @@ Comandos: `npm run test:backend -- --runInBand`, `CI=true npm run test:unit -- -
 
 Respaldos privados de base/configuración/build/workflow y huellas por fila; se aplican solo 034 y 035. Build en servidor, preview privado y aprobación operativa de fingerprints antes de insertar. Aplicación revalida digest bajo locks, conserva todos los originales y agrega solo faltantes respaldados por evidencia, sin categoría. Activar AUTO_POST privadamente y demostrar que PM2 lo cargó verificando `settlement` en la respuesta HTTP del recorrido Gmail. Repetición no añade filas; API conserva permisos/no-store. Actualizar únicamente workflow propio y verificar hashes de los demás. Documentar evidencia pública al completar, sin datos bancarios.
 
-Revisión previa a la aplicación real: una marca heredada distinta no descarta un posible duplicado si falta la tarjeta física. TDD adicional mantiene el cargo en revisión en ese caso y permite tarjetas identificadas distintas. Regresión final 649 backend y PostgreSQL CSN completos aprobados.
+Revisión previa a la aplicación real: una marca heredada distinta no descarta un posible duplicado si falta la tarjeta física. TDD adicional mantiene el cargo en revisión en ese caso y permite tarjetas identificadas distintas. Regresión final 651 backend y PostgreSQL CSN completos aprobados.
 
 Las tablas históricas de producción tienen un propietario distinto del rol de aplicación: 034/035 requieren ejecutarse con el propietario de la base, conservando dueño/permisos de las tablas existentes y asignando únicamente la nueva bitácora al rol de aplicación. Verificación de huellas antes/después; ningún cambio en valores financieros.
 
 Compatibilidad de producción: transactions no tiene columna notas. La escritura omite ese campo sin añadir columnas; las notas históricas en metadata permanecen idénticas. Se corrigió la fixture que añadía una columna inexistente, se observó RED real sin ella y GREEN con el esquema auténtico. Ambos intentos previos de aplicación se revirtieron íntegros, sin inserciones ni cambios de originales.
+
+El lote N8N usa un bucle real de un PDF por iteración; la salida de finalización acumula las respuestas. Un retraso entre solicitudes HTTP no garantiza serialización en 2.7.5. TDD 2 RED→22 GREEN y comprobación autenticada de disponibilidad tras reinicio antes del ensayo final. Esto evita comparar el segundo documento con el estado anterior a la incorporación del primero.

@@ -125,13 +125,29 @@
       }
     },
     {
+      "id": "csr-pdf-loop",
+      "name": "Procesar un PDF cada vez",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        980,
+        0
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {
+          "reset": false
+        }
+      }
+    },
+    {
       "id": "csr-ingest",
       "name": "Conciliar en Finanzas",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        980,
-        0
+        1220,
+        100
       ],
       "parameters": {
         "method": "POST",
@@ -192,7 +208,7 @@
       "typeVersion": 2,
       "position": [
         1220,
-        0
+        -160
       ],
       "parameters": {
         "jsCode": "return (function summarizeResults(items){\n  return(items||[]).map(item=>{const value=item.json?.statement||item.json?.result||item.json||{};\n    return{json:{statementId:value.id||null,status:value.status||'received',network:value.network||null,\n      duplicate:value.duplicate===true,\n      sections:Array.isArray(value.sections)?value.sections.map(section=>({scope:section.scope,currency:section.currency,counts:section.counts||{}})):[]}};\n  });\n})($input.all());"
@@ -259,6 +275,24 @@
       "main": [
         [
           {
+            "node": "Procesar un PDF cada vez",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar un PDF cada vez": {
+      "main": [
+        [
+          {
+            "node": "Resultado de conciliación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Conciliar en Finanzas",
             "type": "main",
             "index": 0
@@ -270,7 +304,7 @@
       "main": [
         [
           {
-            "node": "Resultado de conciliación",
+            "node": "Procesar un PDF cada vez",
             "type": "main",
             "index": 0
           }
