@@ -749,6 +749,8 @@ La posible sincronización diaria de cuenta corriente permanece como [propuesta 
 
 ## 13. Epic17 — Consulta de cuenta propia mediante Fintoc
 
+**Estado:** conector desplegado el 2026-10-31; conexión bancaria pendiente y deshabilitada. [Pruebas y despliegue](implementation/fintoc-readonly-plan.md).
+
 El usuario autoriza construir la conexión Fintoc de Banco de Chile para obtener movimientos y confirma que todavía no tiene cuenta de desarrollador. [FRO-01–12](implementation/fintoc-readonly-contract.md) define la entrega de consulta y previsualización, con credenciales privadas, aislamiento por dueño, API de lectura, importes CLP exactos y sin caché de movimientos bancarios. La elección de Fintoc constituye una excepción acotada a DATA-001 para la información obtenida por ese proveedor tras autorización del titular; no envía a Fintoc el historial o las categorías de esta base.
 
 La entrega no importa movimientos, modifica saldos ni categorías, ejecuta migraciones o activa la sincronización diaria. La conexión real queda pendiente del alta del titular, acceso live y confirmación de costo cero. [Guía privada de activación](implementation/fintoc-readonly-activation.md).

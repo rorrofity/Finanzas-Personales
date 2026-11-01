@@ -1,6 +1,6 @@
 # Epic17 — Fintoc: consulta privada de cuenta propia
 
-**Estado:** implementado y verificado localmente; despliegue pendiente. La especificación se escribió antes del código. Solicitud del 2026-10-31: construir la conexión Fintoc para obtener movimientos de la cuenta personal Banco de Chile. El titular confirmó que todavía no tiene cuenta Fintoc. La conexión real depende de alta, autorización del titular, credenciales y habilitación del proveedor. Se mantiene costo cero.
+**Estado:** conector implementado, verificado y desplegado el 2026-10-31; conexión bancaria pendiente y deshabilitada. La especificación se escribió antes del código. Solicitud del 2026-10-31: construir la conexión Fintoc para obtener movimientos de la cuenta personal Banco de Chile. El titular confirmó que todavía no tiene cuenta Fintoc. La conexión real depende de alta, autorización del titular, credenciales y habilitación del proveedor. Se mantiene costo cero.
 
 ## Alcance y privacidad
 

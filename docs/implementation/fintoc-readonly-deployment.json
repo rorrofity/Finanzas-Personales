@@ -1,0 +1,48 @@
+{
+  "deployedCodeSha": "5000d516758057c14bae3f40db7f11970a11c5a4",
+  "verifiedAt": "2026-11-01T01:47:06.716288Z",
+  "timezone": "America/Santiago",
+  "application": "https://finanzas.rocketflow.cl",
+  "builtOnServer": true,
+  "backendOnline": true,
+  "backendRestarted": true,
+  "fintocState": "disabled",
+  "bankConnectionActivated": false,
+  "providerAccountCreated": false,
+  "credentialsConfigured": false,
+  "fintocNetworkRequests": 0,
+  "schedulerChanged": false,
+  "migrationsRun": false,
+  "dependenciesInstalled": false,
+  "environmentFileUnchanged": true,
+  "financialIntegrity": {
+    "tablesCompared": 9,
+    "existingRowsModified": 0,
+    "existingRowsRemoved": 0,
+    "newRows": 0
+  },
+  "publicHttp": {
+    "application": 200,
+    "mainJavaScript": 200,
+    "fintocModule": 200,
+    "serviceWorker": 200,
+    "previousMainJavaScript": 200,
+    "unauthenticatedFintocEndpoints": 401
+  },
+  "fintocResponsesNoStore": true,
+  "retainedPreviousAssets": 17,
+  "previousCodeSha": "319518babaa78bbfec249de584d75d8f54c0f8d6",
+  "previousBuild": "/var/backups/finanzas/fintoc-readonly-20261031-5000d51/build",
+  "databaseRestoreRequired": false,
+  "mainJavaScript": "/static/js/main.03bccb2e.js",
+  "fintocModule": "/static/js/147.c0eb4ea7.chunk.js",
+  "tests": {
+    "frontend": 148,
+    "backend": 166,
+    "e2ePassed": 88,
+    "e2eViewportSkipped": 9,
+    "pwa": 7,
+    "totalPassed": 409
+  },
+  "evidenceContainsFinancialRecords": false
+}

@@ -216,3 +216,15 @@ Desplegada la interfaz `134d065d3716e8a7313d3640388f3b139c439672` en `finanzas.r
 **Servidor:** construcción de frontend en el servidor, respaldo del build anterior y conservación de assets para clientes sin actualizar. Backend con el mismo PID y tiempo de inicio, sin reiniciar ni modificar scheduler. App/assets/SW responden 200 y API mantiene 401 sin autenticación. Comparación de nueve tablas financieras: 0 modificaciones, 0 eliminaciones y 0 inserciones.
 
 La sincronización de cuenta corriente quedó como [propuesta](proposals/checking-daily-sync.md), ajustada a persona natural y costo cero. No se conectó el banco, contrató un proveedor, activó una programación o modificó el importador. [Plan y despliegue de Epic16](implementation/appearance-mobile-plan.md).
+
+---
+
+# PARTE 7 — Epic17: consulta privada mediante Fintoc (2026-10-31)
+
+Conector `5000d516758057c14bae3f40db7f11970a11c5a4` desplegado en producción. El dueño dispone de panel de consulta de movimientos por mes, separado de su cartola registrada, con compatibilidad móvil y Claro/Oscuro. El servidor restringe banco, cuenta, moneda y propietario; controla paginación, fechas e importes y devuelve errores seguros. Los movimientos no se guardan en caché offline ni en la base de datos.
+
+**SDD/TDD:** contrato FRO-01–12 previo al código, RED observado y 409 pruebas aprobadas: 148 frontend, 166 backend, 88 navegador y 7 PWA; 9 omisiones de navegador por ancho. Revisión independiente corrigió una inconsistencia de paginación con nuevos casos RED/GREEN. [Plan y evidencia](implementation/fintoc-readonly-plan.md).
+
+**Producción:** compilación en servidor, respaldo del build anterior, reinicio de backend y verificación de rutas privadas/no-store. Las huellas de nueve tablas financieras permanecen idénticas: cero modificaciones, eliminaciones o inserciones. Sin migraciones, dependencias nuevas o cambios de scheduler.
+
+**Conexión bancaria pendiente:** el titular todavía no tiene cuenta Fintoc. Conector deshabilitado, sin credenciales ni peticiones al proveedor. El acceso real exige alta autorizada, habilitación live y confirmación de costo cero. No importa movimientos, actualiza saldo ni activa sincronización diaria. [Guía de activación privada](implementation/fintoc-readonly-activation.md).
