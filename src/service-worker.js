@@ -43,11 +43,14 @@ registerRoute(
 
 // Expense reports have their own cache keyed by authenticated user, space and
 // filters. A shared URL-only Workbox fallback must never bypass that isolation.
+// Fintoc previews are online-only and must never enter any browser data cache.
 registerRoute(
   ({ url, request }) => request.method === 'GET' && (
     url.pathname === '/api/dashboard/expense-evolution'
     || url.pathname === '/api/dashboard/expense-evolution/transactions'
     || url.pathname === '/api/dashboard/overview'
+    || url.pathname === '/api/checking/fintoc'
+    || url.pathname.startsWith('/api/checking/fintoc/')
   ),
   new NetworkOnly(),
   'GET'

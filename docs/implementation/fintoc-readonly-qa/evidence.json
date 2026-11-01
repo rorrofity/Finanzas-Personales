@@ -1,0 +1,43 @@
+{
+  "data": "exclusively fictitious",
+  "realBankRequests": 0,
+  "realDatabaseAccess": false,
+  "cases": [
+    {
+      "name": "mobile-pending-light",
+      "width": 375,
+      "mode": "light",
+      "ready": false,
+      "clientWidth": 357,
+      "scrollWidth": 357,
+      "pageWidth": 375,
+      "jsErrors": 0,
+      "unexpectedApi": 0,
+      "writes": 0
+    },
+    {
+      "name": "mobile-preview-dark",
+      "width": 375,
+      "mode": "dark",
+      "ready": true,
+      "clientWidth": 357,
+      "scrollWidth": 357,
+      "pageWidth": 375,
+      "jsErrors": 0,
+      "unexpectedApi": 0,
+      "writes": 0
+    },
+    {
+      "name": "desktop-preview-light",
+      "width": 1440,
+      "mode": "light",
+      "ready": true,
+      "clientWidth": 1206,
+      "scrollWidth": 1206,
+      "pageWidth": 1440,
+      "jsErrors": 0,
+      "unexpectedApi": 0,
+      "writes": 0
+    }
+  ]
+}

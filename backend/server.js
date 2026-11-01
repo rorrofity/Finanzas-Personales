@@ -16,6 +16,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const installmentsRoutes = require('./routes/installmentsRoutes');
 const intlUnbilledRoutes = require('./routes/intlUnbilledRoutes');
 const checkingRoutes = require('./routes/checkingRoutes');
+const fintocRoutes = require('./routes/fintocRoutes');
 const syncRoutes = require('./routes/syncRoutes');
 const suspiciousRoutes = require('./routes/suspiciousRoutes');
 const financialHealthRoutes = require('./routes/financialHealthRoutes');
@@ -106,6 +107,7 @@ app.use('/api/projected', projectedRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/installments', installmentsRoutes);
 app.use('/api/intl-unbilled', intlUnbilledRoutes);
+app.use('/api/checking/fintoc', fintocRoutes);
 app.use('/api/checking', checkingRoutes);
 app.use('/api/sync', syncRoutes); // Cambiar a /api/sync para evitar conflicto con auth middleware
 app.use('/api/suspicious', suspiciousRoutes);

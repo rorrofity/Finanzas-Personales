@@ -746,3 +746,9 @@ El período se basa en facturación persistida. Ventanas3/6/12 terminan en el me
 El usuario elige Claro, Oscuro o Automático por dispositivo sin base de datos. En menos de 900 px, la lista de categorías e historial mensual vertical reemplazan la matriz lateral; escritorio conserva tabla completa. Se mantienen importes exactos, fuentes, períodos, detalle, caché, offline y permisos. Esta enmienda refuerza DCE-18: móvil no requiere desplazamiento horizontal dentro ni fuera de la sección de categorías.
 
 La posible sincronización diaria de cuenta corriente permanece como [propuesta CSYNC](proposals/checking-daily-sync.md): exige un acceso habilitable para persona natural, costo cero y autorización de la fuente. No forma parte de la implementación o del despliegue de apariencia.
+
+## 13. Epic17 — Consulta de cuenta propia mediante Fintoc
+
+El usuario autoriza construir la conexión Fintoc de Banco de Chile para obtener movimientos y confirma que todavía no tiene cuenta de desarrollador. [FRO-01–12](implementation/fintoc-readonly-contract.md) define la entrega de consulta y previsualización, con credenciales privadas, aislamiento por dueño, API de lectura, importes CLP exactos y sin caché de movimientos bancarios. La elección de Fintoc constituye una excepción acotada a DATA-001 para la información obtenida por ese proveedor tras autorización del titular; no envía a Fintoc el historial o las categorías de esta base.
+
+La entrega no importa movimientos, modifica saldos ni categorías, ejecuta migraciones o activa la sincronización diaria. La conexión real queda pendiente del alta del titular, acceso live y confirmación de costo cero. [Guía privada de activación](implementation/fintoc-readonly-activation.md).

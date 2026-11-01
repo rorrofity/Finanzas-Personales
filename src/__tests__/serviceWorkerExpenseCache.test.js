@@ -33,6 +33,16 @@ test('conserva la estrategia existente para otras lecturas API', () => {
   expect(routeFor('/api/transactions').handler.strategy).toBe('NetworkFirst');
 });
 
+test.each(['/api/checking/fintoc', '/api/checking/fintoc/status', '/api/checking/fintoc/preview?year=2026&month=10'])('%s consulta Fintoc solo por red y nunca comparte movimientos mediante caché offline', (path) => {
+  expect(routeFor(path).handler.strategy).toBe('NetworkOnly');
+});
+
+test('Fintoc no registra escrituras y conserva otras lecturas de cuenta corriente', () => {
+  expect(routeFor('/api/checking/fintoc/preview', 'POST')).toBeUndefined();
+  expect(routeFor('/api/checking/fintoc-other').handler.strategy).toBe('NetworkFirst');
+  expect(routeFor('/api/checking/global-balance').handler.strategy).toBe('NetworkFirst');
+});
+
 test('no registra escrituras del dashboard ni otro prefijo parecido', () => {
   expect(routeFor('/api/dashboard/expense-evolution', 'POST')).toBeUndefined();
   expect(routeFor('/api/dashboard/expense-evolution-other').handler.strategy).toBe('NetworkFirst');

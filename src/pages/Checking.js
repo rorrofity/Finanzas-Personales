@@ -39,6 +39,7 @@ import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
 import { usePeriod } from '../contexts/PeriodContext';
 import StatCard from '../components/ui/StatCard';
+import FintocCheckingPreview from '../components/FintocCheckingPreview';
 
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
@@ -225,6 +226,8 @@ export default function Checking() {
         <Typography variant="h4">Cuenta Corriente</Typography>
         <MonthPicker />
       </Box>
+
+      <FintocCheckingPreview year={year} month={month} />
 
       {/* Totales compactos (Epic 12, Req 12.10) */}
       <Grid container spacing={1} sx={{ mb: 2 }} data-testid="totals-row">
