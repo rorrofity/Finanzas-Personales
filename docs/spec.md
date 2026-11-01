@@ -764,3 +764,8 @@ El usuario solicita confirmar gratuidad y activar primera lectura y sincronizaci
 [FDS-01–14](implementation/fintoc-daily-sync-contract.md) amplía la integración con referencias externas y bitácoras aditivas, conciliación inicial sin reimportar historia y posterior inserción idempotente de novedades inequívocas, sin UPDATE/DELETE financiero o cambios de saldo conocido. La programación es independiente a las 07:00 America/Santiago y conserva la sincronización TC/N8N. Estado y pendientes son privados, sin caché, legibles en móvil y ambos temas. No se activan pagos o Refresh Intents.
 
 La cobertura corresponde a cuenta corriente CLP. No trae compras de tarjeta de crédito; un cargo por pagar la tarjeta no sustituye su detalle. [Plan y evidencia](implementation/fintoc-daily-sync-plan.md).
+
+
+### Enmienda FHR — conciliación explícita de pendientes iniciales
+
+**Solicitud:** 2026-11-01. El titular autoriza incorporar los movimientos faltantes de la carga inicial, sin duplicar ni modificar gastos/clasificaciones. [FHR-01–14](implementation/fintoc-initial-reconciliation-contract.md) define un comando interno con preview y huella validada al aplicar, bloqueo compartido, comparación de historial completo y resguardo de casos ambiguos/futuros. Solo inserta faltantes inequívocos y enlaza metadatos de coincidencias; no altera reglas del cron, corte, fecha bancaria ni consulta más datos del proveedor. [Plan y evidencia](implementation/fintoc-initial-reconciliation-plan.md).
