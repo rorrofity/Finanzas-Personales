@@ -394,3 +394,25 @@ describe('daily reconciliation snapshots retain every observed provider state', 
     expect(transport.get.mock.calls[1][1].params.confirmed_only).toBe(true);
   });
 });
+
+describe('bank balance read and optional internal snapshot',()=>{
+  const balances={available:1234567,current:-2500,limit:9900000};
+  test('readBalance requests only own Link and returns exact available/current, never limit',async()=>{const {service,transport}=setup({linkData:link({accounts:[account({balance:balances,refreshed_at:'2026-10-31T19:00:00Z'})]})});expect(await service.readBalance(OWNER)).toEqual({currency:'CLP',available:'1234567',current:'-2500',bankUpdatedAt:'2026-10-31T19:00:00.000Z',queriedAt:'2026-10-31T20:00:00.000Z'});expect(transport.get).toHaveBeenCalledTimes(1);const[url,options]=transport.get.mock.calls[0];expect(url).toMatch(/\/v1\/links\//);expect(options.maxRedirects).toBe(0);expect(options.headers['Fintoc-Version']).toBe('2026-02-01')});
+  test('readBalance preserves disabled/owner guards without network',async()=>{const {service,transport}=setup({env:config({FINTOC_ENABLED:'false'})});await expect(service.readBalance(OWNER)).rejects.toMatchObject({code:'FINTOC_NOT_READY'});await expect(service.readBalance('another')).rejects.toMatchObject({status:403});expect(transport.get).not.toHaveBeenCalled()});
+  test.each([null,{}, {available:1.5,current:2},{available:9007199254740992,current:2},{available:'1',current:2},{available:1,current:null}])('readBalance rejects invalid available/current %o',async balance=>{const {service}=setup({linkData:link({accounts:[account({balance})]})});await expect(service.readBalance(OWNER)).rejects.toMatchObject({code:'FINTOC_INVALID_RESPONSE'})});
+  test('valid zeroes are preserved as zero strings with unknown bank date',async()=>{const {service}=setup({linkData:link({accounts:[account({balance:{available:0,current:0,limit:9999}})]})});expect(await service.readBalance(OWNER)).toMatchObject({available:'0',current:'0',bankUpdatedAt:null})});
+  test('optional bank snapshot is internal; public preview retains exact old shape',async()=>{const linkData=link({accounts:[account({balance:balances})]});const a=setup({linkData}),b=setup({linkData});expect(await a.service.readSnapshot(OWNER,QUERY)).toMatchObject({bankBalance:{available:'1234567',current:'-2500',currency:'CLP'}});expect(await b.service.preview(OWNER,QUERY)).not.toHaveProperty('bankBalance')});
+  test('missing or malformed balance never prevents a complete movement snapshot',async()=>{const {service}=setup({linkData:link({accounts:[account({balance:{available:1.5,current:2}})]})});const result=await service.readSnapshot(OWNER,QUERY);expect(result).toMatchObject({coverage:{complete:true},total:1});expect(result).not.toHaveProperty('bankBalance')});
+});
+
+test.each(['readBalance','readSnapshot'])('%s records the start of bank query, so an older delayed request cannot appear newer',async method=>{
+  let currentTime='2026-10-31T20:00:00.000Z',release;
+  const transport={get:jest.fn().mockImplementationOnce(()=>new Promise(resolve=>{release=resolve})).mockResolvedValue(response([movement()]))};
+  const service=createFintocReadOnlyService({env:config(),transport,now:()=>new Date(currentTime)});
+  const pending=method==='readBalance'?service.readBalance(OWNER):service.readSnapshot(OWNER,QUERY);
+  currentTime='2026-10-31T21:00:00.000Z';
+  release(response(link({accounts:[account({balance:{available:100,current:100},refreshed_at:'2026-10-31T19:00:00.000Z'})]})));
+  const result=await pending,bank=method==='readBalance'?result:result.bankBalance;
+  expect(bank.queriedAt).toBe('2026-10-31T20:00:00.000Z');
+  if(method==='readSnapshot')expect(result.queriedAt).toBe('2026-10-31T21:00:00.000Z');
+});

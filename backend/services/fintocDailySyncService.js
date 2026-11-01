@@ -1,5 +1,6 @@
 const { createHash } = require('crypto');
 const { withCheckingWriteTransaction } = require('./withCheckingWriteTransaction');
+const { storeBankBalance, isValidBankBalanceSnapshot } = require('./fintocBankBalanceService');
 
 const STATUSES = new Set(['confirmed', 'processing', 'reversed', 'manually_reversed']);
 const STICKY = new Set(['provider_changed', 'provider_reversed', 'provider_missing', 'financial_record_removed']);
@@ -133,7 +134,13 @@ function validateSnapshots(snapshots, months) {
         amount: item.amount, status: item.status, pending: item.pending });
     }
   });
-  return { items, bankUpdatedAt: dates.some(value => value === null) ? null : dates.sort()[0] };
+  const bankBalance = snapshots.map(snapshot => snapshot.bankBalance).filter(isValidBankBalanceSnapshot).reduce((latest, candidate) => {
+    if (!latest) return candidate;
+    const oldBank = latest.bankUpdatedAt ? Date.parse(latest.bankUpdatedAt) : -Infinity;
+    const newBank = candidate.bankUpdatedAt ? Date.parse(candidate.bankUpdatedAt) : -Infinity;
+    return newBank > oldBank || (newBank === oldBank && Date.parse(candidate.queriedAt) > Date.parse(latest.queriedAt)) ? candidate : latest;
+  }, null);
+  return { items, bankUpdatedAt: dates.some(value => value === null) ? null : dates.sort()[0], bankBalance };
 }
 
 const STATE_SELECT = `SELECT cutover_date::text, last_success_at, bank_updated_at, coverage_since::text, coverage_until::text, last_error_code FROM fintoc_sync_state WHERE user_id=$1 AND account_id=$2`;
@@ -212,6 +219,7 @@ function createFintocDailySyncService({ db, provider, env = process.env, now = (
         }
         for (const row of result.missing) await client.query(`UPDATE fintoc_external_movements SET disposition='needs_review',reason='provider_missing',candidate_count=0,updated_at=$4 WHERE user_id=$1 AND account_id=$2 AND external_id=$3`, [config.userId, config.accountId, row.external_id, at]);
         const review = result.actions.filter(action => action.disposition === 'needs_review').length + result.missing.length;
+        if (snapshot.bankBalance) await storeBankBalance(client, config, snapshot.bankBalance);
         await client.query(`UPDATE fintoc_sync_state SET last_success_at=$3,bank_updated_at=$4,coverage_since=$5,coverage_until=$6,last_error_code=NULL,updated_at=$3 WHERE user_id=$1 AND account_id=$2`, [config.userId, config.accountId, at, snapshot.bankUpdatedAt, coverage.since, coverage.until]);
         await client.query(`INSERT INTO fintoc_sync_runs (user_id,account_id,trigger,status,inserted,linked,review,coverage_since,coverage_until,bank_updated_at,started_at,finished_at)
           VALUES ($1,$2,$3,'success',$4,$5,$6,$7,$8,$9,$10,$10)`, [config.userId, config.accountId, trigger, inserted, linked, review, coverage.since, coverage.until, snapshot.bankUpdatedAt, at]);

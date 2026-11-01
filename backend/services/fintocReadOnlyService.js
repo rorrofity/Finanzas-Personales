@@ -92,7 +92,13 @@ function accountFromLink(data, config) {
   return {
     publicAccount: { name: text(account.name, 160), currency: 'CLP', numberLast4: account.number.slice(-4) },
     bankUpdatedAt: account.refreshed_at === null ? null : timestamp(account.refreshed_at),
+    rawBalance: account.balance,
   };
+}
+
+function bankBalanceFromAccount(balance, bankUpdatedAt, queriedAt) {
+  if (!object(balance) || !Number.isSafeInteger(balance.available) || !Number.isSafeInteger(balance.current)) return null;
+  return { currency: 'CLP', available: String(balance.available), current: String(balance.current), bankUpdatedAt, queriedAt };
 }
 
 function normalizeMovement(row, selectedPeriod, seen) {
@@ -197,9 +203,9 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
     return { state, provider: 'fintoc', mode, readOnly: true, writesEnabled: false, message: messages[state] };
   }
 
-  async function readPeriod(actorId, query, confirmedOnly) {
+  async function readPeriod(actorId, query, confirmedOnly, balanceOnly = false) {
     assertOwner(actorId);
-    const selectedPeriod = period(query);
+    const selectedPeriod = balanceOnly ? null : period(query);
     const config = configuration(env);
     if (config.state !== 'ready') throw error(503, 'FINTOC_NOT_READY', 'La conexión Fintoc todavía no está habilitada para consultas.');
     const started = clock();
@@ -227,8 +233,14 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
     }
 
     try {
+      const bankQueryStartedAt = now().toISOString();
       const linkResponse = await get(`/v1/links/${encodeURIComponent(config.linkToken)}`);
       const validatedAccount = accountFromLink(linkResponse.data, config);
+      const bankBalance = bankBalanceFromAccount(validatedAccount.rawBalance, validatedAccount.bankUpdatedAt, bankQueryStartedAt);
+      if (balanceOnly) {
+        if (!bankBalance) throw invalid();
+        return bankBalance;
+      }
       const path = `/v1/accounts/${encodeURIComponent(config.accountId)}/movements`;
       const params = { link_token: config.linkToken, since: selectedPeriod.since, until: selectedPeriod.until, confirmed_only: confirmedOnly, per_page: PAGE_SIZE };
       const seen = new Set();
@@ -277,6 +289,7 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
         period: selectedPeriod, account: validatedAccount.publicAccount,
         queriedAt: now().toISOString(), bankUpdatedAt: validatedAccount.bankUpdatedAt,
         items, total: items.length, coverage: { complete: true, excludedNonConfirmed: 0 },
+        ...(!confirmedOnly && bankBalance ? { bankBalance } : {}),
       };
     } finally {
       clearTimeout(timer);
@@ -299,7 +312,7 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
     };
   }
 
-  return { getStatus, preview, readSnapshot, assertOwner };
+  return { getStatus, preview, readSnapshot, readBalance: actorId => readPeriod(actorId, {}, false, true), assertOwner };
 }
 
 module.exports = { createFintocReadOnlyService, FintocReadOnlyError, ...createFintocReadOnlyService() };

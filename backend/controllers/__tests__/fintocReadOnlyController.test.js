@@ -1,12 +1,14 @@
 jest.mock('../../config/database', () => ({ query: jest.fn() }));
 jest.mock('../../models/SpaceMember', () => ({ findMembership: jest.fn() }));
 jest.mock('axios', () => ({ get: jest.fn() }));
+jest.mock('../../services/fintocBankBalanceService', () => ({ getBankBalance: jest.fn() }));
 jest.mock('../../services/fintocDailySyncService', () => ({
   createFintocDailySyncService: jest.fn(() => mockDailyService),
 }), { virtual: true });
 
 const mockDailyService = { getDailyStatus: jest.fn(), getReview: jest.fn(), run: jest.fn() };
 
+const mockBankService = require('../../services/fintocBankBalanceService');
 const axios = require('axios');
 const db = require('../../config/database');
 const spaceMember = require('../../models/SpaceMember');
@@ -20,6 +22,7 @@ beforeEach(() => {
   process.env.JWT_SECRET = 'fintoc-unit-test-only-secret';
   mockDailyService.getDailyStatus.mockResolvedValue({ provider: 'fintoc', enabled: false, schedule: '07:00', timezone: 'America/Santiago', state: 'disabled' });
   mockDailyService.getReview.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
+  mockBankService.getBankBalance.mockResolvedValue({ provider: 'fintoc', state: 'unavailable', available: null, current: null, currency: 'CLP', bankUpdatedAt: null, queriedAt: null, freshness: 'unknown' });
 });
 afterAll(() => { process.env = originalEnv; });
 
@@ -43,7 +46,7 @@ async function request(path, { actor, owner, method = 'GET' } = {}) {
   return res;
 }
 
-describe.each(['/status', '/preview?year=2026&month=10', '/daily-status', '/review?limit=20&offset=0'])('Fintoc %s protects its private connection', (path) => {
+describe.each(['/status', '/preview?year=2026&month=10', '/daily-status', '/review?limit=20&offset=0', '/bank-balance'])('Fintoc %s protects its private connection', (path) => {
   test('unauthenticated requests are rejected before any network or DB read', async () => {
     expect((await request(path)).statusCode).toBe(401);
   });
@@ -109,4 +112,23 @@ test.each(['POST', 'PUT', 'PATCH', 'DELETE'])('daily routes reject %s and never 
   const res = await request('/daily-status', { actor: 'owner', method });
   expect(res.statusCode).toBe(405);
   expect(mockDailyService.run).not.toHaveBeenCalled();
+});
+
+
+test('bank balance GET delegates only to persisted snapshot and never calls provider or sync', async () => {
+  const res = await request('/bank-balance', { actor: 'owner' });
+  expect(res.statusCode).toBe(200);
+  expect(res.data).toMatchObject({ state: 'unavailable', available: null, current: null });
+  expect(mockBankService.getBankBalance).toHaveBeenCalledWith('owner');
+  expect(mockDailyService.run).not.toHaveBeenCalled();
+});
+test('bank balance rejects refresh/account parameters before loading snapshot', async () => {
+  const res = await request('/bank-balance?refresh=true', { actor: 'owner' });
+  expect(res.statusCode).toBe(400);
+  expect(mockBankService.getBankBalance).not.toHaveBeenCalled();
+});
+test.each(['POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])('bank balance %s cannot refresh or mutate data', async method => {
+  const res = await request('/bank-balance', { actor: 'owner', method });
+  expect(res.statusCode).toBe(405);
+  expect(mockBankService.getBankBalance).not.toHaveBeenCalled();
 });

@@ -1,0 +1,37 @@
+# Saldo bancario exacto y clasificación de movimientos importados
+
+**Solicitud y especificación previa al código:** 2026-11-01 America/Santiago. El titular solicita conocer el saldo tras la importación, que la web muestre el saldo informado por el banco, y clasificar los movimientos recién importados siguiendo su historial. Lo no identificable queda sin categoría. Esta autorización amplía FHR-09 únicamente para asignar categoría a incorporaciones Fintoc que aún estén en NULL; no permite reclasificar historia ni modificar importes, fechas, notas o saldos guardados.
+
+## Saldo — FBA
+
+| ID | Criterio |
+|---|---|
+| FBA-01 | Distinguir cálculo del historial de saldo bancario. No modificar checking_balances ni crear movimientos/ajustes para forzar una igualdad. Conservar el cálculo y sus contratos actuales como estimación identificada. |
+| FBA-02 | Fuente bancaria: balance.available CLP (sin línea de crédito), balance.current contable y refreshed_at. Nunca usar balance.limit como dinero propio ni sumar movimientos al snapshot. Mostrar cifras enteras exactas, sin abreviar a K/M. [Cuenta Fintoc](https://docs.fintoc.com/api/movements-api/accounts/accounts-object). |
+| FBA-03 | Migración 032 crea solo fintoc_bank_balances, PK(user_id,account_id), currency CLP, available/current NUMERIC(20,0) con signo, bank_updated_at, queried_at. Sin ALTER ni escrituras de tablas financieras históricas. Secretos fuera de esta tabla. |
+| FBA-04 | Proveedor añade readBalance(actorId): solo GET Link propio, mismos permisos/configuración, validación de cuenta e institución y límites de tiempo; devuelve importes signed integer strings y fechas. Sin Refresh Intent, pagos, redirects o retries. Los campos bancarios de saldo deben ser enteros seguros; una respuesta inválida no reemplaza una buena. |
+| FBA-05 | readSnapshot puede incluir bankBalance validado y el cron guarda ese snapshot en la misma transacción de lectura completa, sin cambiar su programación ni clasificación automática. Preview público conserva su contrato sin añadir el saldo. Si el saldo no está disponible, los movimientos pueden seguir sincronizándose y el saldo anterior queda con su fecha real. |
+| FBA-06 | Upsert del snapshot no permite que una consulta anterior o un refreshed_at bancario anterior reemplace uno posterior. Fallos no borran saldo válido ni anuncian actualización falsa. Captura inicial explícita de solo consulta tras pruebas; se actualiza solo integración. |
+| FBA-07 | GET /api/checking/fintoc/bank-balance lee exclusivamente la base: mismo auth/resolveSpace/requireOwner/dueño configurado, no-store/NetworkOnly. No filtrar saldo a miembros compartidos. Respuesta provider,currency,available,current,bankUpdatedAt,queriedAt,freshness,state (available/unavailable); sin IDs/secretos. Sin snapshot devuelve unavailable y montos null, nunca cero inventado. |
+| FBA-08 | Cuenta Corriente muestra disponible bancario completo, contable separado, fecha bancaria y estado desactualizado si >24h o desconocido. Comparación con saldo calculado/diferencia identificada como estimación, sin insinuar igualdad si no existe. Si no hay autorización/snapshot, conserva cálculo como saldo calculado sin afirmar que es bancario. |
+| FBA-09 | Móvil 375px y Claro/Oscuro legibles sin desplazamiento lateral. Cambios de sesión/espacio descartan respuestas antiguas. No persistir respuesta bancaria en storage/cache/offline. Cero nuevas consultas al proveedor al abrir la pantalla. |
+
+## Clasificación — FHC
+
+| ID | Criterio |
+|---|---|
+| FHC-01 | Comando interno preview/apply privado con SHA-256 recalculado bajo lock Checking. Sin ruta pública ni llamadas externas. Limitar targets a Checking enlazado a la cuenta/dueño configurados, created_checking=true y category_id IS NULL. |
+| FHC-02 | Aprender solo del historial clasificado del mismo dueño, excluyendo targets y categorías 'Sin categorizar'/similares. Categoría debe seguir existiendo y ser del dueño o global. No crear ni renombrar categorías. |
+| FHC-03 | Descripción normalizada conserva identidad de contraparte: caso/acentos/puntuación/espacios pueden normalizarse; no borrar RUT, cuenta, nombre de beneficiario ni referencias arbitrarias que mezclen transferencias a personas distintas. Tipo cargo/abono debe coincidir. Comparar la descripción bancaria completa de los metadatos con el texto guardado: si fue truncado o editado y perdió identidad, dejar NULL. Coincidencias históricas contradictorias quedan NULL. |
+| FHC-04 | Usar reglas conservadoras documentadas del historial. Coincidencia exacta de descripción normalizada completa y tipo, con al menos un antecedente válido y una única categoría en todo ese historial, puede clasificarse; sin evidencia suficiente queda NULL. No inferir categoría solo por importe, banco emisor, palabras genéricas o supuesta relación personal. No entrenar reglas nuevas con las propias asignaciones de este lote. |
+| FHC-05 | Apply cambia únicamente category_id y updated_at de los targets previstos y todavía NULL. No modificar clasificaciones anteriores, notas, importe, fecha, usuario o referencias. Mismo plan repetido/obsoleto no sobrescribe decisiones humanas; toda actualización y validación son atómicas. |
+| FHC-06 | Comparar ocho tablas financieras idénticas y Checking: filas no elegidas byte a byte; targets solo categoría autorizada y su timestamp. No inserciones/borrados de gastos ni cambios de estado/cron/saldo bancario por clasificar. Detalles y planes reales solo en servidor 0700/0600. |
+
+## Verificación y entrega
+
+SDD→TDD RED/GREEN de proveedor, almacenamiento monotónico, ACL/API y UI de saldo; TDD de clasificador y CLI con planes obsoletos, contradicciones y conservación de originales. PostgreSQL efímero verifica ambos flujos y aislamiento. QA de navegador solo fixtures; repo sin saldos ni movimientos reales. Despliegue en servidor: respaldo/huellas, solo migración 032, captura bancaria explícita, plan de categorías revisado, apply y comparación de nueve tablas. Publicar evidencia sin datos financieros y mantener repo actualizado.
+
+Interfaces de saldo: readBalance(actorId) del proveedor; snapshot bankBalance de readSnapshot opcional `{available,current,currency,bankUpdatedAt,queriedAt}`. Servicio backend fintocBankBalanceService con factory inyectable y getBankBalance(actorId), refreshBalance(actorId) interno; helper storeBankBalance(client,{userId,accountId},snapshot) reutilizable por cron. Endpoint nuevo solo GET. Servicio de clasificación y CLI deben exponer preview/apply con el mismo patrón de la conciliación FHR.
+
+
+Interfaz de clasificación fijada: `backend/services/fintocHistoryClassificationService.js`, factory `createFintocHistoryClassificationService({db,env,now})` y planner puro `planHistoryClassification({targets,history,categories})`. `preview(actorId)` devuelve `{version:1,digest,summary:{classify,leave},actions:[{checkingId,decision:'classify'|'leave',categoryId:null|number,reason,support}]}`. `apply(actorId,{digest})` recalcula y valida el mismo conjunto bajo lock; resultado incluye status success y classified/left. CLI `backend/scripts/classify-fintoc-history.js --preview|--apply /ruta/privada/plan.json`, mismas restricciones de FHR. UPDATE solo category_id/updated_at de filas objetivo; validar originales comparando row_to_json SQL completo salvo esos dos campos expresamente autorizados. Excluir todo created_checking=true del entrenamiento, incluso si otro lote lo clasificó: no realimentar inferencias como historia manual.

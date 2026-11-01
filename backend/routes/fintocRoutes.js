@@ -5,6 +5,8 @@ const { requireOwner } = require('../middleware/requirePermission');
 const { getStatus, preview, requireConfiguredOwner } = require('../controllers/fintocReadOnlyController');
 const { getDailyStatus, getReview } = require('../controllers/fintocDailyController');
 
+const { getBankBalance } = require('../controllers/fintocBankBalanceController');
+
 const router = express.Router();
 
 // This namespace is always private and never participates in offline caches.
@@ -24,6 +26,7 @@ router.get('/status', getStatus);
 router.get('/preview', preview);
 router.get('/daily-status', getDailyStatus);
 router.get('/review', getReview);
+router.get('/bank-balance', getBankBalance);
 router.use((req, res) => res.status(404).json({ error: 'Consulta bancaria no disponible.', code: 'FINTOC_NOT_FOUND' }));
 
 module.exports = router;

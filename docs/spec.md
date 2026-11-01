@@ -771,3 +771,8 @@ La cobertura corresponde a cuenta corriente CLP. No trae compras de tarjeta de c
 **Solicitud:** 2026-11-01. El titular autoriza incorporar los movimientos faltantes de la carga inicial, sin duplicar ni modificar gastos/clasificaciones. [FHR-01–14](implementation/fintoc-initial-reconciliation-contract.md) define un comando interno con preview y huella validada al aplicar, bloqueo compartido, comparación de historial completo y resguardo de casos ambiguos/futuros. Solo inserta faltantes inequívocos y enlaza metadatos de coincidencias; no altera reglas del cron, corte, fecha bancaria ni consulta más datos del proveedor. [Plan y evidencia](implementation/fintoc-initial-reconciliation-plan.md).
 
 **Resultado FHR:** aplicado en el servidor el 2026-11-01; faltantes incorporados y fechas futuras pendientes. Todos los registros financieros originales permanecen idénticos; repetición sin nuevas inserciones y cron intacto. [Evidencia](implementation/fintoc-initial-reconciliation-deployment.json).
+
+
+### Enmienda FBA/FHC — saldo bancario y clasificación del historial
+
+**Solicitud:** 2026-11-01. Mostrar el saldo disponible que informa el banco, exacto y con fecha, separado del saldo calculado desde el historial. Guardar el snapshot solo en integración aditiva; no ajustar gastos ni checking_balances. Clasificar exclusivamente incorporaciones Fintoc aún sin categoría por coincidencias completas y unánimes del historial manual del titular; contradicciones o falta de evidencia permanecen NULL. [Contrato previo FBA/FHC](implementation/fintoc-balance-classification-contract.md) y [plan](implementation/fintoc-balance-classification-plan.md).

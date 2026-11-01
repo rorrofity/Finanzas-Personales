@@ -72,7 +72,7 @@ test.describe('Totales compactos (Req 12.10)', () => {
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
     );
     await page.goto('/checking');
-    await expect(page.getByText(/Saldo Actual/i).first()).toBeVisible();
+    await expect(page.getByText(/Saldo calculado/i).first()).toBeVisible();
     expect(await totalsInOneRow(page, 'totals-row')).toBe(true);
     await expect
       .poll(async () => page.evaluate(() => document.documentElement.scrollWidth))

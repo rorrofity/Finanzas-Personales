@@ -1,0 +1,317 @@
+{
+  "data": "exclusively fictitious",
+  "build": "finanzas-bank-balance-final",
+  "buildMain": "main.4915df76.js",
+  "realDatabaseAccess": false,
+  "realBankRequests": 0,
+  "apiMode": "GET fixtures only; all external origins and writes blocked",
+  "cases": [
+    {
+      "name": "mobile-bank-balance-light-375",
+      "width": 375,
+      "height": 1100,
+      "mode": "light",
+      "panelWidth": 359,
+      "clientWidth": 357,
+      "scrollWidth": 357,
+      "pageWidth": 375,
+      "viewportWidth": 375,
+      "amount": "$1.234.567",
+      "totalsLabels": [
+        {
+          "text": "Saldo calculado",
+          "clientWidth": 86,
+          "scrollWidth": 86,
+          "clientHeight": 40,
+          "scrollHeight": 40
+        },
+        {
+          "text": "Total Abonos",
+          "clientWidth": 86,
+          "scrollWidth": 86,
+          "clientHeight": 40,
+          "scrollHeight": 40
+        },
+        {
+          "text": "Total Cargos",
+          "clientWidth": 86,
+          "scrollWidth": 86,
+          "clientHeight": 40,
+          "scrollHeight": 40
+        }
+      ],
+      "jsErrors": [],
+      "consoleErrors": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Error durante el registro del Service Worker: TypeError: Cannot read properties of undefined (reading 'waiting')\n    at http://127.0.0.1:3105/static/js/main.4915df76.js:2:556868",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "consoleErrorContext": "External fonts/Google sign-in are blocked and service workers disabled in fixture-only browser; separate PWA suite verifies real service worker.",
+      "unexpectedApi": [],
+      "writes": [],
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/bank-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/daily-status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/global-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "10"
+          }
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "name": "mobile-bank-balance-dark-375",
+      "width": 375,
+      "height": 1100,
+      "mode": "dark",
+      "panelWidth": 359,
+      "clientWidth": 357,
+      "scrollWidth": 357,
+      "pageWidth": 375,
+      "viewportWidth": 375,
+      "amount": "$1.234.567",
+      "totalsLabels": [
+        {
+          "text": "Saldo calculado",
+          "clientWidth": 86,
+          "scrollWidth": 86,
+          "clientHeight": 40,
+          "scrollHeight": 40
+        },
+        {
+          "text": "Total Abonos",
+          "clientWidth": 86,
+          "scrollWidth": 86,
+          "clientHeight": 40,
+          "scrollHeight": 40
+        },
+        {
+          "text": "Total Cargos",
+          "clientWidth": 86,
+          "scrollWidth": 86,
+          "clientHeight": 40,
+          "scrollHeight": 40
+        }
+      ],
+      "jsErrors": [],
+      "consoleErrors": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Error durante el registro del Service Worker: TypeError: Cannot read properties of undefined (reading 'waiting')\n    at http://127.0.0.1:3105/static/js/main.4915df76.js:2:556868",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "consoleErrorContext": "External fonts/Google sign-in are blocked and service workers disabled in fixture-only browser; separate PWA suite verifies real service worker.",
+      "unexpectedApi": [],
+      "writes": [],
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/bank-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/daily-status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/global-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "10"
+          }
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "name": "desktop-bank-balance-light-1440",
+      "width": 1440,
+      "height": 1100,
+      "mode": "light",
+      "panelWidth": 1208,
+      "clientWidth": 1206,
+      "scrollWidth": 1206,
+      "pageWidth": 1440,
+      "viewportWidth": 1440,
+      "amount": "$1.234.567",
+      "totalsLabels": [
+        {
+          "text": "Saldo calculado",
+          "clientWidth": 369,
+          "scrollWidth": 369,
+          "clientHeight": 20,
+          "scrollHeight": 20
+        },
+        {
+          "text": "Total Abonos",
+          "clientWidth": 369,
+          "scrollWidth": 369,
+          "clientHeight": 20,
+          "scrollHeight": 20
+        },
+        {
+          "text": "Total Cargos",
+          "clientWidth": 369,
+          "scrollWidth": 369,
+          "clientHeight": 20,
+          "scrollHeight": 20
+        }
+      ],
+      "jsErrors": [],
+      "consoleErrors": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Error durante el registro del Service Worker: TypeError: Cannot read properties of undefined (reading 'waiting')\n    at http://127.0.0.1:3105/static/js/main.4915df76.js:2:556868",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "consoleErrorContext": "External fonts/Google sign-in are blocked and service workers disabled in fixture-only browser; separate PWA suite verifies real service worker.",
+      "unexpectedApi": [],
+      "writes": [],
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/bank-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/daily-status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/global-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "10"
+          }
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        }
+      ]
+    }
+  ],
+  "visualReview": {
+    "result": "pass",
+    "reviewed": [
+      "mobile-bank-balance-light-375.png",
+      "mobile-bank-balance-dark-375.png",
+      "desktop-bank-balance-light-1440.png"
+    ],
+    "findings": "Exact available and current balances, bank/query timestamps and the difference from the calculated history remain readable. Both mobile themes show complete two-line totals labels; all three compact cards remain in one row. No clipped bank amount, label or horizontal page/panel overflow. No JavaScript page errors, writes or unexpected API calls.",
+    "fixtureWarnings": "External fonts and Google sign-in are blocked; service workers are disabled only for fixture QA. Their console diagnostics are recorded, and the separate seven-test PWA suite passes against the same final build."
+  }
+}

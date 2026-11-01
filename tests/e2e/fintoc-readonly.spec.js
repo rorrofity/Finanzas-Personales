@@ -12,6 +12,8 @@ const preview = {
     { externalId: 'mov_fictional_b', date: '2026-10-04', description: 'Abono ficticio de Fintoc', type: 'abono', amount: '1000000', status: 'confirmed' },
   ], total: 2, coverage: { complete: true, excludedNonConfirmed: 0 },
 };
+const bankBalance = { provider: 'fintoc', currency: 'CLP', state: 'available', available: '1234567', current: '1200000',
+  bankUpdatedAt: '2026-10-31T19:00:00.000Z', queriedAt: '2026-10-31T20:00:00.000Z', freshness: 'current' };
 const dailyStatus = {
   provider: 'fintoc', enabled: true, schedule: '07:00', timezone: 'America/Santiago',
   state: 'needs_review', initialized: true, cutoverDate: '2026-10-31',
@@ -47,6 +49,11 @@ async function fixtures(page, options = {}) {
     const json = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Cache-Control': 'no-store' }, body: JSON.stringify(data) });
     if (url.pathname.startsWith('/api/checking/fintoc/')) {
       state.fintocRequests.push({ path: url.pathname, params: Object.fromEntries(url.searchParams) });
+      if (url.pathname.endsWith('/bank-balance')) {
+        if (options.failBalance) return json({ error: 'sk_live_NEVER_DISPLAY_BALANCE_ERROR' }, 502);
+        if (options.forbidBalance) return json({ error: 'PRIVATE' }, 403);
+        return json(options.bankBalance || bankBalance);
+      }
       if (url.pathname.endsWith('/status')) return json(options.status || ready);
       if (url.pathname.endsWith('/daily-status')) return json(options.dailyStatus || dailyStatus);
       if (url.pathname.endsWith('/review')) {
@@ -222,6 +229,60 @@ test.describe('Epic18 — sincronización diaria de cuenta corriente', () => {
       expect(await daily(page).evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
     }
+    state.verify();
+  });
+});
+
+
+test.describe('FBA — saldo bancario exacto', () => {
+  test('disponible, contable, fecha y diferencia se muestran sin redondeo ni duplicar movimientos', async ({ page }, testInfo) => {
+    const state = await fixtures(page);
+    await page.goto('/checking');
+    const bank = page.getByRole('region', { name: 'Saldo bancario Fintoc' });
+    await expect(bank.getByTestId('bank-available-value')).toHaveText('$1.234.567');
+    await expect(bank).toContainText('Saldo contable: $1.200.000');
+    await expect(bank).toContainText('Diferencia con el historial: $584.567');
+    await expect(bank).toContainText('Actualización bancaria:');
+    await expect(page.getByTestId('totals-row')).toContainText('Saldo calculado');
+    await expect(page.getByTestId('totals-row')).toContainText('$650.000');
+    await expect(bank).not.toContainText('$1.235K');
+    expect(state.fintocRequests.filter(r => r.path.endsWith('/bank-balance'))).toEqual([{ path: '/api/checking/fintoc/bank-balance', params: {} }]);
+    expect(state.fintocRequests.filter(r => r.path.endsWith('/preview'))).toHaveLength(0);
+    await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(testInfo.project.use.viewport.width + 1);
+    const storage = await page.evaluate(() => JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }));
+    expect(storage).not.toContain('1234567');
+    state.verify();
+  });
+
+  test('tema oscuro y saldo desactualizado conservan la cifra y advierten su fecha', async ({ page }, testInfo) => {
+    const state = await fixtures(page, { bankBalance: { ...bankBalance, freshness: 'stale' } });
+    await page.addInitScript(() => localStorage.setItem('finanzas-appearance', 'dark'));
+    await page.goto('/checking');
+    await expect(page.locator('html')).toHaveAttribute('data-appearance', 'dark');
+    const bank = page.getByRole('region', { name: 'Saldo bancario Fintoc' });
+    await expect(bank.getByTestId('bank-available-value')).toHaveText('$1.234.567');
+    await expect(bank.getByRole('alert')).toContainText('más de 24 horas');
+    await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(testInfo.project.use.viewport.width + 1);
+    state.verify();
+  });
+
+  test('sin snapshot o con fallo no presenta el cálculo como saldo del banco', async ({ page }) => {
+    const state = await fixtures(page, { bankBalance: { ...bankBalance, state: 'unavailable', available: null, current: null, bankUpdatedAt: null, queriedAt: null, freshness: 'unknown' } });
+    await page.goto('/checking');
+    const bank = page.getByRole('region', { name: 'Saldo bancario Fintoc' });
+    await expect(bank).toContainText('Saldo bancario no disponible');
+    await expect(bank.getByTestId('bank-available-value')).toHaveCount(0);
+    await expect(page.getByTestId('totals-row')).toContainText('Saldo calculado');
+    state.verify();
+  });
+
+  test('un error no expone información del banco', async ({ page }) => {
+    const state = await fixtures(page, { failBalance: true });
+    await page.goto('/checking');
+    const bank = page.getByRole('region', { name: 'Saldo bancario Fintoc' });
+    await expect(bank.getByRole('alert')).toContainText('No se pudo consultar el saldo bancario');
+    await expect(bank).not.toContainText('sk_live_NEVER_DISPLAY');
+    await expect(bank.getByTestId('bank-available-value')).toHaveCount(0);
     state.verify();
   });
 });

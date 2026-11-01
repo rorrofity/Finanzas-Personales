@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateLocal, parseDateLocal } from '../utils/dateUtils';
 import {
   Box,
@@ -38,8 +38,11 @@ import { Add, Edit, Delete, FileUpload, CheckCircle, Close } from '@mui/icons-ma
 import axios from 'axios';
 import MonthPicker from '../components/MonthPicker';
 import { usePeriod } from '../contexts/PeriodContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useSpace } from '../contexts/SpaceContext';
 import StatCard from '../components/ui/StatCard';
 import FintocCheckingPreview from '../components/FintocCheckingPreview';
+import FintocBankBalance from '../components/FintocBankBalance';
 
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
@@ -47,7 +50,14 @@ export default function Checking() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
-  const [globalBalance, setGlobalBalance] = useState(0);
+  const { user } = useAuth();
+  const { activeSpace } = useSpace();
+  const scope = `${user?.id || ''}:${activeSpace?.ownerId || ''}`;
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
+  const request = useRef({ version: 0, controller: null });
+  const [balanceState, setBalanceState] = useState({ scope, value: null });
+  const globalBalance = balanceState.scope === scope ? balanceState.value : null;
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -67,26 +77,40 @@ export default function Checking() {
   const [importResult, setImportResult] = useState({ open: false, data: null });
 
   const load = async () => {
+    // A completed action from a previous space must not start another request.
+    if (currentScope.current !== scope) return;
+    request.current.controller?.abort();
+    const controller = new AbortController();
+    const version = request.current.version + 1;
+    request.current = { version, controller };
+    const current = () => !controller.signal.aborted && request.current.version === version && currentScope.current === scope;
     try {
       setLoading(true);
+      setBalanceState({ scope, value: null });
+      setRows([]);
       const [gRes, lRes, cRes] = await Promise.all([
-        axios.get('/api/checking/global-balance'),
-        axios.get('/api/checking', { params: { year, month } }),
-        axios.get('/api/categories'),
+        axios.get('/api/checking/global-balance', { signal: controller.signal }),
+        axios.get('/api/checking', { params: { year, month }, signal: controller.signal }),
+        axios.get('/api/categories', { signal: controller.signal }),
       ]);
-      setGlobalBalance(Number(gRes.data?.saldo_actual || 0));
+      if (!current()) return;
+      const calculated = gRes.data?.saldo_actual;
+      setBalanceState({ scope, value: calculated !== undefined && calculated !== null && Number.isFinite(Number(calculated)) ? Number(calculated) : null });
       const items = lRes.data?.items || [];
       setRows(items);
       setTotal(items.length);
       setCategories(cRes.data || []);
     } catch (e) {
-      console.error(e);
+      if (current()) console.error(e);
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, [year, month]);
+  useEffect(() => {
+    load();
+    return () => { request.current.controller?.abort(); request.current.version += 1; };
+  }, [year, month, scope]);
 
   const filteredRows = useMemo(() => {
     return rows.filter(r => {
@@ -227,18 +251,20 @@ export default function Checking() {
         <MonthPicker />
       </Box>
 
+      <FintocBankBalance year={year} month={month} calculatedBalance={globalBalance} />
+
       <FintocCheckingPreview year={year} month={month} showDailyStatus />
 
       {/* Totales compactos (Epic 12, Req 12.10) */}
       <Grid container spacing={1} sx={{ mb: 2 }} data-testid="totals-row">
         <Grid item xs={4}>
-          <StatCard label="Saldo Actual" value={globalBalance} short accent="primary.main" />
+          <StatCard label={isMobile ? <>Saldo <br />calculado</> : 'Saldo calculado'} value={globalBalance} accent="primary.main" emptyText={loading ? 'Consultando historial…' : 'Saldo no disponible'} />
         </Grid>
         <Grid item xs={4}>
-          <StatCard label="Total Abonos" value={totals.abonos} short accent="success.main" />
+          <StatCard label={isMobile ? <>Total <br />Abonos</> : 'Total Abonos'} value={totals.abonos} short accent="success.main" />
         </Grid>
         <Grid item xs={4}>
-          <StatCard label="Total Cargos" value={totals.cargos} short accent="error.main" />
+          <StatCard label={isMobile ? <>Total <br />Cargos</> : 'Total Cargos'} value={totals.cargos} short accent="error.main" />
         </Grid>
       </Grid>
 
