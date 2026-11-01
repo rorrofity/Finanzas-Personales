@@ -1,6 +1,6 @@
 # Activación privada de Fintoc — cuenta propia
 
-**Estado actualizado:** el titular creó su cuenta y completó personalmente la vinculación Banco de Chile Individual desde el Dashboard en modo live. La pantalla mostró un Link activo y una cuenta, con actualización inicial todavía en curso. Nuestra web permanece deshabilitada hasta completar credenciales y confirmar gratuidad. Al iniciar el desarrollo no existía cuenta Fintoc. Contrato: [FRO-01–12](fintoc-readonly-contract.md).
+**Estado actualizado:** el titular creó su cuenta y completó personalmente la vinculación Banco de Chile Individual desde el Dashboard en modo live. El Link y su única cuenta corriente aparecen activos; posteriormente el Dashboard mostró una fecha de actualización. Clave secreta existente, Link Token, cuenta y dueño ya están configurados privadamente en el servidor y validados sin consultas externas. Nuestra web permanece deshabilitada hasta confirmar gratuidad. Al iniciar el desarrollo no existía cuenta Fintoc. Contrato: [FRO-01–12](fintoc-readonly-contract.md).
 
 Esta entrega permite **consultar movimientos confirmados y verlos por separado**. No importa movimientos a la base, cambia clasificaciones, modifica el saldo de la web ni programa consultas. Tampoco envía los gastos existentes a Fintoc.
 

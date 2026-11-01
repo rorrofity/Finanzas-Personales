@@ -1,6 +1,6 @@
 # Epic17 — Plan y evidencia de conexión Fintoc
 
-**Estado:** conector implementado y desplegado; el titular creó un vínculo personal en Fintoc live, mientras la consulta desde nuestra web permanece deshabilitada y pendiente de configuración completa y gratuidad. Contrato previo: [FRO-01–12](fintoc-readonly-contract.md). Alcance: consulta por acción explícita y vista previa separada, sin alterar datos existentes ni programaciones.
+**Estado:** conector implementado y desplegado; vínculo personal en Fintoc live y configuración privada completa. La consulta desde nuestra web permanece deshabilitada y pendiente de confirmar gratuidad y probar el acceso del proveedor. Contrato previo: [FRO-01–12](fintoc-readonly-contract.md). Alcance: consulta por acción explícita y vista previa separada, sin alterar datos existentes ni programaciones.
 
 ## Secuencia SDD/TDD
 
@@ -48,3 +48,11 @@ El Link Token se guardó en el `.env` privado del servidor con permisos 0600 y s
 Se corrigió mediante TDD la aceptación de sufijos URL-safe en tokens y claves secretas: RED previo con datos exclusivamente ficticios, validación positiva del transporte simulado y rechazo de prefijo público, modo incorrecto, espacios, controles y caracteres inválidos. Regresión completa: **8 suites y 185 pruebas backend pasan**. La corrección modifica únicamente validación de configuración; no altera frontend, consultas de gastos o persistencia.
 
 Corrección `cdef63663b64c4ddf1b18f954c7ce0ff6c6b53da` desplegada y verificada el **2026-10-31 a las 23:35:36 America/Santiago**, mediante actualización del backend y reinicio del proceso, sin reconstruir el frontend. App responde 200 y ruta Fintoc mantiene 401 y no-store. Nueve tablas financieras idénticas antes y después: cero filas modificadas, eliminadas o añadidas. [Evidencia sin credenciales](fintoc-private-setup-verification.json).
+
+### Configuración completa posterior
+
+El titular creó una clave secreta existente para su aplicación y autorizó su almacenamiento privado. Se configuraron clave live, token, única cuenta corriente seleccionada desde el Dashboard y UUID del dueño verificado contra su usuario existente mediante SELECT de solo lectura. El archivo `.env` tiene permisos 0600; los valores no están en este repositorio. Se eliminaron los archivos locales temporales y el payload de transferencia del servidor.
+
+La configuración se validó con transporte bloqueado y `getStatus` puro; una copia temporal de banderas en memoria acreditó configuración sintácticamente completa, sin habilitar el proceso ni ejecutar peticiones externas. Las banderas reales permanecen false. La autenticación del proveedor y la primera lectura de movimientos no están verificadas todavía.
+
+Verificado el **2026-10-31 a las 23:42:02 America/Santiago**: backend online, web 200, API anónima 401/no-store y nueve tablas financieras idénticas antes y después. No hubo migraciones, cambios de scheduler ni peticiones de la aplicación a Fintoc. La vista de configuración del proveedor no ofreció información de facturación consultable; los términos gratuitos publicados no se interpretaron como una confirmación de la tarifa particular de este acceso.

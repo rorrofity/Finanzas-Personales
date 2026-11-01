@@ -1,6 +1,6 @@
 # Epic17 — Fintoc: consulta privada de cuenta propia
 
-**Estado:** conector implementado, verificado y desplegado el 2026-10-31. Posteriormente el titular creó su cuenta y vinculó Banco de Chile Individual en el Dashboard live; la integración de nuestra web permanece deshabilitada mientras se completa su configuración y se confirma gratuidad. La especificación se escribió antes del código. Al iniciar la implementación el titular todavía no tenía cuenta Fintoc. Se mantiene costo cero.
+**Estado:** conector implementado, verificado y desplegado el 2026-10-31. Posteriormente el titular creó su cuenta y vinculó Banco de Chile Individual en el Dashboard live. Credenciales, cuenta y dueño quedaron configurados privadamente y validados sin tráfico externo; nuestra web permanece deshabilitada hasta confirmar gratuidad y realizar la primera consulta autorizada. La especificación se escribió antes del código. Al iniciar la implementación el titular todavía no tenía cuenta Fintoc. Se mantiene costo cero.
 
 ## Alcance y privacidad
 

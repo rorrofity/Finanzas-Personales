@@ -1,6 +1,6 @@
 {
   "deployedCodeSha": "cdef63663b64c4ddf1b18f954c7ce0ff6c6b53da",
-  "verifiedAt": "2026-11-01T02:35:36.511272Z",
+  "verifiedAt": "2026-11-01T02:42:02.359338Z",
   "timezone": "America/Santiago",
   "backendOnline": true,
   "backendOnlyDeployment": true,
@@ -8,7 +8,7 @@
   "backendUnitTestsPassed": 185,
   "linkCreatedByUserInFintoc": true,
   "linkTokenStoredPrivately": true,
-  "secretKeyConfigured": false,
+  "secretKeyConfigured": true,
   "applicationConnectionState": "disabled",
   "freePersonalAccessConfirmed": false,
   "applicationFintocApiRequests": 0,
@@ -20,5 +20,11 @@
   "schedulerChanged": false,
   "applicationHttpStatus": 200,
   "unauthenticatedFintocHttpStatus": 401,
-  "secretsInEvidence": false
+  "secretsInEvidence": false,
+  "formatPatchVerifiedAt": "2026-11-01T02:35:36.511272Z",
+  "accountSelected": true,
+  "ownerMatched": true,
+  "configurationValidWithoutProviderRequests": true,
+  "providerAuthenticationVerified": false,
+  "firstMovementsQueryExecuted": false
 }
