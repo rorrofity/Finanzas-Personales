@@ -172,4 +172,8 @@ if (process.env.NODE_ENV === 'production' || process.env.ENABLE_SCHEDULER === 't
   require('./services/scheduler').start();
 }
 
+// Independent Fintoc schedule. start only registers a daily job when all three
+// explicit access/free/daily flags are enabled; it never runs an import at boot.
+require('./services/fintocDailyScheduler').start();
+
 module.exports = app;

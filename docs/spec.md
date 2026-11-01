@@ -754,3 +754,11 @@ La posible sincronización diaria de cuenta corriente permanece como [propuesta 
 El usuario autoriza construir la conexión Fintoc de Banco de Chile para obtener movimientos y confirma que todavía no tiene cuenta de desarrollador. [FRO-01–12](implementation/fintoc-readonly-contract.md) define la entrega de consulta y previsualización, con credenciales privadas, aislamiento por dueño, API de lectura, importes CLP exactos y sin caché de movimientos bancarios. La elección de Fintoc constituye una excepción acotada a DATA-001 para la información obtenida por ese proveedor tras autorización del titular; no envía a Fintoc el historial o las categorías de esta base.
 
 La entrega no importa movimientos, modifica saldos ni categorías, ejecuta migraciones o activa la sincronización diaria. La conexión real queda pendiente del alta del titular, acceso live y confirmación de costo cero. [Guía privada de activación](implementation/fintoc-readonly-activation.md).
+
+## 14. Epic18 — Sincronización diaria Fintoc de cuenta corriente
+
+El usuario solicita confirmar gratuidad y activar primera lectura y sincronización diaria, preservando gastos y clasificaciones existentes. Se verificó el servicio gratuito para hasta cinco cuentas personales en los términos canónicos, aplicable a la única cuenta vinculada y sin contratar un plan pagado. La primera lectura live fue completa y exitosa, sin escrituras financieras.
+
+[FDS-01–14](implementation/fintoc-daily-sync-contract.md) amplía la integración con referencias externas y bitácoras aditivas, conciliación inicial sin reimportar historia y posterior inserción idempotente de novedades inequívocas, sin UPDATE/DELETE financiero o cambios de saldo conocido. La programación es independiente a las 07:00 America/Santiago y conserva la sincronización TC/N8N. Estado y pendientes son privados, sin caché, legibles en móvil y ambos temas. No se activan pagos o Refresh Intents.
+
+La cobertura corresponde a cuenta corriente CLP. No trae compras de tarjeta de crédito; un cargo por pagar la tarjeta no sustituye su detalle. [Plan y evidencia](implementation/fintoc-daily-sync-plan.md).

@@ -1,10 +1,12 @@
 # Propuesta — sincronización diaria de cuenta corriente
 
-**Estado:** investigación y propuesta; sin conexión bancaria, cuenta de proveedor, aceptación de términos, programación ni implementación.
+**Estado al 2026-11-01:** investigación inicial conservada como antecedente. El titular ya vinculó Banco de Chile Individual en live; gratuidad publicada hasta cinco cuentas personales confirmada y primera lectura real exitosa sin escrituras financieras. Epic18 tiene implementación y pruebas listas, con despliegue próximo. La especificación vigente es el [contrato FDS-01–14](../implementation/fintoc-daily-sync-contract.md) y el resultado de activación se registra en su [plan y evidencia](../implementation/fintoc-daily-sync-plan.md).
 
-**Consulta:** 2026-10-31, America/Santiago. **Identificadores:** `CSYNC-*`, provisionales; no asignan una épica ni cambian Epic14 o Epic15.
+**Consulta inicial:** 2026-10-31, America/Santiago. **Identificadores históricos:** `CSYNC-*`, provisionales; Epic18 los concreta mediante `FDS-*`, sin cambiar Epic14 o Epic15.
 
-**Actualización posterior en la sesión del titular:** se pudo abrir Conexiones en modo live, elegir Bancaria / Individual y completar personalmente la vinculación de Banco de Chile. El Dashboard mostró un Link creado, estado Activo y una cuenta; la actualización inicial seguía en curso. Esto aporta evidencia operativa para esta cuenta, sin confirmar gratuidad, frecuencia diaria ni lectura por nuestra API. La integración propia continúa deshabilitada; el titular autorizó guardar privadamente las credenciales en su servidor. No se publican IDs, tokens, claves o datos bancarios en esta documentación.
+**Antecedente histórico de vinculación:** el titular pudo abrir Conexiones live, elegir Bancaria / Individual y vincular personalmente Banco de Chile. En esa etapa el Dashboard mostraba el Link activo con actualización inicial en curso y la aplicación permanecía deshabilitada, pendiente de verificar costo y lectura. La configuración quedó privada en el servidor. Esa incertidumbre se resolvió posteriormente mediante los términos canónicos y la primera lectura exitosa, según la actualización final de este documento. No se publican IDs, tokens, claves, respuestas ni datos bancarios.
+
+**Lectura de los antecedentes:** las secciones 1–9 describen la investigación y alternativas originales. Sus condiciones pendientes y propuestas de frecuencia no constituyen instrucciones actuales de activación; prevalecen la resolución final y el contrato Epic18 enlazado arriba.
 
 ## 1. Necesidad y condiciones confirmadas
 
@@ -12,9 +14,9 @@ La cuenta es **personal de Banco de Chile**. Hoy su cartola se descarga y se imp
 
 Objetivo: incorporar cargos, abonos y saldo con una actualización bancaria comprobable al menos una vez al día, sin tener que descargar y cargar el archivo manualmente. No modificar gastos, clasificaciones ni información bancaria histórica existente.
 
-**Conclusión a esta fecha, tras la segunda revisión:** existen conectores para Banco de Chile Personas, pero no se ha confirmado una contratación gratuita de producción que pueda abrir directamente una persona natural para este proyecto. Los términos gratuitos de Fintoc siguen publicados y contradicen sus requisitos operativos de alta: corresponde solicitar una aclaración escrita antes de declarar disponible o descartada la modalidad personal. Banco de Chile ofrece una API real, pero su circuito público es empresarial y contempla tarifas contractuales. Debe confirmar expresamente una eventual excepción personal gratuita. Ninguna de estas vías se presenta como conexión ya habilitada ni como garantía de ejecución diaria desatendida ante MFA.
+**Conclusión histórica tras la segunda revisión, posteriormente resuelta para Fintoc:** había conectores para Banco de Chile Personas, pero todavía no se había acreditado habilitación gratuita de producción para este titular. Se propuso aclarar la discrepancia entre términos gratuitos y requisitos empresariales. Banco de Chile ofrecía una API cuyo circuito público era empresarial y contemplaba tarifas contractuales. La vinculación live, la lectura exitosa y la verificación canónica posterior resolvieron la vía Fintoc para este proyecto; la alternativa API directa del banco no quedó habilitada. La frecuencia de refresco bancario no constituye una garantía diaria ante MFA.
 
-## 2. Tres alternativas
+## 2. Tres alternativas evaluadas — histórico
 
 | Alternativa | Encaje con este caso | Costo y automatización | Recomendación |
 |---|---|---|---|
@@ -24,7 +26,7 @@ Objetivo: incorporar cargos, abonos y saldo con una actualización bancaria comp
 
 Un horario diario no es una fuente de datos: es necesario resolver primero cómo obtener información bancaria completa y autorizada. Tampoco basta consultar diariamente la caché de un proveedor para afirmar que ese día se obtuvo información nueva del banco.
 
-## 3. Hallazgos de proveedores y costo
+## 3. Hallazgos iniciales de proveedores y costo — histórico
 
 ### Fintoc: soporte de cuenta personal y alta de desarrollador son cosas distintas
 
@@ -34,7 +36,7 @@ Los términos actuales para desarrolladores publican, en la cláusula **2.3**, a
 
 Sin embargo, las guías actuales de Movements exigen para producción RUT de empresa, cuenta bancaria de la empresa, correo corporativo y al menos seis meses de actividad; excluyen expresamente el alta de personas naturales, incluso con giro, y señalan que aplica a todos los productos. El quickstart distingue la prueba de la habilitación live. **Soportar una cuenta bancaria personal no equivale a admitir como desarrollador a su titular persona natural.** [Requisitos actuales y frecuencia según plan](https://docs.fintoc.com/guides/movements/overview-data-aggregation), [Quickstart y modo live](https://docs.fintoc.com/guides/movements/overview-data-aggregation/quickstart).
 
-Por ello, la gratuidad publicada no se presenta aquí como plan personal habilitable garantizado. La vía empresarial no cumple este diseño, pero **la contradicción documental no permite afirmar que la cláusula gratuita haya desaparecido o sea exclusivamente para clientes antiguos**. Se necesita una aclaración escrita de Fintoc sobre nuevas altas individuales, acceso productivo y refresco diario incluido. No se ha verificado una excepción operativa ni su alcance.
+**Evaluación histórica:** estas guías motivaron proponer una aclaración de elegibilidad; no demostraban que la cláusula gratuita hubiera desaparecido o fuera exclusiva de clientes antiguos. **Resolución posterior para este titular:** la vinculación Individual live y la lectura real fueron exitosas, y la verificación de 2.3 y QUINTO(a) en la canónica confirmó la gratuidad para hasta cinco cuentas personales. La aclaración escrita dejó de ser un requisito pendiente para este acceso. Se consulta lo disponible; no se promete refresco diario del banco ni se fuerza uno pagado.
 
 El flujo documentado usa Widget y tokens; nuestra aplicación no necesita almacenar la contraseña bancaria, pero el proveedor sí interviene en la conexión y procesa información financiera. No equivale a afirmar que los datos permanecen exclusivamente en el servidor personal. [Flujo de integración](https://docs.fintoc.com/guides/movements/integration-with-exchange-token).
 
@@ -51,7 +53,7 @@ El formulario de contratación pide **Nombre Empresa y RUT Empresa**. Es evidenc
 - **Khipu:** documenta endpoints Banco de Chile Personas y un catálogo de instituciones para su flujo OAuth. Se verificó capacidad documentada, no una tarifa cero para un consumidor live personal; los términos de pagos no se extrapolan al precio de Open Finance. [Accounts Banco de Chile Personas](https://docs.khipu.com/en/apis/v1/cl/banking/personal/bancochile.cl/openapi/other/productsaccounts), [instituciones OAuth](https://docs.khipu.com/data-solutions/open-finance/oauth-institutions-list).
 - **CBank:** publica espacios personales y catálogo Banco de Chile Personas, pero su web informa **$19.990 CLP + IVA**, sin confirmar aquí periodicidad o condiciones particulares. Además declara que las conexiones reales son experimentales y no están certificadas para producción. No cumple la condición de costo cero para recomendarlo como solución de esta entrega. [Producto y precio](https://cbank.cl/), [documentación](https://cbank.cl/documentacion).
 
-No se encontraron pruebas oficiales suficientes para prometer un proveedor gratuito permanente de producción disponible directamente para este titular. Esto no demuestra que sea imposible obtener una excepción; significa que aún no está acreditada para decidir una integración.
+**Resultado histórico de la comparación:** en la investigación inicial aún no se había acreditado la opción personal gratuita. La evidencia posterior sí permitió elegir Fintoc dentro del límite publicado; no implica una promesa de gratuidad permanente ante cambios futuros de condiciones ni habilita servicios adicionales.
 
 ## 4. Sistema de Finanzas Abiertas: calendario relevante
 
@@ -65,15 +67,15 @@ Al 2026-10-31, el artículo 12 de la Ley 19.628 reconoce el derecho a solicitar 
 
 La reforma de la Ley 21.719 entra en vigor el **2026-12-01**. Su artículo 9 incorpora portabilidad bajo condiciones: tratamiento automatizado y basado en consentimiento, con transmisión directa cuando sea técnicamente posible. No permite prometer que toda cartola contractual quedará automáticamente cubierta ni una API bancaria diaria gratuita. El SFA tiene su propio calendario gradual; julio de 2027 no es una fecha garantizada de acceso a esta cuenta personal. [Ley 21.719, artículo 9 y transitorio primero](https://www.bcn.cl/leychile/navegar?i=1209272), [fecha oficial de vigencia](https://www.consejotransparencia.cl/datos-personales/).
 
-## 5. Encaje con el proyecto actual
+## 5. Encaje con el proyecto al investigar — histórico
 
 - `backend/controllers/checkingController.js#importFile` ya parsea fecha, descripción, cargo/abono y saldo desde Excel. Su importación llama `Checking.bulkImport` y después actualiza el saldo conocido. Reutilizar el formato de entrada es viable; invocar el importador actual sin validación no equivale a una sincronización bancaria robusta.
 - `Checking.bulkImport` omite coincidencias por fecha/monto/tipo/descripción normalizada. No persiste un identificador externo por movimiento ni maneja vinculación de fuentes o correcciones. Repeticiones legítimas idénticas y datos ya importados necesitan tratarse con multiplicidad y procedencia, no con una nueva deduplicación por parecido.
 - El scheduler existente programa TC mediante n8n a las 13:00 y 22:00, America/Santiago. `runSync` llama al webhook y registra resultados. Se puede reutilizar su patrón de orquestación y notificación, conservando flujos y permisos actuales; cuenta corriente requiere una fuente y ejecución independientes.
 - El saldo actual combina un saldo conocido con movimientos posteriores a su fecha. Un nuevo conector necesita definir la fecha/hora real del saldo y el alcance de la consulta, para evitar sumar de nuevo movimientos que ese saldo ya incluye.
-- La [constitución](../constitution.md) establece que los datos financieros no salen del servidor personal. Un agregador que recibe información bancaria exige revisar y aprobar una excepción expresa antes de construir su conexión. Esa decisión no se da por tomada en esta propuesta.
+- La [constitución](../constitution.md) exigía una excepción expresa para el procesamiento bancario por un agregador. La elección de Fintoc, vinculación autorizada por el titular y alcance de privacidad quedaron documentados posteriormente en [Epic17](../implementation/fintoc-readonly-contract.md), con ampliación acotada de persistencia en Epic18. No se exportan los gastos o clasificaciones de nuestra base al proveedor.
 
-## 6. Flujo propuesto, condicionado a elegir y habilitar fuente
+## 6. Flujo propuesto antes de elegir y habilitar fuente — histórico
 
 ```text
 Fuente autorizada de lectura
@@ -97,7 +99,7 @@ Una futura programación podría consultar, por ejemplo, a las 07:00 y 19:00 Ame
 
 Al elegir proveedor se debe fijar un único producto y versión de API, con su contrato de refresco documentado. No mezclar endpoints, frecuencias ni estados de Movements y Connections porque aparezcan en documentación comercial de la misma empresa.
 
-## 7. Requisitos SDD provisionales
+## 7. Requisitos SDD provisionales — histórico
 
 | ID | Criterio de aceptación propuesto |
 |---|---|
@@ -117,19 +119,29 @@ Al elegir proveedor se debe fijar un único producto y versión de API, con su c
 
 El conector necesita persistencia de identidad/cursor/ejecuciones que hoy no existe para CC. Su esquema y cualquier migración se especificarían y revisarían antes de implementarse. No se ha creado esa persistencia ni se ha ejecutado DDL/DML en esta investigación.
 
-## 8. TDD y piloto de aceptación
+## 8. TDD y piloto de aceptación propuestos — histórico
 
 1. **RED:** fixtures sintéticos de proveedor/cuenta/moneda, paginación, dos movimientos legítimos idénticos, reenvío del mismo ID, llegada tardía, referencia bancaria corregida y lotes parciales. Probar que categorías/notas/montos de registros previos permanecen idénticos.
 2. **GREEN:** adaptador y normalizador separados del importador; comparación inicial en solo lectura, metadatos independientes y transacción controlada para nuevos registros autorizados.
 3. **VERIFY:** API simulada y PostgreSQL efímero; no usar credenciales reales ni bases existentes. Verificar autenticación, bloqueo por conexión, reintentos, cursor, permisos, saldo, monedas y cambios de día en Santiago.
 4. **Piloto por aprobar:** conexión de solo lectura tras validar costo y consentimiento; primero previsualización sin insertar. Contrastar cargos, abonos, saldo y fechas con una cartola conocida. Tras aceptar el corte inicial, verificar varios días, incluido un fallo o reautenticación, antes de afirmar actualización diaria autónoma.
 
-## 9. Decisiones pendientes
+## 9. Decisiones de la investigación inicial — histórico
 
-- Primero, pedir aclaración escrita a Fintoc sobre la contradicción entre sus términos para desarrolladores y las guías de producción. Canal publicado: `hello@fintoc.com`. Consulta concreta: ¿habilitan Movements live para una persona natural que conecta únicamente su cuenta Banco de Chile a una aplicación privada, bajo la cláusula 2.3, sin mensualidad, cobro por uso ni vencimiento de prueba, y con refresco bancario diario? Si no, ¿qué alcance mantiene esa cláusula y existe una modalidad personal o excepción? No se ha enviado esta consulta.
+- Se propuso pedir aclaración a Fintoc sobre la contradicción documental y el acceso personal gratuito. No se envió la consulta. La verificación canónica y la operación live posteriores resolvieron el requisito para este titular; no queda pendiente una respuesta escrita para las lecturas GET autorizadas. El refresco bancario conserva sus límites publicados según modalidad.
 - ¿Banco de Chile ofrece habilitación API de producción para esta cuenta personal, con alta de persona natural y sin costo adicional, o entrega programada completa gratuita? Es la validación complementaria a la aclaración de Fintoc; no se verificó que así sea y no se ha contactado al banco.
 - Para el banco, precisar cuenta corriente de Personas, RUT personal sin empresa, uso propio y solo lectura; pedir requisitos de autorización, costo total, rango de movimientos y mecanismo de actualización diaria. El circuito API público remite al ejecutivo cash. Separadamente, el canal ARCO permite solicitar los datos y preguntar por su entrega electrónica; no reemplaza la habilitación API.
 - Si no hay acceso personal gratuito confirmado, ¿se prefiere conservar el Excel manual o probar una descarga asistida desde el dispositivo propio, sin cuota de proveedor, con autenticación del titular y limitaciones explícitas?
 - ¿Se aprueba compartir datos con el proveedor y la correspondiente excepción de privacidad, o se mantiene todo el tratamiento bajo el servidor y dispositivo propios?
 
-**Trabajo realizado:** revisión de código y documentación pública. No se conectó una cuenta bancaria, no se introdujeron credenciales, no se contactó a terceros, no se programó un cron y no se modificaron datos o clasificaciones.
+**Trabajo de la investigación inicial:** revisión de código y documentación pública, sin conectar cuentas, configurar credenciales, contactar a terceros, programar procesos o modificar datos en esa etapa. La vinculación y primera lectura posteriores se distinguen a continuación.
+
+## 10. Resolución e implementación Epic18 — 2026-11-01
+
+Los términos canónicos de Chile, seleccionando **Para desarrolladores → Términos y condiciones**, reconocen desarrolladores naturales o jurídicos, incluyen Conciliación Bancaria en Servicios y establecen gratuidad hasta cinco cuentas personales en 2.3 y QUINTO(a). La cuenta vinculada es Individual, está dentro de ese límite y no se ha contratado un instrumento pagado. La primera lectura productiva mediante Movements v1, versión 2026-02-01, fue completa y exitosa, con configuración temporal en memoria y sin escrituras financieras. Las credenciales y respuestas permanecen en el servidor privado.
+
+La solución implementada consulta tres meses calendario una vez al día a las **07:00 America/Santiago**, sin ejecución automática al arrancar ni reintentos inmediatos. Baseline establece un corte inmutable, vincula coincidencias exactas 1:1 y guarda pendientes; no inserta historia. Después solo añade novedades confirmadas inequívocas posteriores al corte, con categoría/notas NULL. Identidad externa, multiplicidad, bloqueo compartido y transacción protegen el historial; correcciones, reversiones, reemisiones y referencias eliminadas quedan en revisión sin reescribir o recrear gastos. No se escribe el saldo conocido.
+
+**Alcance:** cuenta corriente CLP Banco de Chile. La [cobertura oficial](https://docs.fintoc.com/guides/movements/overview-data-aggregation/products-and-institutions-movements) no documenta el detalle de compras de tarjeta de crédito para esa institución; TC/N8N mantiene su programación existente. Un pago de tarjeta desde la cuenta no equivale a sus compras individuales.
+
+La web distingue última consulta completa, fecha bancaria, cobertura y pendientes. La consulta diaria no garantiza un nuevo refresco bancario cada 24 horas; no activa Refresh Intents, planes, pagos ni servicios opcionales. HTTP402 detiene la ejecución. La implementación y sus pruebas están listas; el despliegue productivo es el siguiente paso. Contrato, verificación y resultado definitivo: [Epic18 FDS-01–14](../implementation/fintoc-daily-sync-contract.md) y [plan y evidencia](../implementation/fintoc-daily-sync-plan.md).

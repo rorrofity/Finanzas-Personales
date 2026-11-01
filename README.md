@@ -18,7 +18,7 @@ Aplicación web (PWA) para gestión de finanzas personales con React, Node.js, E
 - 🔁 **Compras en Cuotas** - Manejo de cuotas con proyección automática
 - 🌍 **Transacciones Internacionales** - Compras en USD con conversión a CLP
 - 🏦 **Cuenta Corriente** - Importación de cartolas y seguimiento de saldo
-- 🔎 **Consulta Fintoc** - Conector de solo lectura y vista previa separada; pendiente de cuenta y habilitación gratuita del proveedor
+- 🔎 **Sincronización Fintoc** - Cuenta corriente Banco de Chile a las 07:00 (Chile), pendientes visibles y protección de gastos y clasificaciones existentes
 - 📆 **Transacciones Proyectadas** - Gastos/ingresos recurrentes proyectados
 - ❤️ **Salud Financiera** - Health score, proyección de balance y alertas
 - 📧 **Sincronización de Emails** - Importación automática desde Gmail vía N8N (✅ funcional)
@@ -65,9 +65,11 @@ Abre: http://localhost:3000
 - **[Evolución de gastos: especificación y contrato](./docs/implementation/dashboard-category-evolution-contract.md)** - Períodos de facturación, matriz y consultas de solo lectura
 - **[Evolución de gastos: plan y pruebas](./docs/implementation/dashboard-category-evolution-plan.md)** - Evidencia SDD/TDD y despliegue sin alterar registros
 - **[Apariencia y lectura móvil](./docs/implementation/appearance-mobile-contract.md)** - Modos visuales y categorías legibles sin desplazamiento lateral
-- **[Propuesta de sincronización de cuenta corriente](./docs/proposals/checking-daily-sync.md)** - Alternativas para persona natural y condición de costo cero; conexión aún no habilitada
+- **[Propuesta de sincronización de cuenta corriente](./docs/proposals/checking-daily-sync.md)** - Investigación histórica y decisión de conexión personal gratuita
 - **[Consulta Fintoc: contrato](./docs/implementation/fintoc-readonly-contract.md)** - Cuenta propia, aislamiento por dueño y consulta sin modificar registros
-- **[Consulta Fintoc: activación privada](./docs/implementation/fintoc-readonly-activation.md)** - Alta pendiente, confirmación de gratuidad y configuración exclusiva del servidor
+- **[Consulta Fintoc: activación privada](./docs/implementation/fintoc-readonly-activation.md)** - Condiciones gratuitas y configuración exclusiva del servidor
+- **[Sincronización diaria: contrato](./docs/implementation/fintoc-daily-sync-contract.md)** - Novedades de cuenta corriente, conciliación inicial sin reimportar historia y TC sin cambios
+- **[Sincronización diaria: evidencia](./docs/implementation/fintoc-daily-sync-plan.md)** - SDD/TDD, pruebas y despliegue en el servidor
 
 ### Configuración
 - **[SETUP.md](./SETUP.md)** - Guía completa de configuración local y producción

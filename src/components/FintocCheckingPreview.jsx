@@ -6,6 +6,7 @@ import { AccountBalanceOutlined, OpenInNew, SearchOutlined } from '@mui/icons-ma
 import axios from '../config/axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useSpace } from '../contexts/SpaceContext';
+import FintocDailySyncStatus from './FintocDailySyncStatus';
 
 const STATUS_PATH = '/api/checking/fintoc/status';
 const PREVIEW_PATH = '/api/checking/fintoc/preview';
@@ -64,7 +65,7 @@ function safeError(error) {
   return 'No se pudo completar la consulta de Fintoc. Inténtalo más tarde.';
 }
 
-export default function FintocCheckingPreview({ year, month }) {
+export default function FintocCheckingPreview({ year, month, showDailyStatus = false }) {
   const { user } = useAuth();
   const { activeSpace } = useSpace();
   const ownSpace = Boolean(user?.id && activeSpace?.isOwner
@@ -152,6 +153,8 @@ export default function FintocCheckingPreview({ year, month }) {
           Consultar movimientos con Fintoc
         </Button>}
       </Stack>
+
+      {showDailyStatus && <FintocDailySyncStatus year={year} month={month} />}
 
       {visible.configLoading && <Typography role="status" variant="body2" color="text.secondary" sx={{ mt: 1 }}>Verificando conexión…</Typography>}
       {visible.config && !ready && <Box sx={{ mt: 1.5 }}>

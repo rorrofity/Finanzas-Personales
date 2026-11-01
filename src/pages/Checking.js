@@ -227,7 +227,7 @@ export default function Checking() {
         <MonthPicker />
       </Box>
 
-      <FintocCheckingPreview year={year} month={month} />
+      <FintocCheckingPreview year={year} month={month} showDailyStatus />
 
       {/* Totales compactos (Epic 12, Req 12.10) */}
       <Grid container spacing={1} sx={{ mb: 2 }} data-testid="totals-row">

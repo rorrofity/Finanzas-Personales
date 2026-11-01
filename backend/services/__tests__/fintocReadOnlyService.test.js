@@ -349,3 +349,48 @@ describe('upstream failures are private and never retried', () => {
     await expect(service.preview(OWNER, QUERY)).rejects.toMatchObject({ status: 504, code: 'FINTOC_TIMEOUT' });
   });
 });
+
+describe('daily reconciliation snapshots retain every observed provider state', () => {
+  test('reads all states with pending markers while preserving exact CLP values', async () => {
+    const movements = [
+      movement(),
+      movement({ id: 'mov_processing', status: 'processing', pending: true, amount: 50000 }),
+      movement({ id: 'mov_reversed', status: 'reversed', pending: false }),
+      movement({ id: 'mov_manual_reversed', status: 'manually_reversed', pending: false }),
+    ];
+    const { service, transport } = setup({ movements });
+    const result = await service.readSnapshot(OWNER, QUERY);
+    expect(result).toMatchObject({ provider: 'fintoc', readOnly: true, imported: false, total: 4, coverage: { complete: true, excludedNonConfirmed: 0 } });
+    expect(result.items).toEqual([
+      { externalId: 'mov_example', date: '2026-10-03', description: 'Ejemplo ficticio', type: 'cargo', amount: '12500', status: 'confirmed', pending: false },
+      { externalId: 'mov_processing', date: '2026-10-03', description: 'Ejemplo ficticio', type: 'abono', amount: '50000', status: 'processing', pending: true },
+      { externalId: 'mov_reversed', date: '2026-10-03', description: 'Ejemplo ficticio', type: 'cargo', amount: '12500', status: 'reversed', pending: false },
+      { externalId: 'mov_manual_reversed', date: '2026-10-03', description: 'Ejemplo ficticio', type: 'cargo', amount: '12500', status: 'manually_reversed', pending: false },
+    ]);
+    expect(transport.get.mock.calls[1][1].params.confirmed_only).toBe(false);
+    expect(JSON.stringify(result)).not.toMatch(/privateExample|acc_example|00001234/);
+  });
+
+  test('snapshot failures still reject incomplete pages instead of returning observed rows', async () => {
+    const { service } = setup({ headers: { 'x-total-count': '2', link: '' } });
+    await expect(service.readSnapshot(OWNER, QUERY)).rejects.toMatchObject({ code: 'FINTOC_INCOMPLETE' });
+  });
+
+  test('snapshots retain schema, owner and readiness checks before network', async () => {
+    const { service, transport } = setup();
+    await expect(service.readSnapshot('other-owner', QUERY)).rejects.toMatchObject({ status: 403, code: 'FINTOC_FORBIDDEN' });
+    await expect(service.readSnapshot(OWNER, { ...QUERY, account_id: 'another' })).rejects.toMatchObject({ status: 400 });
+    expect(transport.get).not.toHaveBeenCalled();
+    const blocked = setup({ env: config({ FINTOC_ENABLED: 'false' }) });
+    await expect(blocked.service.readSnapshot(OWNER, QUERY)).rejects.toMatchObject({ code: 'FINTOC_NOT_READY' });
+    expect(blocked.transport.get).not.toHaveBeenCalled();
+  });
+
+  test('the public preview retains confirmed-only requests and excludes pending from its response shape', async () => {
+    const { service, transport } = setup({ movements: [movement(), movement({ id: 'mov_pending', status: 'processing', pending: true })] });
+    const result = await service.preview(OWNER, QUERY);
+    expect(result.items).toEqual([{ externalId: 'mov_example', date: '2026-10-03', description: 'Ejemplo ficticio', type: 'cargo', amount: '12500', status: 'confirmed' }]);
+    expect(result.coverage.excludedNonConfirmed).toBe(1);
+    expect(transport.get.mock.calls[1][1].params.confirmed_only).toBe(true);
+  });
+});

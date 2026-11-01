@@ -1,16 +1,16 @@
 # Activación privada de Fintoc — cuenta propia
 
-**Estado actualizado:** el titular creó su cuenta y completó personalmente la vinculación Banco de Chile Individual desde el Dashboard en modo live. El Link y su única cuenta corriente aparecen activos; posteriormente el Dashboard mostró una fecha de actualización. Clave secreta existente, Link Token, cuenta y dueño ya están configurados privadamente en el servidor y validados sin consultas externas. Nuestra web permanece deshabilitada hasta confirmar gratuidad. Al iniciar el desarrollo no existía cuenta Fintoc. Contrato: [FRO-01–12](fintoc-readonly-contract.md).
+**Estado al 2026-11-01:** el titular completó personalmente la vinculación Banco de Chile Individual en live y la configuración permanece privada en el servidor. Se confirmó la gratuidad publicada para hasta cinco cuentas personales en los términos canónicos de Chile y se realizó una primera lectura real exitosa, sin escrituras financieras. Epic18 tiene implementación y pruebas listas; su despliegue y activación diaria son el siguiente paso. El resultado definitivo se registra en el [plan Epic18](fintoc-daily-sync-plan.md), bajo el [contrato FDS-01–14](fintoc-daily-sync-contract.md).
 
-Esta entrega permite **consultar movimientos confirmados y verlos por separado**. No importa movimientos a la base, cambia clasificaciones, modifica el saldo de la web ni programa consultas. Tampoco envía los gastos existentes a Fintoc.
+El preview de Epic17 permite **consultar movimientos confirmados y verlos por separado**, sin persistirlos. Epic18 añade un proceso diario interno para cuenta corriente CLP: baseline sin insertar historia y posteriores novedades inequívocas, con categoría/notas NULL. Conserva íntegros los gastos y clasificaciones existentes y no escribe saldos. No envía los gastos de nuestra base a Fintoc. Las compras de tarjeta de crédito mantienen su integración TC/N8N existente.
 
-## 1. Confirmar habilitación y costo antes de conectar
+## 1. Habilitación y costo confirmados para este alcance
 
-La [investigación](../proposals/checking-daily-sync.md) registra una contradicción entre los términos gratuitos para desarrolladores y los requisitos de alta empresarial. Antes de habilitar tráfico, obtener confirmación escrita de Fintoc para **persona natural, aplicación privada, cuenta propia Banco de Chile y costo cero**, incluyendo consultas, duración de la modalidad gratuita y frecuencia de actualización bancaria disponible. No aceptar un plan pagado o una prueba que continúe con cobro.
+Los [términos de Chile](https://www.fintoc.com/cl/legal/terminos), seleccionando **Para desarrolladores → Términos y condiciones**, incluyen Conciliación Bancaria entre los Servicios y establecen gratuidad hasta cinco cuentas personales en 2.3 y QUINTO(a). El vínculo es Individual y está dentro de ese límite; no se ha contratado un instrumento pagado. Junto con la lectura live exitosa, esto resuelve la habilitación y gratuidad requeridas para las consultas GET de este proyecto. La [investigación histórica](../proposals/checking-daily-sync.md) conserva la incertidumbre inicial, ya resuelta para este acceso.
 
-El alta y la autorización de la cuenta corresponden al titular. Esta guía no crea una cuenta, acepta condiciones ni permite eludir una restricción de Fintoc. Si el proveedor no habilita `live` para este caso, el conector queda pendiente aunque el desarrollo esté probado.
+El titular ya completó el alta y la autorización bancaria mediante el flujo oficial. La habilitación no autoriza contratar planes, pagos, nuevas cuentas empresariales, Refresh Intents ni servicios opcionales. HTTP402 detiene la ejecución sin contratar ni reintentar.
 
-La conexión observada en esta sesión confirma que el Dashboard permitió crear el vínculo personal en live. No acredita por sí sola tarifa cero, derecho a usar cualquier producto o frecuencia diaria incluida; esas condiciones siguen pendientes de confirmación.
+La consulta diaria utiliza los datos disponibles en Fintoc. La frecuencia de actualización desde el banco depende de la modalidad del proveedor; no se promete un refresco bancario nuevo cada 24 horas. La web distingue la última consulta completa de la fecha bancaria y señala datos desactualizados. No fuerza refrescos de pago.
 
 ## 2. Vincular la cuenta propia en Fintoc
 
@@ -29,6 +29,7 @@ Plantilla sin credenciales:
 ```dotenv
 FINTOC_ENABLED=false
 FINTOC_PERSONAL_FREE_ACCESS_CONFIRMED=false
+FINTOC_DAILY_SYNC_ENABLED=false
 FINTOC_MODE=test
 FINTOC_OWNER_USER_ID=
 FINTOC_SECRET_KEY=
@@ -38,8 +39,9 @@ FINTOC_ACCOUNT_ID=
 
 | Variable | Configuración privada |
 |---|---|
-| `FINTOC_ENABLED` | Permanece `false` hasta terminar las validaciones. |
-| `FINTOC_PERSONAL_FREE_ACCESS_CONFIRMED` | Solo cambia a `true` cuando esté confirmado el acceso personal gratuito; no representa permiso para contratar o pagar. |
+| `FINTOC_ENABLED` | La plantilla permanece deshabilitada. Se activa mediante el procedimiento de despliegue de Epic18, después de las validaciones. |
+| `FINTOC_PERSONAL_FREE_ACCESS_CONFIRMED` | La condición de acceso personal gratuito ya fue confirmada para el alcance descrito; el despliegue registra su activación privada. No representa permiso para contratar o pagar. |
+| `FINTOC_DAILY_SYNC_ENABLED` | Control independiente del proceso diario. Se habilita en el despliegue controlado de Epic18, que ejecuta el baseline explícito y verifica el cron; no altera TC/N8N. |
 | `FINTOC_MODE` | `test` para datos de prueba o `live` para acceso real habilitado. Debe coincidir con la clave y el vínculo utilizados. |
 | `FINTOC_OWNER_USER_ID` | UUID del usuario dueño ya existente en nuestra web. El administrador lo identifica de manera privada mediante consulta de solo lectura; no crea otro usuario ni toma el ID de un invitado. |
 | `FINTOC_SECRET_KEY` | Clave secreta del ambiente correspondiente en Fintoc. Solo permanece en el servidor. |
@@ -50,26 +52,26 @@ El conector comprueba Banco de Chile (`cl_banco_de_chile`), país Chile, titular
 
 Las pruebas automatizadas usan transporte ficticio y no necesitan credenciales reales ni una conexión al banco. Un resultado en modo `test` debe permanecer identificado como prueba.
 
-## 4. Primera consulta
+## 4. Consulta y activación de Epic18
 
-Después de completar y revisar la configuración, habilitar las dos banderas y aplicar el procedimiento operativo de recarga del backend del proyecto. No ejecutar migraciones ni procesos de importación.
+La primera lectura productiva ya fue exitosa con configuración temporal en memoria, sin escrituras financieras. Para el despliegue diario seguir exclusivamente el [plan Epic18](fintoc-daily-sync-plan.md): respaldo y huellas financieras, migración aditiva 031, configuración privada, baseline explícito y verificación de cron a las 07:00 America/Santiago. La recarga del servidor no ejecuta una importación al arrancar.
 
-En **Cuenta Corriente**, el dueño verá el panel Fintoc. Un estado preparado solo acredita la configuración local; la primera consulta debe confirmar que el proveedor permite realmente leer la cuenta. Elegir un mes y usar **Consultar movimientos con Fintoc**. Verificar identidad de la cuenta enmascarada, moneda CLP, fechas, cargos y abonos frente a una cartola conocida.
+En **Cuenta Corriente**, el dueño conserva el panel Fintoc y su consulta manual por mes. El preview muestra la cuenta enmascarada y movimientos confirmados CLP. El estado diario y los pendientes se consultan en la base local, sin disparar nuevas peticiones bancarias.
 
-La previsualización no se guarda en la base ni en la caché offline. No existe en esta entrega un botón para aplicar o importar esos movimientos. El saldo e historial registrados previamente siguen siendo la referencia de la web.
+La previsualización no se guarda en la base ni en la caché offline. No existe un botón público para aplicar o importar sus movimientos. El motor interno de Epic18 conserva referencias en tablas separadas y añade únicamente novedades inequívocas posteriores al corte. Coincidencias ambiguas, correcciones, reversiones y referencias eliminadas permanecen en revisión; nunca reescribe ni recrea silenciosamente un gasto existente.
 
 La fecha de consulta y la fecha de actualización bancaria son distintas. Si la última fecha bancaria falta o es antigua, no presentar la cuenta como actualizada hoy. Leer la API puede devolver información previamente recogida por Fintoc.
 
 ## 5. Fallos y desconexión
 
-- Si falta configuración o confirmación de gratuidad, conservar la conexión pendiente y no hacer consultas externas.
+- Si falta configuración o alguna bandera requerida, no hacer consultas externas. El requisito de gratuidad del alcance actual ya está resuelto.
 - Ante autenticación vencida o solicitud de reconexión, el titular debe resolverla mediante el flujo oficial. No reintentar credenciales bancarias ni eludir MFA.
 - Ante HTTP `402`, detener la evaluación y revisar las condiciones con Fintoc. No contratar, cambiar de plan ni activar pagos para resolverlo.
 - Ante un lote incompleto, límite o error, no interpretar el resultado como una cartola completa ni importar un subconjunto.
 - Para desactivar el conector, volver `FINTOC_ENABLED=false` y aplicar la recarga operativa. La revocación del acceso bancario se gestiona en Fintoc; desactivar nuestra aplicación no debe confundirse con revocar el vínculo del proveedor.
 
-## 6. Qué falta para sincronización diaria
+## 6. Transición desde Epic17 y estado del despliegue
 
-Esta entrega realiza consultas manuales de solo lectura. No incorpora cron, refrescos bajo demanda ni inserciones automáticas. La frecuencia real del banco debe estar confirmada por Fintoc para la modalidad habilitada.
+**Histórico de Epic17:** la entrega original solo realizaba consultas manuales, sin cron ni persistencia. Antes de confirmar las condiciones se mantuvieron las banderas deshabilitadas; ese estado anterior y sus verificaciones se conservan en el [plan Epic17](fintoc-readonly-plan.md).
 
-Antes de una sincronización diaria se requiere el diseño CSYNC: conciliación inicial contra lo ya importado, identidad externa estable, tratamiento de ambigüedades, fechas y saldo, reintentos y actualización bancaria verificable. Ningún paso debe sobrescribir los gastos o clasificaciones históricos. Ver [propuesta de sincronización](../proposals/checking-daily-sync.md).
+**Actualización Epic18:** el diseño y la implementación de conciliación, multiplicidad, bloqueos, rollback, estado diario y pendientes ya cuentan con pruebas. El despliegue productivo está próximo; no se declara aquí ejecutado. Su evidencia y resultado final corresponden al [contrato](fintoc-daily-sync-contract.md) y [plan Epic18](fintoc-daily-sync-plan.md), que sustituyen los criterios provisionales CSYNC para esta entrega.

@@ -3,6 +3,7 @@ const { auth } = require('../middleware/auth');
 const { resolveSpace } = require('../middleware/resolveSpace');
 const { requireOwner } = require('../middleware/requirePermission');
 const { getStatus, preview, requireConfiguredOwner } = require('../controllers/fintocReadOnlyController');
+const { getDailyStatus, getReview } = require('../controllers/fintocDailyController');
 
 const router = express.Router();
 
@@ -21,6 +22,8 @@ router.use((req, res, next) => {
 });
 router.get('/status', getStatus);
 router.get('/preview', preview);
+router.get('/daily-status', getDailyStatus);
+router.get('/review', getReview);
 router.use((req, res) => res.status(404).json({ error: 'Consulta bancaria no disponible.', code: 'FINTOC_NOT_FOUND' }));
 
 module.exports = router;

@@ -105,8 +105,7 @@ function normalizeMovement(row, selectedPeriod, seen) {
   if (date < selectedPeriod.since || date > selectedPeriod.until) throw invalid();
   const description = text(row.description, 2000);
   seen.add(row.id);
-  if (row.status !== 'confirmed' || row.pending) return null;
-  return { externalId: row.id, date, description, type: row.amount < 0 ? 'cargo' : 'abono', amount: String(Math.abs(row.amount)), status: 'confirmed' };
+  return { externalId: row.id, date, description, type: row.amount < 0 ? 'cargo' : 'abono', amount: String(Math.abs(row.amount)), status: row.status, pending: row.pending };
 }
 
 function header(headers, name) {
@@ -198,7 +197,7 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
     return { state, provider: 'fintoc', mode, readOnly: true, writesEnabled: false, message: messages[state] };
   }
 
-  async function preview(actorId, query) {
+  async function readPeriod(actorId, query, confirmedOnly) {
     assertOwner(actorId);
     const selectedPeriod = period(query);
     const config = configuration(env);
@@ -231,10 +230,9 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
       const linkResponse = await get(`/v1/links/${encodeURIComponent(config.linkToken)}`);
       const validatedAccount = accountFromLink(linkResponse.data, config);
       const path = `/v1/accounts/${encodeURIComponent(config.accountId)}/movements`;
-      const params = { link_token: config.linkToken, since: selectedPeriod.since, until: selectedPeriod.until, confirmed_only: true, per_page: PAGE_SIZE };
+      const params = { link_token: config.linkToken, since: selectedPeriod.since, until: selectedPeriod.until, confirmed_only: confirmedOnly, per_page: PAGE_SIZE };
       const seen = new Set();
       const items = [];
-      let excludedNonConfirmed = 0;
       let announcedTotal = null;
       let announcedLast = null;
       let page = 1;
@@ -254,9 +252,7 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
           announcedTotal = meta.total;
         }
         for (const row of pageResponse.data) {
-          const normalized = normalizeMovement(row, selectedPeriod, seen);
-          if (normalized) items.push(normalized);
-          else excludedNonConfirmed += 1;
+          items.push(normalizeMovement(row, selectedPeriod, seen));
         }
         ensureTime();
         if (announcedTotal !== null && seen.size > announcedTotal) throw incomplete();
@@ -280,7 +276,7 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
         provider: 'fintoc', mode: config.mode, readOnly: true, imported: false,
         period: selectedPeriod, account: validatedAccount.publicAccount,
         queriedAt: now().toISOString(), bankUpdatedAt: validatedAccount.bankUpdatedAt,
-        items, total: items.length, coverage: { complete: true, excludedNonConfirmed },
+        items, total: items.length, coverage: { complete: true, excludedNonConfirmed: 0 },
       };
     } finally {
       clearTimeout(timer);
@@ -288,7 +284,22 @@ function createFintocReadOnlyService({ env = process.env, transport = axios, now
     }
   }
 
-  return { getStatus, preview, assertOwner };
+  async function readSnapshot(actorId, query) {
+    return readPeriod(actorId, query, false);
+  }
+
+  async function preview(actorId, query) {
+    const snapshot = await readPeriod(actorId, query, true);
+    const confirmed = snapshot.items.filter((item) => item.status === 'confirmed' && !item.pending);
+    return {
+      ...snapshot,
+      items: confirmed.map(({ pending, ...item }) => item),
+      total: confirmed.length,
+      coverage: { complete: true, excludedNonConfirmed: snapshot.items.length - confirmed.length },
+    };
+  }
+
+  return { getStatus, preview, readSnapshot, assertOwner };
 }
 
 module.exports = { createFintocReadOnlyService, FintocReadOnlyError, ...createFintocReadOnlyService() };

@@ -1,0 +1,388 @@
+{
+  "data": "exclusively fictitious",
+  "build": "finanzas-fintoc-daily-final",
+  "realDatabaseAccess": false,
+  "apiMode": "explicit GET fixtures only; all other API requests and all external origins blocked",
+  "cases": [
+    {
+      "name": "mobile-daily-review-light-375",
+      "width": 375,
+      "height": 1100,
+      "mode": "light",
+      "clientWidth": 333,
+      "scrollWidth": 333,
+      "panelWidth": 333,
+      "pageWidth": 375,
+      "viewportWidth": 375,
+      "pageHeight": 1536,
+      "items": [
+        {
+          "width": 333,
+          "clientWidth": 331,
+          "scrollWidth": 331
+        },
+        {
+          "width": 333,
+          "clientWidth": 331,
+          "scrollWidth": 331
+        }
+      ],
+      "jsErrors": [],
+      "consoleErrors": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Error durante el registro del Service Worker: TypeError: Cannot read properties of undefined (reading 'waiting')\n    at http://127.0.0.1:3105/static/js/main.74c22675.js:2:556870",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "consoleErrorContext": "Blocked external font/Google sign-in resources and disabled service worker in the fixture-only browser; no JavaScript page errors.",
+      "unexpectedApi": [],
+      "writes": [],
+      "externalRequestsBlocked": [
+        {
+          "origin": "https://fonts.googleapis.com",
+          "method": "GET"
+        },
+        {
+          "origin": "https://accounts.google.com",
+          "method": "GET"
+        }
+      ],
+      "loadWaits": [
+        {
+          "stage": "initial navigation",
+          "networkIdle": false
+        },
+        {
+          "stage": "review visible",
+          "networkIdle": false
+        }
+      ],
+      "unresolvedRequests": [
+        {
+          "path": "/service-worker.js",
+          "origin": "http://127.0.0.1:3105"
+        }
+      ],
+      "realBankRequests": 0,
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/daily-status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/global-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "10"
+          }
+        },
+        {
+          "path": "/api/categories",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/review",
+          "method": "GET",
+          "params": {
+            "limit": "20",
+            "offset": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mobile-daily-review-dark-375",
+      "width": 375,
+      "height": 1100,
+      "mode": "dark",
+      "clientWidth": 333,
+      "scrollWidth": 333,
+      "panelWidth": 333,
+      "pageWidth": 375,
+      "viewportWidth": 375,
+      "pageHeight": 1536,
+      "items": [
+        {
+          "width": 333,
+          "clientWidth": 331,
+          "scrollWidth": 331
+        },
+        {
+          "width": 333,
+          "clientWidth": 331,
+          "scrollWidth": 331
+        }
+      ],
+      "jsErrors": [],
+      "consoleErrors": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Error durante el registro del Service Worker: TypeError: Cannot read properties of undefined (reading 'waiting')\n    at http://127.0.0.1:3105/static/js/main.74c22675.js:2:556870",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "consoleErrorContext": "Blocked external font/Google sign-in resources and disabled service worker in the fixture-only browser; no JavaScript page errors.",
+      "unexpectedApi": [],
+      "writes": [],
+      "externalRequestsBlocked": [
+        {
+          "origin": "https://fonts.googleapis.com",
+          "method": "GET"
+        },
+        {
+          "origin": "https://accounts.google.com",
+          "method": "GET"
+        }
+      ],
+      "loadWaits": [
+        {
+          "stage": "initial navigation",
+          "networkIdle": false
+        },
+        {
+          "stage": "review visible",
+          "networkIdle": false
+        }
+      ],
+      "unresolvedRequests": [
+        {
+          "path": "/service-worker.js",
+          "origin": "http://127.0.0.1:3105"
+        }
+      ],
+      "realBankRequests": 0,
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/daily-status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/global-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "10"
+          }
+        },
+        {
+          "path": "/api/categories",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/review",
+          "method": "GET",
+          "params": {
+            "limit": "20",
+            "offset": "0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "desktop-daily-review-light-1440",
+      "width": 1440,
+      "height": 1100,
+      "mode": "light",
+      "clientWidth": 1174,
+      "scrollWidth": 1174,
+      "panelWidth": 1174,
+      "pageWidth": 1440,
+      "viewportWidth": 1440,
+      "pageHeight": 1164,
+      "items": [
+        {
+          "width": 1174,
+          "clientWidth": 1172,
+          "scrollWidth": 1172
+        },
+        {
+          "width": 1174,
+          "clientWidth": 1172,
+          "scrollWidth": 1172
+        }
+      ],
+      "jsErrors": [],
+      "consoleErrors": [
+        "Failed to load resource: net::ERR_FAILED",
+        "Error durante el registro del Service Worker: TypeError: Cannot read properties of undefined (reading 'waiting')\n    at http://127.0.0.1:3105/static/js/main.74c22675.js:2:556870",
+        "Failed to load resource: net::ERR_FAILED"
+      ],
+      "consoleErrorContext": "Blocked external font/Google sign-in resources and disabled service worker in the fixture-only browser; no JavaScript page errors.",
+      "unexpectedApi": [],
+      "writes": [],
+      "externalRequestsBlocked": [
+        {
+          "origin": "https://fonts.googleapis.com",
+          "method": "GET"
+        },
+        {
+          "origin": "https://accounts.google.com",
+          "method": "GET"
+        }
+      ],
+      "loadWaits": [
+        {
+          "stage": "initial navigation",
+          "networkIdle": false
+        },
+        {
+          "stage": "review visible",
+          "networkIdle": false
+        }
+      ],
+      "unresolvedRequests": [
+        {
+          "path": "/service-worker.js",
+          "origin": "http://127.0.0.1:3105"
+        }
+      ],
+      "realBankRequests": 0,
+      "requests": [
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/auth/profile",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/memberships",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/space/members",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/daily-status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/status",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/global-balance",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking",
+          "method": "GET",
+          "params": {
+            "year": "2026",
+            "month": "10"
+          }
+        },
+        {
+          "path": "/api/categories",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/suspicious/count",
+          "method": "GET",
+          "params": {}
+        },
+        {
+          "path": "/api/checking/fintoc/review",
+          "method": "GET",
+          "params": {
+            "limit": "20",
+            "offset": "0"
+          }
+        }
+      ]
+    }
+  ],
+  "visualReview": {
+    "result": "pass",
+    "reviewed": [
+      "mobile-daily-review-light-375.png",
+      "mobile-daily-review-dark-375.png",
+      "desktop-daily-review-light-1440.png"
+    ],
+    "findings": "Two fictitious pending movements remain readable in a vertical list. Exact CLP amounts, dates, bank status, review reasons, candidate counts, daily schedule, coverage and current credit-card sync notice are visible. No clipping or horizontal page overflow in any captured viewport.",
+    "sourceChangesRequired": false,
+    "fixtureWarnings": "External font/Google sign-in requests are blocked and service workers are disabled. Their console diagnostics are recorded in each case; no JavaScript page errors or pending API requests occurred."
+  }
+}
