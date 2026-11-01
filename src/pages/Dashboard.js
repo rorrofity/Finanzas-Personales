@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Container,
-  FormControl, Grid, InputLabel, NativeSelect, Skeleton, Stack, Typography,
+  FormControl, InputLabel, Select, Skeleton, Stack, Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Link as RouterLink } from 'react-router-dom';
@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [retry, setRetry] = useState(0);
   const [selection, setSelection] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [overviewResult, setOverviewResult] = useState(null);
   const [overviewError, setOverviewError] = useState(false);
   const ownerId = activeSpace?.ownerId || user?.id;
@@ -70,35 +71,38 @@ export default function Dashboard() {
   const report = result?.data;
   const overview = overviewResult?.data;
   return (
-    <Container maxWidth="lg" sx={{ py: { xs: 1.5, sm: 3 }, minWidth: 0 }}>
-      <Stack spacing={3} sx={{ minWidth: 0 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', md: 'flex-start' }, flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-          <Box><Typography component="h1" variant="h5" fontWeight={700}>Evolución de gastos</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>Tus categorías, mes a mes. Importes de movimientos ya registrados.</Typography></Box>
-          <Box sx={{ minWidth: 0 }}><MonthPicker /><SyncButton size="small" variant="outlined" /></Box>
+    <Container maxWidth="lg" sx={{ py: { xs: 1.5, md: 3 }, minWidth: 0 }}>
+      <Stack spacing={{ xs: 2, md: 3 }} sx={{ minWidth: 0 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+          <Box sx={{ minWidth: 0 }}><Typography component="h1" variant="h5" fontWeight={700}>Evolución de gastos</Typography><Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, display: { xs: 'none', md: 'block' } }}>Tus categorías, mes a mes.</Typography></Box>
+          <Box sx={{ display: { xs: 'none', md: 'block' }, flexShrink: 0 }}><SyncButton size="small" variant="outlined" /></Box>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'flex-end' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
-          <FormControl variant="outlined" size="small" sx={{ minWidth: { xs: 0, sm: 150 } }}>
-            <InputLabel htmlFor="expense-window" shrink>Ventana</InputLabel>
-            <NativeSelect disableUnderline value={months} onChange={(event) => setMonths(Number(event.target.value))} inputProps={{ id: 'expense-window', 'aria-label': 'Ventana' }} sx={{ px: 1.5, pt: 1 }}>
-              <option value={3}>3 meses</option><option value={6}>6 meses</option><option value={12}>12 meses</option>
-            </NativeSelect>
-          </FormControl>
-          <FormControl variant="outlined" size="small" sx={{ minWidth: { xs: 0, sm: 230 }, maxWidth: '100%' }}>
-            <InputLabel htmlFor="expense-source" shrink>Fuente</InputLabel>
-            <NativeSelect disableUnderline value={source} onChange={(event) => setSource(event.target.value)} inputProps={{ id: 'expense-source', 'aria-label': 'Fuente' }} sx={{ px: 1.5, pt: 1 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr) 96px', md: 'minmax(260px, 1fr) minmax(220px, 260px) 140px' }, gap: { xs: 1.25, md: 2 }, alignItems: 'center' }}>
+          <Box sx={{ gridColumn: { xs: '1 / -1', md: 'auto' }, minWidth: 0, '& > .MuiBox-root': { mb: 0 }, '& > .MuiBox-root > .MuiTypography-root': { display: 'none' } }}><MonthPicker /></Box>
+          <FormControl variant="outlined" size="small" sx={{ minWidth: 0 }}>
+            <InputLabel htmlFor="expense-source">Fuente</InputLabel>
+            <Select native value={source} label="Fuente" onChange={(event) => setSource(event.target.value)} inputProps={{ id: 'expense-source', 'aria-label': 'Fuente' }} sx={{ minHeight: 44, '& select': { pl: 1.25, pr: '24px !important' } }}>
               {Object.entries(SOURCES).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
-            </NativeSelect>
+            </Select>
           </FormControl>
-          <Typography variant="body2" color="text.secondary">Base temporal: <strong>Facturación</strong></Typography>
+          <FormControl variant="outlined" size="small" sx={{ minWidth: 0 }}>
+            <InputLabel htmlFor="expense-window">Ventana</InputLabel>
+            <Select native value={months} label="Ventana" onChange={(event) => setMonths(Number(event.target.value))} inputProps={{ id: 'expense-window', 'aria-label': 'Ventana' }} sx={{ minHeight: 44, '& select': { pl: 1.25, pr: '24px !important' } }}>
+              <option value={3}>3 meses</option><option value={6}>6 meses</option><option value={12}>12 meses</option>
+            </Select>
+          </FormControl>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="caption" color="text.secondary">Base temporal: <strong>Facturación</strong></Typography>
+          <Box sx={{ display: { xs: 'block', md: 'none' }, '& .MuiButton-root': { minWidth: 0 } }}><SyncButton size="small" variant="outlined" /></Box>
         </Box>
 
         {error && <Alert severity="error" action={<Button color="inherit" onClick={() => setRetry((value) => value + 1)}>Reintentar</Button>}>{error}</Alert>}
-        {loading && <Box aria-label="Cargando evolución de gastos" aria-busy="true"><Grid container spacing={2}>{[0, 1, 2].map((key) => <Grid item xs={12} sm={4} key={key}><Skeleton height={70} /></Grid>)}</Grid><Skeleton variant="rounded" height={260} sx={{ mt: 2 }} /><Skeleton variant="rounded" height={220} sx={{ mt: 2 }} /></Box>}
+        {loading && <Box aria-label="Cargando evolución de gastos" aria-busy="true"><Skeleton variant="rounded" height={140} /><Skeleton variant="rounded" height={80} sx={{ mt: 2 }} /><Skeleton variant="rounded" height={220} sx={{ mt: 2 }} /></Box>}
         {!loading && report && <>
           {result.origin === 'cache' && <Alert severity="info">Mostrando una consulta guardada del {new Date(result.cachedAt).toLocaleString('es-CL')}. {isOffline ? 'Sin conexión.' : 'No se pudo actualizar.'}</Alert>}
-          <Typography variant="caption" color="text.secondary">Consultado: {new Date(report.generatedAt || result.cachedAt).toLocaleString('es-CL')}</Typography>
-          <ExpenseExplorer report={report} onOpenCell={(category, selectedMonth) => setSelection({ category, month: selectedMonth })} />
+          <ExpenseExplorer report={report} selectedCategoryId={selectedCategoryId} onSelectedCategoryChange={setSelectedCategoryId} onOpenCell={(category, selectedMonth) => setSelection({ category, month: selectedMonth })} />
         </>}
 
         <Box sx={{ borderTop: '1px solid', borderTopColor: 'divider', pt: 2 }}>

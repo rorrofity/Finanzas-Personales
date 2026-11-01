@@ -738,3 +738,11 @@ Los requisitos normativos son **DCE-01–21** de [la propuesta aceptada](proposa
 **Enmienda a Req12.4/12.5:** la matriz completa categoría×mes y la tendencia seleccionable pasan a ser el contenido principal. Reemplazan la prioridad visual del Top5 y las pestañas, conservando consulta, detalle, permisos, estados vacíos y adaptación móvil. Las pruebas se actualizan para verificar esa experiencia y ampliar su cobertura; no se debilitan.
 
 El período se basa en facturación persistida. Ventanas3/6/12 terminan en el mes seleccionado. Categorías conservan su identidad, todas son consultables, los montos permanecen exactos y el detalle usa la misma selección de movimientos. Se distinguen fuentes, cobertura desconocida y proyecciones. Los endpoints nuevos son exclusivamente GET; contratos previos preservados. El despliegue se realiza en el servidor del proyecto, sin migraciones ni escrituras financieras.
+
+## 12. Epic16 — Apariencia y lectura móvil
+
+**Estado:** autorizada para implementación el 2026-10-31. Requisitos [AP-01–05 y MOB-01–09](implementation/appearance-mobile-contract.md), con [plan y evidencia TDD](implementation/appearance-mobile-plan.md).
+
+El usuario elige Claro,Oscuro oAutomático por dispositivo sin base de datos. En menos de 900 px, la lista de categorías e historial mensual vertical reemplazan la matriz lateral; escritorio conserva tabla completa. Se mantienen importes exactos,fuentes, períodos, detalle, caché, offline y permisos. Esta enmienda refuerza DCE-18: móvil no requiere desplazamiento horizontal dentro ni fuera de la sección de categorías.
+
+La posible sincronización diaria de cuenta corriente permanece como [propuesta CSYNC](proposals/checking-daily-sync.md): exige un acceso habilitable para persona natural, costo cero y autorización de la fuente. No forma parte de la implementación o del despliegue de apariencia.

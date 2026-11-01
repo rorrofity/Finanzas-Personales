@@ -13,6 +13,7 @@ Aplicación web (PWA) para gestión de finanzas personales con React, Node.js, E
 - 🔐 **Autenticación** - Login local + Google OAuth
 - 💳 **Transacciones** - Gestión de gastos/ingresos con categorías y períodos de facturación
 - 📊 **Dashboard** - Evolución mensual por categoría, matriz de importes, filtros por fuente y detalle de cada mes
+- 🌓 **Apariencia y móvil** - Modo claro, oscuro o automático; categorías e historial vertical en el teléfono, sin tabla lateral
 - 📥 **Importación** - CSV/Excel desde bancos con detección de duplicados
 - 🔁 **Compras en Cuotas** - Manejo de cuotas con proyección automática
 - 🌍 **Transacciones Internacionales** - Compras en USD con conversión a CLP
@@ -62,6 +63,8 @@ Abre: http://localhost:3000
 - **[docs/tasks.md](./docs/tasks.md)** - Tareas de implementación TDD (RED→GREEN→VERIFY)
 - **[Evolución de gastos: especificación y contrato](./docs/implementation/dashboard-category-evolution-contract.md)** - Períodos de facturación, matriz y consultas de solo lectura
 - **[Evolución de gastos: plan y pruebas](./docs/implementation/dashboard-category-evolution-plan.md)** - Evidencia SDD/TDD y despliegue sin alterar registros
+- **[Apariencia y lectura móvil](./docs/implementation/appearance-mobile-contract.md)** - Modos visuales y categorías legibles sin desplazamiento lateral
+- **[Propuesta de sincronización de cuenta corriente](./docs/proposals/checking-daily-sync.md)** - Alternativas para persona natural y condición de costo cero; conexión aún no habilitada
 
 ### Configuración
 - **[SETUP.md](./SETUP.md)** - Guía completa de configuración local y producción

@@ -1,6 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { installDashboardFixtures, makeEvolution, clp } = require('./helpers/expenseFixtures');
+const { narrow, categorySurface, openHistory, trendView, categoriesView } = require('./helpers/expenseInteraction');
 
 /**
  * Epic12 guarantees retained under DCE's accepted amendment of Req12.4/12.5:
@@ -14,7 +15,8 @@ test.describe('Dashboard — garantías de Epic12 con evolución DCE', () => {
     await expect(page.getByTestId('expense-current-total')).toContainText(clp(makeEvolution().summary.currentTotal));
     await expect(page.getByText('Disponible hoy', { exact: true })).toBeVisible();
     await expect(page.getByText(/1\.031\.242/)).toBeVisible();
-    await expect(page.getByText('Variación frente al mes anterior', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('expense-summary')).toContainText(clp(makeEvolution().summary.delta));
+    await expect(page.getByTestId('expense-summary')).toContainText(makeEvolution().months.at(-2).label);
     state.verify();
   });
 
@@ -34,6 +36,7 @@ test.describe('Dashboard — garantías de Epic12 con evolución DCE', () => {
     const state = await installDashboardFixtures(page);
     await page.goto('/');
     const label = makeEvolution().months.at(-1).label;
+    await openHistory(page, 'Cuentas');
     await page.getByRole('button', { name: `Ver movimientos de Cuentas en ${label}`, exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Cuentas', exact: true })).toBeVisible();
     await expect(page.getByText('Movimiento ficticio A', { exact: true })).toBeVisible();
@@ -44,12 +47,14 @@ test.describe('Dashboard — garantías de Epic12 con evolución DCE', () => {
   test('12.5 enmendado: selección cambia la serie sin ocultar la matriz', async ({ page }) => {
     const state = await installDashboardFixtures(page);
     await page.goto('/');
+    await categorySurface(page);
+    await trendView(page);
     const select = page.getByRole('combobox', { name: 'Categoría', exact: true });
     await select.selectOption({ label: 'Cuentas' });
     await expect(page.getByTestId('expense-trend')).toHaveAccessibleName('Tendencia de Cuentas');
     await select.selectOption({ label: 'Compras casa' });
     await expect(page.getByTestId('expense-trend')).toHaveAccessibleName('Tendencia de Compras casa');
-    await expect(page.getByRole('table', { name: 'Gastos por categoría y mes' })).toBeVisible();
+    await categoriesView(page);
     state.verify();
   });
 

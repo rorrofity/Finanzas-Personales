@@ -1,0 +1,80 @@
+{
+  "fictitiousData": true,
+  "build": "/private/tmp/finanzas-appearance-mobile-final",
+  "browser": "Chromium",
+  "physicalDevice": false,
+  "apiIntercepted": true,
+  "databaseConnected": false,
+  "viewports": [
+    {
+      "width": 375,
+      "scrollWidth": 375,
+      "bodyColor": "rgb(248, 250, 252)",
+      "themeColor": "#F8FAFC",
+      "sourceSelectionVerified": true,
+      "centsPreserved": true,
+      "list": {
+        "scrollWidth": 327,
+        "clientWidth": 327,
+        "rows": 14
+      },
+      "history": {
+        "scrollWidth": 325,
+        "clientWidth": 325,
+        "monthButtons": 6
+      },
+      "detail": {
+        "background": "rgb(255, 255, 255)",
+        "color": "rgb(30, 41, 59)",
+        "scrollWidth": 375,
+        "clientWidth": 375
+      },
+      "mode": "light",
+      "writes": 0,
+      "javascriptErrors": 0,
+      "unexpectedApi": 0
+    },
+    {
+      "width": 375,
+      "scrollWidth": 375,
+      "bodyColor": "rgb(11, 18, 32)",
+      "themeColor": "#0B1220",
+      "sourceSelectionVerified": true,
+      "centsPreserved": true,
+      "list": {
+        "scrollWidth": 327,
+        "clientWidth": 327,
+        "rows": 14
+      },
+      "history": {
+        "scrollWidth": 325,
+        "clientWidth": 325,
+        "monthButtons": 6
+      },
+      "detail": {
+        "background": "rgb(18, 29, 48)",
+        "color": "rgb(232, 239, 249)",
+        "scrollWidth": 375,
+        "clientWidth": 375
+      },
+      "mode": "dark",
+      "writes": 0,
+      "javascriptErrors": 0,
+      "unexpectedApi": 0
+    },
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "bodyColor": "rgb(11, 18, 32)",
+      "themeColor": "#0B1220",
+      "sourceSelectionVerified": true,
+      "centsPreserved": true,
+      "desktopMatrix": true,
+      "mode": "dark",
+      "writes": 0,
+      "javascriptErrors": 0,
+      "unexpectedApi": 0
+    }
+  ],
+  "defects": []
+}

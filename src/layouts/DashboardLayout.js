@@ -33,6 +33,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSpace } from '../contexts/SpaceContext';
 import OfflineBanner from '../components/OfflineBanner';
 import SpaceSwitcher from '../components/SpaceSwitcher';
+import AppearanceModeControl from '../components/AppearanceModeControl';
 import { getSuspiciousCount } from '../services/suspiciousService';
 
 const drawerWidth = 200;
@@ -143,13 +144,14 @@ const DashboardLayout = () => {
             aria-label="toggle drawer"
             onClick={handleDrawerToggle}
             edge="start"
-            sx={{ marginRight: 2 }}
+            sx={{ marginRight: { xs: 1, sm: 2 } }}
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, minWidth: 0 }}>
             Finanzas Personales
           </Typography>
+          <AppearanceModeControl compact />
           <SpaceSwitcher />
           <IconButton onClick={handleProfileMenu} sx={{ padding: 0 }}>
             <Avatar

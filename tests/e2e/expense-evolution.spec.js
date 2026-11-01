@@ -1,12 +1,13 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
 const { CATEGORIES, makeEvolution, installDashboardFixtures, clp } = require('./helpers/expenseFixtures');
+const { narrow, categorySurface, openHistory, trendView, categoriesView, dataDetails } = require('./helpers/expenseInteraction');
 
 async function openDashboard(page, options = {}) {
   const state = await installDashboardFixtures(page, options);
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Evolución de gastos', exact: true })).toBeVisible();
-  await expect(page.getByRole('table', { name: 'Gastos por categoría y mes' })).toBeVisible();
+  await categorySurface(page);
   return state;
 }
 async function selectMUI(page, name, option) {
@@ -22,22 +23,30 @@ async function selectMUI(page, name, option) {
 test.describe('DCE — evolución de gastos con fixtures sin backend', () => {
   test('DCE-01/07/08 ancla la matriz al mes seleccionado y conserva todas las categorías', async ({ page }) => {
     const state = await openDashboard(page, { period: '2025-02' });
-    const table = page.getByRole('table', { name: 'Gastos por categoría y mes' });
     const fixture = makeEvolution({ endYear: 2025, endMonth: 2 });
-    for (const month of fixture.months) await expect(table.getByRole('columnheader', { name: new RegExp('^' + month.label.replace('.', '\\.')) })).toBeVisible();
-    for (const category of CATEGORIES) await expect(table.getByRole('button', { name: `Ver tendencia de ${category.name}`, exact: true })).toBeVisible();
+    if (narrow(page)) {
+      for (const category of CATEGORIES) await expect(page.getByTestId(`expense-category-card-${category.id}`)).toContainText(category.name);
+      await openHistory(page, 'Cuentas');
+      for (const month of fixture.months) await expect(page.getByRole('button', { name: `Ver movimientos de Cuentas en ${month.label}`, exact: true })).toBeVisible();
+    } else {
+      const table = await categorySurface(page);
+      for (const month of fixture.months) await expect(table.getByRole('columnheader', { name: new RegExp('^' + month.label.replace('.', '\\.')) })).toBeVisible();
+      for (const category of CATEGORIES) await expect(table.getByRole('button', { name: `Ver tendencia de ${category.name}`, exact: true })).toBeVisible();
+    }
     expect(state.requests.find(r => r.path === '/api/dashboard/expense-evolution').params).toMatchObject({ endYear: '2025', endMonth: '2', months: '6', basis: 'billing', sources: 'tc_nacional' });
     state.verify();
   });
 
   test('DCE-01 ventana 3/6/12 cambia los meses y cruza el año correctamente', async ({ page }) => {
     const state = await openDashboard(page, { period: '2025-02' });
-    const table = page.getByRole('table', { name: 'Gastos por categoría y mes' });
     for (const length of [3, 12, 6]) {
       await selectMUI(page, 'Ventana', `${length} meses`);
       await expect.poll(() => state.requests.filter(r => r.path === '/api/dashboard/expense-evolution').at(-1)?.params.months).toBe(String(length));
       const fixture = makeEvolution({ endYear: 2025, endMonth: 2, months: length });
-      await expect(table.getByRole('columnheader', { name: new RegExp('^' + fixture.months[0].label.replace('.', '\\.')) })).toBeVisible();
+      if (narrow(page)) {
+        await openHistory(page, 'Cuentas');
+        await expect(page.getByRole('button', { name: `Ver movimientos de Cuentas en ${fixture.months[0].label}`, exact: true })).toBeVisible();
+      } else await expect(page.getByRole('columnheader', { name: new RegExp('^' + fixture.months[0].label.replace('.', '\\.')) })).toBeVisible();
     }
     state.verify();
   });
@@ -56,6 +65,7 @@ test.describe('DCE — evolución de gastos con fixtures sin backend', () => {
   test('DCE-09 celda de otro mes abre su detalle con fecha real y suma consistente', async ({ page }) => {
     const state = await openDashboard(page);
     const fixture = makeEvolution(), first = fixture.months[0];
+    await openHistory(page, 'Cuentas');
     await page.getByRole('button', { name: `Ver movimientos de Cuentas en ${first.label}`, exact: true }).click();
     const detail = page.getByTestId('expense-detail');
     await expect(detail).toBeVisible();
@@ -70,10 +80,13 @@ test.describe('DCE — evolución de gastos con fixtures sin backend', () => {
 
   test('DCE-09/18 categoría y celdas se operan por teclado', async ({ page }) => {
     const state = await openDashboard(page);
-    const category = page.getByRole('table', { name: 'Gastos por categoría y mes' }).getByRole('button', { name: 'Ver tendencia de Cuentas', exact: true });
+    const category = narrow(page)
+      ? page.getByRole('button', { name: 'Ver historial de Cuentas', exact: true })
+      : page.getByRole('button', { name: 'Ver tendencia de Cuentas', exact: true });
     await category.focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('combobox', { name: 'Categoría', exact: true })).toContainText('Cuentas');
+    if (narrow(page)) await expect(category).toHaveAttribute('aria-expanded', 'true');
+    else await expect(page.getByRole('combobox', { name: 'Categoría', exact: true })).toContainText('Cuentas');
     const label = makeEvolution().months[0].label;
     await page.getByRole('button', { name: `Ver movimientos de Cuentas en ${label}`, exact: true }).focus();
     await page.keyboard.press('Enter');
@@ -85,10 +98,13 @@ test.describe('DCE — evolución de gastos con fixtures sin backend', () => {
 
   test('DCE-03/10/12/19 declara cobertura, exclusiones y porcentaje sin base', async ({ page }) => {
     const state = await openDashboard(page, { exclusions: true, zeroBase: true });
+    await trendView(page);
     await selectMUI(page, 'Categoría', 'Cuentas');
+    await dataDetails(page);
     await expect(page.getByTestId('expense-coverage')).toContainText(/no verificada|desconocida/i);
     await expect(page.getByText(/sin período|período.*determinado/i)).toBeVisible();
     await expect(page.getByText(/conversión|CLP/i).filter({ hasText: /2/ })).toBeVisible();
+    await categoriesView(page);
     await expect(page.getByText(/Sin base previa/i).first()).toBeVisible();
     await expect(page.locator('body')).not.toContainText(/Infinity|NaN/);
     state.verify();
@@ -140,7 +156,8 @@ test.describe('DCE — evolución de gastos con fixtures sin backend', () => {
     await expect(value).toContainText(clp(makeEvolution({}, { huge: true }).summary.currentTotal));
     expect(await value.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(testInfo.project.use.viewport.width + 1);
-    await expect(page.getByRole('table', { name: 'Gastos por categoría y mes' }).getByRole('button', { name: `Ver tendencia de ${CATEGORIES[11].name}`, exact: true })).toBeVisible();
+    if (narrow(page)) await expect(page.getByTestId(`expense-category-card-${CATEGORIES[11].id}`)).toContainText(CATEGORIES[11].name);
+    else await expect(page.getByRole('table', { name: 'Gastos por categoría y mes' }).getByRole('button', { name: `Ver tendencia de ${CATEGORIES[11].name}`, exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`expense-evolution-${testInfo.project.name}.png`), fullPage: true });
     state.verify();
   });
@@ -157,6 +174,15 @@ test.describe('DCE — evolución de gastos con fixtures sin backend', () => {
 
   test('DCE-18 conserva encabezado y categoría visibles al desplazar la matriz', async ({ page }) => {
     const state = await openDashboard(page);
+    if (narrow(page)) {
+      await expect(page.getByRole('table', { name: 'Gastos por categoría y mes' })).toHaveCount(0);
+      const list = await categorySurface(page);
+      expect(await list.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      await openHistory(page, CATEGORIES[11].name);
+      await expect(page.getByTestId(`expense-category-history-${CATEGORIES[11].id}`)).toBeVisible();
+      state.verify();
+      return;
+    }
     const matrix = page.getByTestId('expense-matrix');
     expect(await matrix.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
     await matrix.evaluate(el => { el.scrollTop = el.scrollHeight; el.scrollLeft = el.scrollWidth; });

@@ -1,0 +1,119 @@
+# Propuesta — sincronización diaria de cuenta corriente
+
+**Estado:** investigación y propuesta; sin conexión bancaria, cuenta de proveedor, aceptación de términos, programación ni implementación.
+
+**Consulta:** 2026-10-31, America/Santiago. **Identificadores:** `CSYNC-*`, provisionales; no asignan una épica ni cambian Epic14 o Epic15.
+
+## 1. Necesidad y condiciones confirmadas
+
+La cuenta es **personal de Banco de Chile**. Hoy su cartola se descarga y se importa manualmente; ese flujo funciona y debe conservarse. El usuario no recibe por correo cartolas ni avisos de cargos/abonos. Aceptaría evaluar un proveedor externo si es factible, seguro y **sin costo adicional**. La solución debe permitir alta y uso directamente como **persona natural, sin exigir una empresa**. Esto expresa el requisito elegido, sin afirmar si el usuario dispone de una empresa.
+
+Objetivo: incorporar cargos, abonos y saldo con una actualización bancaria comprobable al menos una vez al día, sin tener que descargar y cargar el archivo manualmente. No modificar gastos, clasificaciones ni información bancaria histórica existente.
+
+**Conclusión a esta fecha:** existen conectores para Banco de Chile Personas, pero no se ha confirmado una contratación gratuita de producción que pueda abrir directamente una persona natural para este proyecto. La gratuidad publicada por Fintoc no acredita esa habilitación y su alta empresarial no es una alternativa aplicable a este diseño. La prioridad de evaluación es confirmar con Banco de Chile si ofrece acceso oficial gratuito para esta cuenta personal; como alternativa, evaluar descarga asistida desde el dispositivo propio, sin cuota de proveedor. Ninguna de estas vías se presenta como conexión ya habilitada ni como garantía de ejecución diaria desatendida ante MFA.
+
+## 2. Tres alternativas
+
+| Alternativa | Encaje con este caso | Costo y automatización | Recomendación |
+|---|---|---|---|
+| **A. Fuente bancaria mediante API de lectura** | El banco publica una API de consultas. Falta confirmar expresamente alta y uso productivo para una persona natural. Los agregadores revisados no aportan una opción gratuita personal habilitable confirmada | Una API puede permitir consulta diaria sin entrar al portal cada vez. No se verificó acceso de producción gratuito para este caso | Priorizar una consulta de disponibilidad al banco para esta cuenta personal, sin contratar ni conectar en esta entrega. Avanzar solo si se acredita acceso personal y costo cero |
+| **B. Cartola o avisos enviados por el banco** | Hoy no existe ese correo como fuente. Se puede consultar al banco si ofrece envío automático con frecuencia suficiente | Sin una cartola o fuente completa diaria, n8n no puede obtener movimientos que nunca recibe. Avisos aislados no demuestran saldo ni cobertura completa | No proponerlo como solución lista. Si el banco habilita una fuente completa, automatizar su ingesta puede reutilizar parte del flujo actual |
+| **C. Descarga asistida desde navegador del dispositivo propio y envío al servidor** | Reutiliza el Excel que ya se sabe importar. El usuario autentica su sesión bancaria y atiende MFA cuando se solicite | Sin cuota de proveedor, usando dispositivo e infraestructura existentes; requiere mantenimiento y disponibilidad del dispositivo. La caducidad de sesión, MFA, CAPTCHA o cambios del portal pueden impedir la ejecución desatendida | Alternativa exploratoria si no hay API personal gratuita habilitable. Un piloto debe demostrar descarga de solo lectura y reconocer cuándo requiere intervención; no prometer funcionamiento autónomo diario |
+
+Un horario diario no es una fuente de datos: es necesario resolver primero cómo obtener información bancaria completa y autorizada. Tampoco basta consultar diariamente la caché de un proveedor para afirmar que ese día se obtuvo información nueva del banco.
+
+## 3. Hallazgos de proveedores y costo
+
+### Fintoc: soporte de cuenta personal y alta de desarrollador son cosas distintas
+
+Su documentación de instituciones incluye **Banco de Chile Personas**, cuentas corrientes/vista y CLP/USD. El producto Connections describe actualizaciones varias veces al día y reconexión cuando la conexión queda desactualizada. Esto hace que el objetivo técnico sea plausible, sujeto al plan y a la disponibilidad bancaria. [Instituciones soportadas](https://docs.fintoc.com/guides/movements/overview-data-aggregation/products-and-institutions-movements), [Connections](https://www.fintoc.com/cl/producto/connections).
+
+Los términos actuales para desarrolladores publican, en la cláusula **2.3**, acceso gratuito hasta cinco cuentas bancarias de personas naturales; la obligación 5(a) lo reafirma. Se verificó en la URL canónica seleccionando **«Para desarrolladores → Términos y condiciones»**; el contenido inicial visible es de Payments y no contiene esa sección. El documento reconoce desarrolladores naturales o jurídicos. [Términos de Chile](https://www.fintoc.com/cl/legal/terminos).
+
+Sin embargo, las guías actuales de Movements exigen para producción RUT de empresa, cuenta bancaria de la empresa, correo corporativo y al menos seis meses de actividad; excluyen expresamente el alta de personas naturales, incluso con giro, y señalan que aplica a todos los productos. El quickstart distingue la prueba de la habilitación live. **Soportar una cuenta bancaria personal no equivale a admitir como desarrollador a su titular persona natural.** [Requisitos actuales y frecuencia según plan](https://docs.fintoc.com/guides/movements/overview-data-aggregation), [Quickstart y modo live](https://docs.fintoc.com/guides/movements/overview-data-aggregation/quickstart).
+
+Por ello, la gratuidad publicada no se presenta aquí como plan personal habilitable garantizado. Con los requisitos actuales de producción, **el alta empresarial de Fintoc se descarta para este diseño**, que debe funcionar sin exigir una empresa. Solo una modalidad de alta personal documentada y gratuita permitiría reconsiderarlo; no se ha verificado esa modalidad. La existencia de una cláusula de gratuidad no basta para prometer actualización bancaria diaria incluida ni ausencia de cargos adicionales.
+
+El flujo documentado usa Widget y tokens; nuestra aplicación no necesita almacenar la contraseña bancaria, pero el proveedor sí interviene en la conexión y procesa información financiera. No equivale a afirmar que los datos permanecen exclusivamente en el servidor personal. [Flujo de integración](https://docs.fintoc.com/guides/movements/integration-with-exchange-token).
+
+### Banco de Chile: API oficial publicada, habilitación personal no confirmada
+
+APIStore publica **Consultas → MovimientosySaldos**, con operaciones para obtener movimientos, resumen y período. Su descripción se orienta a software de gestión empresarial. No se pudo verificar una oferta contractual de producción para esta cuenta personal con costo cero. El registro gratuito en el portal y los límites del sandbox no prueban gratuidad o acceso productivo. Confirmar elegibilidad, autenticación, disponibilidad y tarifa directamente con el banco sería un paso de evaluación, sin contratar ni enviar credenciales en esta entrega. [Portal oficial](https://apistore.bancochile.cl/banco-chile/sandbox/), [Consultas](https://apistore.bancochile.cl/banco-chile/sandbox/product/883).
+
+### Otros conectores revisados
+
+- **Khipu:** documenta endpoints Banco de Chile Personas y un catálogo de instituciones para su flujo OAuth. Se verificó capacidad documentada, no una tarifa cero para un consumidor live personal; los términos de pagos no se extrapolan al precio de Open Finance. [Accounts Banco de Chile Personas](https://docs.khipu.com/en/apis/v1/cl/banking/personal/bancochile.cl/openapi/other/productsaccounts), [instituciones OAuth](https://docs.khipu.com/data-solutions/open-finance/oauth-institutions-list).
+- **CBank:** publica espacios personales y catálogo Banco de Chile Personas, pero su web informa **$19.990 CLP + IVA**, sin confirmar aquí periodicidad o condiciones particulares. Además declara que las conexiones reales son experimentales y no están certificadas para producción. No cumple la condición de costo cero para recomendarlo como solución de esta entrega. [Producto y precio](https://cbank.cl/), [documentación](https://cbank.cl/documentacion).
+
+No se encontraron pruebas oficiales suficientes para prometer un proveedor gratuito permanente de producción disponible directamente para este titular. Esto no demuestra que sea imposible obtener una excepción; significa que aún no está acreditada para decidir una integración.
+
+## 4. Sistema de Finanzas Abiertas: calendario relevante
+
+No debe suponerse que en 2026 ya exista una API bancaria obligatoria universal lista para una app personal. La CMF modificó la NCG 514 mediante **NCG 569, de 1 de junio de 2026**, y pospuso la entrada en vigor del sistema hasta julio de 2027, con implementación gradual. El sandbox ATENA se lanzó el 30 de septiembre de 2026 para pruebas previas. Esto es contexto de disponibilidad; no constituye una conexión bancaria ni garantiza gratuidad futura. [Comunicado CMF de modificación](https://www.cmfchile.cl/portal/prensa/625/w4-article-110881.html), [NCG 569](https://www.cmfchile.cl/portal/normativa/624/w4-article-111273.html), [lanzamiento ATENA](https://www.cmfchile.cl/portal/prensa/625/w4-article-113897.html).
+
+## 5. Encaje con el proyecto actual
+
+- `backend/controllers/checkingController.js#importFile` ya parsea fecha, descripción, cargo/abono y saldo desde Excel. Su importación llama `Checking.bulkImport` y después actualiza el saldo conocido. Reutilizar el formato de entrada es viable; invocar el importador actual sin validación no equivale a una sincronización bancaria robusta.
+- `Checking.bulkImport` omite coincidencias por fecha/monto/tipo/descripción normalizada. No persiste un identificador externo por movimiento ni maneja vinculación de fuentes o correcciones. Repeticiones legítimas idénticas y datos ya importados necesitan tratarse con multiplicidad y procedencia, no con una nueva deduplicación por parecido.
+- El scheduler existente programa TC mediante n8n a las 13:00 y 22:00, America/Santiago. `runSync` llama al webhook y registra resultados. Se puede reutilizar su patrón de orquestación y notificación, conservando flujos y permisos actuales; cuenta corriente requiere una fuente y ejecución independientes.
+- El saldo actual combina un saldo conocido con movimientos posteriores a su fecha. Un nuevo conector necesita definir la fecha/hora real del saldo y el alcance de la consulta, para evitar sumar de nuevo movimientos que ese saldo ya incluye.
+- La [constitución](../constitution.md) establece que los datos financieros no salen del servidor personal. Un agregador que recibe información bancaria exige revisar y aprobar una excepción expresa antes de construir su conexión. Esa decisión no se da por tomada en esta propuesta.
+
+## 6. Flujo propuesto, condicionado a elegir y habilitar fuente
+
+```text
+Fuente autorizada de lectura
+  → obtención de movimientos y saldo con fecha real
+  → normalización en servidor: cuenta, moneda, cargo/abono, fecha y referencia
+  → validación de páginas, cobertura y estado del refresco bancario
+  → identificación estable por proveedor + conexión + cuenta + movimiento
+  → vincular referencias ya verificadas, sin modificar el registro financiero
+  → insertar solo movimientos nuevos inequívocos, sin categoría automática
+  → guardar cursor, fecha de obtención, fecha bancaria y bitácora
+  → actualizar la consulta web y avisar solo si hay novedades o intervención
+```
+
+La primera conexión debe realizar una **previsualización de conciliación contra la cartola ya cargada**. Los movimientos históricos actuales no tienen ID del proveedor: no se puede prometer que el primer lote sea idempotente solo porque el proveedor sí entregue IDs. Las coincidencias ambiguas se revisan; no se duplican ni se descartan silenciosamente. Las referencias se guardan en metadatos separados, preservando IDs, categorías, notas y montos de los registros financieros existentes. No se activa la conciliación pendiente de Epic14 como efecto secundario.
+
+Después del corte inicial, usar cursor/paginación y ventana solapada configurable para llegadas tardías, con unicidad del ID externo y un bloqueo por conexión que evite carreras entre ejecución manual y diaria. Los reintentos no deben duplicar inserciones. El cursor solo avanza al completar todas las páginas y confirmar la operación.
+
+Cargar movimientos confirmados. Si un proveedor cambia monto/estado o revierte un movimiento previamente registrado, conservar el registro y su clasificación y mostrar una discrepancia; no reescribir ni borrar automáticamente el gasto. Fintoc documenta estados `confirmed`, `pending` y `reversed`; no confundir pendiente con gasto asentado. [Estados de movimientos](https://docs.fintoc.com/changelog/status-de-los-movimientos).
+
+Una futura programación podría consultar, por ejemplo, a las 07:00 y 19:00 America/Santiago, con reintentos limitados. Es una elección técnica propuesta, **no una programación creada**. La UI mostraría última consulta, última actualización bancaria confirmada, rango cubierto y estados «Al día», «Sin actualizar» o «Requiere reconectar». Un fallo de MFA o de banco requiere intervención visible, no saltarse una protección ni renovar indefinidamente intentos de acceso.
+
+Al elegir proveedor se debe fijar un único producto y versión de API, con su contrato de refresco documentado. No mezclar endpoints, frecuencias ni estados de Movements y Connections porque aparezcan en documentación comercial de la misma empresa.
+
+## 7. Requisitos SDD provisionales
+
+| ID | Criterio de aceptación propuesto |
+|---|---|
+| CSYNC-01 | Cuando se habilite una fuente, el dueño debe conocer proveedor, costo confirmado, alcance de lectura, información compartida y forma de desconexión. No habilitar pagos ni transferencias. |
+| CSYNC-02 | Mientras rigen los requisitos de persona natural y costo cero, ningún proceso debe exigir alta o cuenta empresarial, contratar un plan de pago ni agotar una prueba y continuar con cobro. |
+| CSYNC-03 | Si el proveedor procesa información bancaria fuera del servidor, debe explicitarse y aprobarse la excepción al principio de privacidad antes de conectar; esta propuesta no modifica la constitución. |
+| CSYNC-04 | Cuando se consulte diariamente, debe distinguirse consultar datos almacenados de completar un refresco de información en el banco; registrar las dos fechas. |
+| CSYNC-05 | Cuando llegue un movimiento nuevo confirmado, debe importarse a la cuenta y moneda correctas con identidad externa estable e idempotencia; no modificar categorías existentes. |
+| CSYNC-06 | Si el movimiento coincide potencialmente con una cartola ya cargada o existen varias coincidencias, debe preservarse la multiplicidad y solicitar conciliación; no deduplicar solo por fecha/monto/descripción. |
+| CSYNC-07 | Si una ejecución falla o se repite, no debe duplicar movimientos, avanzar el cursor incompleto ni anunciar la cuenta como actualizada. |
+| CSYNC-08 | Cuando el banco exija MFA, CAPTCHA o una renovación de sesión, debe detenerse la ejecución automática y mostrarse una acción del titular; no evadir la protección. |
+| CSYNC-09 | Cuando se actualice el saldo, deben conservarse procedencia y fecha/hora bancaria y evitar contabilizar otra vez los movimientos incluidos en ese saldo. |
+| CSYNC-10 | Mientras opere la sincronización, debe respetar espacio/propietario y permisos, cifrar secretos del conector, ocultarlos de logs y permitir detenerla sin alterar gastos históricos. |
+| CSYNC-11 | Si una fuente no demuestra cobertura completa, debe indicarse su limitación; no presentar avisos de correo o consultas fallidas como una cartola completa. |
+| CSYNC-12 | Si el proveedor corrige o revierte un movimiento existente, debe registrarse la discrepancia para revisión sin sobrescribir monto, fecha, notas o clasificación financiera. |
+| CSYNC-13 | Si transcurren 24 horas sin actualización bancaria confirmada, debe mostrarse que no se cumplió la frecuencia diaria, aunque las consultas al proveedor hayan respondido correctamente. |
+
+El conector necesita persistencia de identidad/cursor/ejecuciones que hoy no existe para CC. Su esquema y cualquier migración se especificarían y revisarían antes de implementarse. No se ha creado esa persistencia ni se ha ejecutado DDL/DML en esta investigación.
+
+## 8. TDD y piloto de aceptación
+
+1. **RED:** fixtures sintéticos de proveedor/cuenta/moneda, paginación, dos movimientos legítimos idénticos, reenvío del mismo ID, llegada tardía, referencia bancaria corregida y lotes parciales. Probar que categorías/notas/montos de registros previos permanecen idénticos.
+2. **GREEN:** adaptador y normalizador separados del importador; comparación inicial en solo lectura, metadatos independientes y transacción controlada para nuevos registros autorizados.
+3. **VERIFY:** API simulada y PostgreSQL efímero; no usar credenciales reales ni bases existentes. Verificar autenticación, bloqueo por conexión, reintentos, cursor, permisos, saldo, monedas y cambios de día en Santiago.
+4. **Piloto por aprobar:** conexión de solo lectura tras validar costo y consentimiento; primero previsualización sin insertar. Contrastar cargos, abonos, saldo y fechas con una cartola conocida. Tras aceptar el corte inicial, verificar varios días, incluido un fallo o reautenticación, antes de afirmar actualización diaria autónoma.
+
+## 9. Decisiones pendientes
+
+- ¿Banco de Chile ofrece habilitación API de producción para esta cuenta personal, con alta de persona natural y sin costo adicional, o entrega programada completa gratuita? Es la primera validación recomendada; no se verificó que así sea y no se ha contactado al banco.
+- Si no hay acceso personal gratuito confirmado, ¿se prefiere conservar el Excel manual o probar una descarga asistida desde el dispositivo propio, sin cuota de proveedor, con autenticación del titular y limitaciones explícitas?
+- ¿Se aprueba compartir datos con el proveedor y la correspondiente excepción de privacidad, o se mantiene todo el tratamiento bajo el servidor y dispositivo propios?
+
+**Trabajo realizado:** revisión de código y documentación pública. No se conectó una cuenta bancaria, no se introdujeron credenciales, no se contactó a terceros, no se programó un cron y no se modificaron datos o clasificaciones.

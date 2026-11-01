@@ -78,4 +78,16 @@ describe('Dashboard: selección coordinada del alcance (DCE-14/17)',()=>{
     expect(screen.getByText(/Consulta guardada de liquidez; no se pudo actualizar/)).toBeInTheDocument();
     expect(screen.getByText('$321')).toBeInTheDocument();
   });
+
+  test('conserva la categoría seleccionada al cambiar la ventana de comparación', async () => {
+    const data = report(500);
+    data.categories.push({ ...data.categories[0], id:'2', name:'Transporte' });
+    readExpenseReport.mockResolvedValue({ ...result(500), data });
+    renderPage();
+    const selector = await screen.findByRole('combobox', { name:'Categoría' });
+    fireEvent.change(selector, { target:{value:'2'} });
+    expect(screen.getByTestId('expense-trend')).toHaveAttribute('aria-label','Tendencia de Transporte');
+    fireEvent.change(screen.getByRole('combobox',{name:'Ventana'}),{target:{value:'3'}});
+    await waitFor(()=>expect(screen.getByTestId('expense-trend')).toHaveAttribute('aria-label','Tendencia de Transporte'));
+  });
 });

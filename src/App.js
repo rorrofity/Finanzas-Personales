@@ -1,6 +1,5 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import GlobalStyles from '@mui/material/GlobalStyles';
 import { Box, CircularProgress } from '@mui/material';
@@ -9,7 +8,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { PeriodProvider } from './contexts/PeriodContext';
 import { OfflineProvider } from './contexts/OfflineContext';
 import { SpaceProvider } from './contexts/SpaceContext';
-import theme from './theme';
+import { AppearanceProvider } from './contexts/AppearanceContext';
+import AppearanceModeControl from './components/AppearanceModeControl';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -45,10 +45,16 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
+const PublicAppearanceControl = () => {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) return null;
+  return <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1.5 }}><AppearanceModeControl /></Box>;
+};
+
 function App() {
   return (
     <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
-      <ThemeProvider theme={theme}>
+      <AppearanceProvider>
         <CssBaseline />
         {/* Safe-area iOS/Android en modo standalone (Req 9.11) */}
         <GlobalStyles
@@ -64,6 +70,7 @@ function App() {
         <UpdateBanner />
         <InstallPrompt />
         <AuthProvider>
+          <PublicAppearanceControl />
           <SpaceProvider>
           <PeriodProvider>
             <OfflineProvider>
@@ -97,7 +104,7 @@ function App() {
           </PeriodProvider>
           </SpaceProvider>
         </AuthProvider>
-      </ThemeProvider>
+      </AppearanceProvider>
     </GoogleOAuthProvider>
   );
 }
