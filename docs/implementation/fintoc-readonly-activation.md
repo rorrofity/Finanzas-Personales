@@ -1,6 +1,6 @@
 # Activación privada de Fintoc — cuenta propia
 
-**Estado al 2026-11-01:** el titular completó personalmente la vinculación Banco de Chile Individual en live y la configuración permanece privada en el servidor. Se confirmó la gratuidad publicada para hasta cinco cuentas personales en los términos canónicos de Chile y se realizó una primera lectura real exitosa, sin escrituras financieras. Epic18 tiene implementación y pruebas listas; su despliegue y activación diaria son el siguiente paso. El resultado definitivo se registra en el [plan Epic18](fintoc-daily-sync-plan.md), bajo el [contrato FDS-01–14](fintoc-daily-sync-contract.md).
+**Estado al 2026-11-01:** el titular completó personalmente la vinculación Banco de Chile Individual en live y la configuración permanece privada en el servidor. Se confirmó la gratuidad publicada para hasta cinco cuentas personales en los términos canónicos de Chile y se realizó una primera lectura real exitosa, sin escrituras financieras. Epic18 está desplegado y activo: baseline de metadatos exitoso y cron diario a las 07:00 America/Santiago verificado en el proceso productivo. El resultado se registra en el [plan Epic18](fintoc-daily-sync-plan.md), bajo el [contrato FDS-01–14](fintoc-daily-sync-contract.md).
 
 El preview de Epic17 permite **consultar movimientos confirmados y verlos por separado**, sin persistirlos. Epic18 añade un proceso diario interno para cuenta corriente CLP: baseline sin insertar historia y posteriores novedades inequívocas, con categoría/notas NULL. Conserva íntegros los gastos y clasificaciones existentes y no escribe saldos. No envía los gastos de nuestra base a Fintoc. Las compras de tarjeta de crédito mantienen su integración TC/N8N existente.
 
@@ -39,9 +39,9 @@ FINTOC_ACCOUNT_ID=
 
 | Variable | Configuración privada |
 |---|---|
-| `FINTOC_ENABLED` | La plantilla permanece deshabilitada. Se activa mediante el procedimiento de despliegue de Epic18, después de las validaciones. |
-| `FINTOC_PERSONAL_FREE_ACCESS_CONFIRMED` | La condición de acceso personal gratuito ya fue confirmada para el alcance descrito; el despliegue registra su activación privada. No representa permiso para contratar o pagar. |
-| `FINTOC_DAILY_SYNC_ENABLED` | Control independiente del proceso diario. Se habilita en el despliegue controlado de Epic18, que ejecuta el baseline explícito y verifica el cron; no altera TC/N8N. |
+| `FINTOC_ENABLED` | La plantilla permanece deshabilitada por seguridad. La configuración productiva quedó activa tras las validaciones de Epic18. |
+| `FINTOC_PERSONAL_FREE_ACCESS_CONFIRMED` | El acceso personal gratuito del alcance actual está confirmado y la bandera productiva activa. No representa permiso para contratar o pagar. |
+| `FINTOC_DAILY_SYNC_ENABLED` | Control independiente del proceso diario, activo tras el despliegue controlado de Epic18 con baseline y cron verificados; no altera TC/N8N. |
 | `FINTOC_MODE` | `test` para datos de prueba o `live` para acceso real habilitado. Debe coincidir con la clave y el vínculo utilizados. |
 | `FINTOC_OWNER_USER_ID` | UUID del usuario dueño ya existente en nuestra web. El administrador lo identifica de manera privada mediante consulta de solo lectura; no crea otro usuario ni toma el ID de un invitado. |
 | `FINTOC_SECRET_KEY` | Clave secreta del ambiente correspondiente en Fintoc. Solo permanece en el servidor. |
@@ -54,7 +54,7 @@ Las pruebas automatizadas usan transporte ficticio y no necesitan credenciales r
 
 ## 4. Consulta y activación de Epic18
 
-La primera lectura productiva ya fue exitosa con configuración temporal en memoria, sin escrituras financieras. Para el despliegue diario seguir exclusivamente el [plan Epic18](fintoc-daily-sync-plan.md): respaldo y huellas financieras, migración aditiva 031, configuración privada, baseline explícito y verificación de cron a las 07:00 America/Santiago. La recarga del servidor no ejecuta una importación al arrancar.
+La primera lectura productiva fue exitosa con configuración temporal en memoria, sin escrituras financieras. El despliegue diario posterior completó el procedimiento del [plan Epic18](fintoc-daily-sync-plan.md): respaldo y huellas financieras, migración aditiva 031, configuración privada, baseline explícito y cron verificado a las 07:00 America/Santiago. La recarga del servidor no ejecuta una importación al arrancar.
 
 En **Cuenta Corriente**, el dueño conserva el panel Fintoc y su consulta manual por mes. El preview muestra la cuenta enmascarada y movimientos confirmados CLP. El estado diario y los pendientes se consultan en la base local, sin disparar nuevas peticiones bancarias.
 
@@ -74,4 +74,4 @@ La fecha de consulta y la fecha de actualización bancaria son distintas. Si la 
 
 **Histórico de Epic17:** la entrega original solo realizaba consultas manuales, sin cron ni persistencia. Antes de confirmar las condiciones se mantuvieron las banderas deshabilitadas; ese estado anterior y sus verificaciones se conservan en el [plan Epic17](fintoc-readonly-plan.md).
 
-**Actualización Epic18:** el diseño y la implementación de conciliación, multiplicidad, bloqueos, rollback, estado diario y pendientes ya cuentan con pruebas. El despliegue productivo está próximo; no se declara aquí ejecutado. Su evidencia y resultado final corresponden al [contrato](fintoc-daily-sync-contract.md) y [plan Epic18](fintoc-daily-sync-plan.md), que sustituyen los criterios provisionales CSYNC para esta entrega.
+**Actualización Epic18:** implementación probada, desplegada y activa, verificada el 2026-11-01 a las 00:22:29 America/Santiago. El baseline solo escribió metadatos, la fecha bancaria se verificó vigente y las nueve tablas financieras permanecieron idénticas, sin inserciones, modificaciones ni eliminaciones. El cron quedó registrado en el proceso productivo; TC/N8N conserva su funcionamiento. Evidencia: [despliegue Epic18](fintoc-daily-sync-deployment.json), [contrato](fintoc-daily-sync-contract.md) y [plan](fintoc-daily-sync-plan.md), que sustituyen los criterios provisionales CSYNC para esta entrega.

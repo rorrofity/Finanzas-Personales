@@ -1,0 +1,25 @@
+{
+  "verifiedAt": "2026-11-01T03:22:29.383Z",
+  "sourceSha": "3a7b1af414c6181f6e0330bc5d37fe164840397a",
+  "initialRead": "success",
+  "baseline": "metadata-only",
+  "existingFinancialTablesIdentical": 9,
+  "financialInserted": 0,
+  "financialUpdated": 0,
+  "financialDeleted": 0,
+  "migration": "031 only; three integration tables",
+  "daily": {
+    "enabled": true,
+    "schedule": "07:00",
+    "timezone": "America/Santiago",
+    "initialized": true,
+    "bankFreshness": "current",
+    "coverageComplete": true
+  },
+  "authentication": "owner200 other403 anonymous401",
+  "cacheControl": "no-store",
+  "appAndAssets": 200,
+  "previousAssetsRetained": true,
+  "cardSync": "unchanged",
+  "paidRefreshIntents": false
+}

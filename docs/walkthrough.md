@@ -228,3 +228,16 @@ Conector `5000d516758057c14bae3f40db7f11970a11c5a4` desplegado en producción. E
 **Producción:** compilación en servidor, respaldo del build anterior, reinicio de backend y verificación de rutas privadas/no-store. Las huellas de nueve tablas financieras permanecen idénticas: cero modificaciones, eliminaciones o inserciones. Sin migraciones, dependencias nuevas o cambios de scheduler.
 
 **Conexión bancaria pendiente:** el titular todavía no tiene cuenta Fintoc. Conector deshabilitado, sin credenciales ni peticiones al proveedor. El acceso real exige alta autorizada, habilitación live y confirmación de costo cero. No importa movimientos, actualiza saldo ni activa sincronización diaria. [Guía de activación privada](implementation/fintoc-readonly-activation.md).
+
+
+## PARTE 8 — Epic18: cuenta corriente diaria mediante Fintoc
+
+**Entrega verificada el 2026-11-01 a las 00:22:29 America/Santiago.** [Contrato previo FDS-01–14](implementation/fintoc-daily-sync-contract.md), [plan y pruebas](implementation/fintoc-daily-sync-plan.md), [evidencia de producción](implementation/fintoc-daily-sync-deployment.json).
+
+Los términos canónicos de Fintoc confirman el servicio gratuito hasta cinco cuentas personales; se utiliza la cuenta Individual vinculada, sin planes pagados ni Refresh Intents. La lectura real y el baseline de tres meses terminaron completos. La historia inicial queda referenciada o visible en revisión, sin reimportarla. Corte 2026-11-01: novedades confirmadas posteriores e inequívocas pueden añadirse sin categoría/notas, preservando todas las clasificaciones existentes.
+
+El proceso independiente consulta a las 07:00 America/Santiago, con fecha de consulta y actualización bancaria separadas. La web muestra estado y pendientes en ambos temas y móvil, sin caché bancaria. Solo cuenta corriente CLP Banco de Chile; las compras de tarjeta mantienen su flujo TC/N8N.
+
+SDD y TDD RED→GREEN: 186 pruebas frontend, 280 backend, 101 navegador y 7 PWA; 11 omisiones previstas por viewport. PostgreSQL efímero adicional verifica inmutabilidad campo a campo, idempotencia, multiplicidad, rollback, carrera con cartola, pendientes que se confirman, reemisiones de referencias eliminadas y ejecuciones antiguas/errores tardíos. Reauditoría independiente aprobada. Capturas usan exclusivamente datos ficticios.
+
+Código publicado y construido en el servidor. Solo migración aditiva 031; tres tablas nuevas. PM2 online y cron real registrado. API dueño 200/no-store, otro usuario 403 y anónimo 401; app, módulo y service worker 200. Comparación antes/después de nueve tablas financieras idéntica: cero registros añadidos, modificados o eliminados durante el despliegue y baseline. Respaldos y datos reales permanecen privados. Los cambios previos del usuario se preservaron separados.

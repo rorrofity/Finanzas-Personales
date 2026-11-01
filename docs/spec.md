@@ -757,6 +757,8 @@ La entrega no importa movimientos, modifica saldos ni categorías, ejecuta migra
 
 ## 14. Epic18 — Sincronización diaria Fintoc de cuenta corriente
 
+**Estado:** implementada y desplegada el 2026-11-01. Primera conciliación completa, cron diario activo y nueve tablas financieras preexistentes idénticas. [Evidencia de producción](implementation/fintoc-daily-sync-deployment.json).
+
 El usuario solicita confirmar gratuidad y activar primera lectura y sincronización diaria, preservando gastos y clasificaciones existentes. Se verificó el servicio gratuito para hasta cinco cuentas personales en los términos canónicos, aplicable a la única cuenta vinculada y sin contratar un plan pagado. La primera lectura live fue completa y exitosa, sin escrituras financieras.
 
 [FDS-01–14](implementation/fintoc-daily-sync-contract.md) amplía la integración con referencias externas y bitácoras aditivas, conciliación inicial sin reimportar historia y posterior inserción idempotente de novedades inequívocas, sin UPDATE/DELETE financiero o cambios de saldo conocido. La programación es independiente a las 07:00 America/Santiago y conserva la sincronización TC/N8N. Estado y pendientes son privados, sin caché, legibles en móvil y ambos temas. No se activan pagos o Refresh Intents.

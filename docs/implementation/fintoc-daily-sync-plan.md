@@ -1,6 +1,6 @@
 # Epic18 — Plan y evidencia de sincronización diaria Fintoc
 
-**Estado:** implementación y validación completas; despliegue productivo en preparación. Especificado antes de implementar. [Contrato FDS-01–14](fintoc-daily-sync-contract.md).
+**Estado:** implementado, validado y desplegado en producción el 2026-11-01 a las 00:22:29 America/Santiago. Especificado antes de implementar. [Contrato FDS-01–14](fintoc-daily-sync-contract.md).
 
 1. Verificar condiciones oficiales y cobertura. Gratuidad publicada en canónica para hasta cinco cuentas personales; una cuenta Individual vinculada y ningún contrato pagado. Movements Banco de Chile no documenta tarjetas de crédito.
 2. Primera lectura productiva de solo consulta: completa y exitosa; resultados reales solo en servidor privado. No se alteraron flags persistentes ni tablas financieras.
@@ -24,4 +24,14 @@ Comandos: `CI=true npm run test:unit -- --runInBand`, `npm run test:backend -- -
 
 ## Despliegue
 
-Se completará con evidencia tras construir en el servidor, aplicar exclusivamente 031, activar tres banderas, ejecutar el baseline y comparar las nueve tablas financieras. Rollback de código/build y desactivación del scheduler; no restaurar ni reescribir historia financiera.
+Código `3a7b1af414c6181f6e0330bc5d37fe164840397a` publicado y construido en el servidor del proyecto. No se instalaron dependencias. Se aplicó exclusivamente la migración 031, que crea tres tablas de integración sin alterar tablas financieras. Credenciales y configuración privada conservadas con permisos 0600; las tres banderas de lectura, acceso gratuito confirmado y ejecución diaria están activas.
+
+El baseline real de tres meses calendario terminó completo y exitoso. Guardó metadatos/referencias, sin insertar historia. Corte inicial: **2026-11-01 America/Santiago**; fechas de ese día o anteriores sin coincidencia inequívoca permanecen visibles en revisión. El conector puede añadir novedades confirmadas posteriores al corte, con categoría/notas NULL y protección contra duplicados. No existe una acción pública para aplicar historia automáticamente.
+
+Se verificó el registro del cron **07:00 America/Santiago** en el proceso PM2 real, independiente de TC/N8N y sin ejecución al arrancar. Estado privado inicializado, cobertura completa y fecha bancaria reciente. Las respuestas del dueño son 200/no-store; otro usuario recibe 403 y el acceso anónimo 401. App, módulo diario, service worker y JS anterior responden 200. La frecuencia de refresco del proveedor sigue distinguiéndose de la consulta diaria.
+
+Las huellas de cada fila de las **nueve tablas financieras son idénticas** antes de la migración, tras ella, tras el baseline y tras verificar la API: **0 añadidos, 0 modificados, 0 eliminados**. Categorías, notas, saldos y timestamps preexistentes intactos. [Evidencia pública sin datos bancarios](fintoc-daily-sync-deployment.json); snapshots y resultados reales solo en el servidor privado.
+
+Rollback: código anterior `6294e433daf28728355a39d245751bf9621032e2`, build y configuración privada en `/var/backups/finanzas/fintoc-daily-20261101-3a7b1af/`. Desactivar banderas, restaurar únicamente código/build y reiniciar el proceso; no restaurar ni reescribir historia financiera. Las tablas nuevas pueden permanecer deshabilitadas.
+
+Los cambios documentales previos del usuario y sus archivos de recuperación se conservaron separados y sin cambios.

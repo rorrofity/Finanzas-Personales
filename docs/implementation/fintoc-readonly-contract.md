@@ -1,12 +1,12 @@
 # Epic17 — Fintoc: consulta privada de cuenta propia
 
-**Estado al 2026-11-01:** Epic17 fue implementado, verificado y desplegado el 2026-10-31. Posteriormente se completaron la vinculación Individual y la configuración privada, se confirmó la gratuidad publicada hasta cinco cuentas personales y se realizó la primera lectura live exitosa sin escrituras financieras. Epic18 tiene implementación y pruebas listas, con despliegue próximo. El [contrato FDS-01–14](fintoc-daily-sync-contract.md) y su [plan](fintoc-daily-sync-plan.md) amplían esta especificación; allí se registra el resultado final de activación diaria. Se conserva este contrato como evidencia previa al código de Epic17.
+**Estado al 2026-11-01:** Epic17 fue implementado, verificado y desplegado el 2026-10-31. Posteriormente se completaron la vinculación Individual y la configuración privada, se confirmó la gratuidad publicada hasta cinco cuentas personales y se realizó la primera lectura live exitosa sin escrituras financieras. Epic18 está probado, desplegado y activo, con baseline de metadatos y cron diario verificados. El [contrato FDS-01–14](fintoc-daily-sync-contract.md) y su [plan](fintoc-daily-sync-plan.md) amplían esta especificación y registran el resultado de activación. Se conserva este contrato como evidencia previa al código de Epic17.
 
 ## Alcance y privacidad
 
 La selección expresa de Fintoc autoriza construir esta integración externa de lectura. Se documenta como excepción acotada al principio DATA-001: al vincular su banco, el titular autorizará a Fintoc a procesar la información de esa cuenta. No se habilita otro proveedor, pagos, transferencias, escritura bancaria ni exportación de los gastos o clasificaciones de nuestra base. Ningún secreto bancario o del proveedor se solicita por chat.
 
-Entrega original de Epic17: consultar movimientos confirmados de un mes en una previsualización separada, sin persistirlos. **Enmienda Epic18:** el preview mantiene ese comportamiento; el motor diario interno añade metadatos de conciliación y únicamente novedades inequívocas posteriores al corte, con categoría/notas NULL. El baseline no inserta historia; no se modifican gastos, clasificaciones ni saldos existentes. La programación de cuenta corriente es independiente de TC/N8N y no se declara desplegada en este documento.
+Entrega original de Epic17: consultar movimientos confirmados de un mes en una previsualización separada, sin persistirlos. **Enmienda Epic18:** el preview mantiene ese comportamiento; el motor diario interno añade metadatos de conciliación y únicamente novedades inequívocas posteriores al corte, con categoría/notas NULL. El baseline productivo no insertó historia; no se modificaron gastos, clasificaciones ni saldos existentes. La programación activa de cuenta corriente a las 07:00 America/Santiago es independiente de TC/N8N, que conserva su comportamiento.
 
 ## Contrato de aceptación
 
