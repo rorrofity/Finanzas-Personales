@@ -1,0 +1,22 @@
+{
+  "verifiedAt": "2026-11-01T03:35:32.546Z",
+  "sourceSha": "fb99412d23fb15d38ea55f207bc6e4965125044d",
+  "reconciliation": "applied explicit reviewed plan",
+  "financialWrites": "only planned missing checking INSERTs",
+  "unchangedFinancialTables": 8,
+  "allOriginalCheckingRowsIdentical": true,
+  "existingClassificationsNotesBalancesAndTimestampsPreserved": true,
+  "addedRowsHaveNullCategoryAndNotes": true,
+  "dailyStateUnchanged": true,
+  "repeatPreviewNewInserts": 0,
+  "dailyWouldInsertKnownIds": 0,
+  "futureDatedMovementsHeld": true,
+  "newProviderCalls": 0,
+  "migration": false,
+  "configurationChanged": false,
+  "dailySchedule": "unchanged 07:00 America/Santiago",
+  "cardSync": "unchanged",
+  "privateDetailsLocation": "server backup only",
+  "authenticatedWebListsContainAllAddedIds": true,
+  "authenticatedPendingReviewMatches": true
+}

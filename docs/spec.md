@@ -769,3 +769,5 @@ La cobertura corresponde a cuenta corriente CLP. No trae compras de tarjeta de c
 ### Enmienda FHR — conciliación explícita de pendientes iniciales
 
 **Solicitud:** 2026-11-01. El titular autoriza incorporar los movimientos faltantes de la carga inicial, sin duplicar ni modificar gastos/clasificaciones. [FHR-01–14](implementation/fintoc-initial-reconciliation-contract.md) define un comando interno con preview y huella validada al aplicar, bloqueo compartido, comparación de historial completo y resguardo de casos ambiguos/futuros. Solo inserta faltantes inequívocos y enlaza metadatos de coincidencias; no altera reglas del cron, corte, fecha bancaria ni consulta más datos del proveedor. [Plan y evidencia](implementation/fintoc-initial-reconciliation-plan.md).
+
+**Resultado FHR:** aplicado en el servidor el 2026-11-01; faltantes incorporados y fechas futuras pendientes. Todos los registros financieros originales permanecen idénticos; repetición sin nuevas inserciones y cron intacto. [Evidencia](implementation/fintoc-initial-reconciliation-deployment.json).

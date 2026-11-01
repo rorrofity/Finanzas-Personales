@@ -1,6 +1,6 @@
 # Conciliación inicial Fintoc — plan y evidencia
 
-**Estado:** implementación y validación completas; conciliación productiva pendiente. Especificación FHR escrita antes del código el 2026-11-01 America/Santiago. [Contrato](fintoc-initial-reconciliation-contract.md).
+**Estado:** implementado, publicado y aplicado en producción el 2026-11-01 a las 00:35:32 America/Santiago. Especificación FHR escrita antes del código el 2026-11-01 America/Santiago. [Contrato](fintoc-initial-reconciliation-contract.md).
 
 1. Revisar agregados privados de pendientes e historial completo; identificar fechas futuras y posibles cruces con tarjetas sin exportar movimientos.
 2. TDD del plan y apply bajo lock, identidad externa, controles de estado obsoleto y conservación de todas las filas originales.
@@ -21,4 +21,12 @@ Comandos: `npm run test:backend -- --runInBand`, `node tests/integration/fintoc-
 
 ## Operación productiva
 
-La herramienta se publicará y se generará un preview en el servidor, en directorio 0700 y archivo exclusivo 0600. Se revisarán conteos y motivos, se aplicará la misma huella recalculada bajo lock y se compararán las nueve tablas financieras. Los detalles reales permanecerán exclusivamente en el servidor. Al revertir código, conservar movimientos y referencias añadidos: no borrar ni reescribir información financiera.
+Código `fb99412d23fb15d38ea55f207bc6e4965125044d` publicado e instalado en el servidor. Se respaldaron las nueve tablas financieras y el estado diario mediante consulta de solo lectura. Preview privado 0600/0700, revisado antes de apply; no efectuó escrituras financieras. La huella del mismo plan se recalculó y validó bajo el lock al aplicar.
+
+Se incorporaron exclusivamente los faltantes confirmados y fechados hasta el día de conciliación. Las fechas futuras permanecen visibles en revisión. Ningún gasto existente se reescribió o eliminó; las incorporaciones tienen categoría/notas NULL. Cada fila original de Checking conserva todos sus campos y las otras ocho tablas financieras son idénticas. Estado, corte, cobertura, fecha bancaria y última consulta completa permanecen exactos; el cron 07:00 America/Santiago y TC/N8N no cambian.
+
+Preview repetido: cero nuevas inserciones o enlaces. El plan puro del cron tampoco insertaría nuevamente ninguno de los IDs conocidos. La API autenticada de producción contiene todos los IDs incorporados y muestra los pendientes restantes con motivo future_date/no-store. Web HTTP200. Sin llamadas nuevas al proveedor, migraciones, cambios de configuración, build o reinicio del servicio.
+
+[Evidencia pública sin movimientos ni importes](fintoc-initial-reconciliation-deployment.json). Planes, conteos reales, resultados y huellas de filas permanecen solo en `/var/backups/finanzas/fintoc-initial-20261101-fb99412/`, directorio privado del servidor. La configuración .env conserva su huella; los cambios documentales previos del usuario se preservan separados.
+
+Al revertir código de la herramienta, conservar movimientos y referencias añadidos: no borrar ni reescribir información financiera. El proceso diario continúa con sus reglas originales y reconoce los IDs conciliados.

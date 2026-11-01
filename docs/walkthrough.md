@@ -241,3 +241,14 @@ El proceso independiente consulta a las 07:00 America/Santiago, con fecha de con
 SDD y TDD RED→GREEN: 186 pruebas frontend, 280 backend, 101 navegador y 7 PWA; 11 omisiones previstas por viewport. PostgreSQL efímero adicional verifica inmutabilidad campo a campo, idempotencia, multiplicidad, rollback, carrera con cartola, pendientes que se confirman, reemisiones de referencias eliminadas y ejecuciones antiguas/errores tardíos. Reauditoría independiente aprobada. Capturas usan exclusivamente datos ficticios.
 
 Código publicado y construido en el servidor. Solo migración aditiva 031; tres tablas nuevas. PM2 online y cron real registrado. API dueño 200/no-store, otro usuario 403 y anónimo 401; app, módulo y service worker 200. Comparación antes/después de nueve tablas financieras idéntica: cero registros añadidos, modificados o eliminados durante el despliegue y baseline. Respaldos y datos reales permanecen privados. Los cambios previos del usuario se preservaron separados.
+
+
+## PARTE 9 — Conciliación inicial Fintoc
+
+**Verificada el 2026-11-01 a las 00:35:32 America/Santiago.** [Contrato FHR previo al código](implementation/fintoc-initial-reconciliation-contract.md), [plan y pruebas](implementation/fintoc-initial-reconciliation-plan.md), [evidencia de producción](implementation/fintoc-initial-reconciliation-deployment.json).
+
+A solicitud expresa del titular se compararon los pendientes iniciales con todo el historial de cuenta corriente y posibles coincidencias de tarjetas. Un preview privado revisado y su huella recalculada bajo el lock permitieron insertar únicamente faltantes inequívocos; los futuros quedaron pendientes. Categoría y notas nulas en los nuevos movimientos; todos los campos originales y las otras ocho tablas financieras idénticos.
+
+TDD: 49 pruebas del motor y 13 de CLI; regresión backend completa 342/15 suites. Integración en PostgreSQL efímero verifica inmutabilidad, rollback, multiplicidad, fechas, tombstones, planes obsoletos y concurrencia con cartola/otro apply. Reauditoría independiente aprobada. Ningún dato real se incorporó a fixtures o repo.
+
+Herramienta publicada e instalada, sin migraciones, build, reinicio, cambios de configuración ni consultas nuevas a Fintoc. Fecha bancaria, corte, última consulta y cron diario conservados. Repetir preview o evaluar el cron con los IDs conciliados produce cero nuevas inserciones. API autenticada y web de producción verificadas; respaldos y detalles reales solo en el servidor privado.

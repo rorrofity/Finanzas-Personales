@@ -35,3 +35,8 @@ Las huellas de cada fila de las **nueve tablas financieras son idénticas** ante
 Rollback: código anterior `6294e433daf28728355a39d245751bf9621032e2`, build y configuración privada en `/var/backups/finanzas/fintoc-daily-20261101-3a7b1af/`. Desactivar banderas, restaurar únicamente código/build y reiniciar el proceso; no restaurar ni reescribir historia financiera. Las tablas nuevas pueden permanecer deshabilitadas.
 
 Los cambios documentales previos del usuario y sus archivos de recuperación se conservaron separados y sin cambios.
+
+
+## Conciliación explícita posterior del baseline
+
+El 2026-11-01 el titular autorizó incorporar los faltantes iniciales mediante la [enmienda FHR](fintoc-initial-reconciliation-contract.md). [Operación verificada](fintoc-initial-reconciliation-plan.md): solo INSERTs faltantes, originales intactos y fechas futuras pendientes. No cambia las reglas automáticas, el corte ni las fechas de actualización de esta entrega; los IDs conciliados quedan mapeados para impedir duplicados.
