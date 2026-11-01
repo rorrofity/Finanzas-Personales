@@ -12,7 +12,12 @@ function canonical(value){if(Array.isArray(value))return value.map(canonical);if
 function validHeader(document){const p=document.period||{};const dates=[p.since,p.until,document.statementDate,document.dueDate];return dates.every(d=>validDay(d)&&Number(d.slice(0,4))>=2000&&Number(d.slice(0,4))<=2100)&&p.since<=p.until&&p.until<=document.statementDate&&document.statementDate<=document.dueDate;}
 const digest=value=>createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 const samePeriod=(source,document)=>Number(source.billingYear)===Number(document.dueDate?.slice(0,4))&&Number(source.billingMonth)===Number(document.dueDate?.slice(5,7));
-function possibleIdentity(item,source,network){return (!source.network||source.network===network)&&(!item.cardLastFour||!source.cardLastFour||item.cardLastFour===source.cardLastFour);}
+function possibleIdentity(item,source,network){
+ // A legacy brand may be a route default; without physical card identity it
+ // cannot establish that an otherwise compatible charge belongs elsewhere.
+ if(!item.cardLastFour||!source.cardLastFour)return true;
+ return item.cardLastFour===source.cardLastFour&&(!source.network||source.network===network);
+}
 function sameCandidateAmount(item,source){const a=minor(item.amount),b=minor(source.amount);return a!==null&&b!==null&&(a===b||(item.currency==='CLP'&&source.type==='gasto'&&b<0n&&a===-b));}
 function near(item,source,document){
  if(item.currency!==source.currency||!possibleIdentity(item,source,document.network))return false;
