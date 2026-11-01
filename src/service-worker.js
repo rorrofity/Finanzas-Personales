@@ -19,6 +19,7 @@ import {
   StaleWhileRevalidate,
   CacheFirst,
   NetworkFirst,
+  NetworkOnly,
 } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
@@ -38,6 +39,18 @@ registerRoute(
       fileExtensionRegexp,
     ],
   })
+);
+
+// Expense reports have their own cache keyed by authenticated user, space and
+// filters. A shared URL-only Workbox fallback must never bypass that isolation.
+registerRoute(
+  ({ url, request }) => request.method === 'GET' && (
+    url.pathname === '/api/dashboard/expense-evolution'
+    || url.pathname === '/api/dashboard/expense-evolution/transactions'
+    || url.pathname === '/api/dashboard/overview'
+  ),
+  new NetworkOnly(),
+  'GET'
 );
 
 // API de LECTURA (GET): NetworkFirst — intenta red, cae a caché si no hay red.

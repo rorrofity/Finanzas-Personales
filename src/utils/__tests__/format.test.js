@@ -1,4 +1,14 @@
-import { formatCLP, formatCLPShort, formatCLPThousands, formatPct } from '../format';
+import { formatCLP, formatCLPExact, formatCLPShort, formatCLPThousands, formatPct } from '../format';
+
+describe('formatCLPExact (importes persistidos sin redondear centavos)', () => {
+  test('conserva hasta dos decimales sin añadir ceros a importes enteros', () => {
+    expect(formatCLPExact(176.2)).toBe('$176,2');
+    expect(formatCLPExact(176.25)).toBe('$176,25');
+    expect(formatCLPExact(176)).toBe('$176');
+    expect(formatCLPExact(-176.25)).toBe('-$176,25');
+    expect(formatCLPExact(999999999.99)).toBe('$999.999.999,99');
+  });
+});
 
 describe('formatCLP', () => {
   test('formatea CLP sin decimales', () => {

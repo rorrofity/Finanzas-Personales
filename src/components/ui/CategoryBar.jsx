@@ -12,8 +12,17 @@ const CategoryBar = ({ name, total, pct, deltaPct, onClick, color = 'primary.mai
 
   return (
     <Box
+      component={onClick ? 'button' : 'div'}
+      type={onClick ? 'button' : undefined}
       onClick={onClick}
       sx={{
+        display: 'block',
+        width: '100%',
+        border: 0,
+        bgcolor: 'transparent',
+        textAlign: 'left',
+        color: 'inherit',
+        font: 'inherit',
         py: 0.75,
         cursor: onClick ? 'pointer' : 'default',
         '&:hover': onClick ? { bgcolor: 'action.hover' } : undefined,

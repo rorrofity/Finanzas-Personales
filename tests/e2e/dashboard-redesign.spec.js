@@ -1,129 +1,73 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { installDashboardFixtures, makeEvolution, clp } = require('./helpers/expenseFixtures');
 
 /**
- * Epic 12 Fase 2 — Dashboard rediseñado (Reqs 12.2–12.7, 12.11).
+ * Epic12 guarantees retained under DCE's accepted amendment of Req12.4/12.5:
+ * compact exact values, commitments, category detail, usable trends, empty state,
+ * no viewport overflow. All API data is synthetic; no backend is started.
  */
-
-async function mockAuthenticatedSession(page) {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('token', 'fake-jwt-token');
-    window.sessionStorage.setItem('period', '2026-08');
-  });
-  await page.route('**/api/auth/profile', (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: { id: 'u-1', nombre: 'Usuario Test', email: 't@t.cl' } }) })
-  );
-  await page.route('**/api/suspicious/count', (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ count: 0 }) })
-  );
-  await page.route('**/api/space/**', (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ spaces: [], members: [] }) })
-  );
-}
-
-const OVERVIEW = {
-  period: { year: 2026, month: 8 },
-  balance: { value: 520000, deltaPct: 12 },
-  gastos: { value: 1800000, deltaPct: -5 },
-  ingresos: { value: 2320000, deltaPct: 3 },
-  tasaAhorro: 0.22,
-  burnRate: { dailyAvg: 58000, projectedClose: 1950000 },
-  disponibleHoy: 1031242,
-  compromisos: { total: 2100000, tcNoFacturado: 1200000, cuotas: 600000, intl: 0, proyectados: 300000 },
-  topCategorias: [
-    { name: 'Cuentas', total: 700000, pct: 0.38, deltaPct: 4 },
-    { name: 'Compras casa', total: 400000, pct: 0.22, deltaPct: -10 },
-  ],
-};
-
-async function mockDashboard(page, overview = OVERVIEW) {
-  await page.route('**/api/dashboard/overview**', (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(overview) })
-  );
-  await page.route('**/api/dashboard/monthly-history**', (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
-      { year: 2026, month: 8, monthName: 'Ago', label: 'Ago 2026', gastosTC: 1000000, gastosCC: 800000, ingresosCC: 2320000, balance: 520000 },
-    ]) })
-  );
-  await page.route('**/api/dashboard/category-evolution**', (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [{ label: 'Ago 2026', year: 2026, month: 8, Cuentas: 700000 }], categories: ['Cuentas'] }) })
-  );
-  await page.route('**/api/dashboard/category-transactions**', (r) =>
-    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ count: 0, total: 0, transactions: [] }) })
-  );
-}
-
-test.describe('Dashboard rediseñado (Epic 12)', () => {
-  test('12.2 muestra stat-cards con valores del overview', async ({ page }) => {
-    await mockAuthenticatedSession(page);
-    await mockDashboard(page);
+test.describe('Dashboard — garantías de Epic12 con evolución DCE', () => {
+  test('12.2 indicadores exactos del alcance y disponible hoy', async ({ page }) => {
+    const state = await installDashboardFixtures(page);
     await page.goto('/');
-
-    await expect(page.getByText('Balance', { exact: true })).toBeVisible();
-    await expect(page.getByText(/520\.000/)).toBeVisible();
-    await expect(page.getByText('Disponible hoy')).toBeVisible();
+    await expect(page.getByTestId('expense-current-total')).toContainText(clp(makeEvolution().summary.currentTotal));
+    await expect(page.getByText('Disponible hoy', { exact: true })).toBeVisible();
     await expect(page.getByText(/1\.031\.242/)).toBeVisible();
-    // Tasa de ahorro
-    await expect(page.getByText('Ahorro')).toBeVisible();
+    await expect(page.getByText('Variación frente al mes anterior', { exact: true })).toBeVisible();
+    state.verify();
   });
 
   test('12.3 compromisos próximos colapsado por defecto; expande con tap', async ({ page }) => {
-    await mockAuthenticatedSession(page);
-    await mockDashboard(page);
+    const state = await installDashboardFixtures(page);
     await page.goto('/');
-
-    const compromisos = page.getByText(/Compromisos próximos/i);
+    const compromisos = page.getByText('Compromisos próximos', { exact: true });
     await expect(compromisos).toBeVisible();
-    // detalle oculto por defecto
-    await expect(page.getByText(/TC no facturado/i)).toBeHidden();
+    await expect(page.getByText('TC no facturado', { exact: true })).toBeHidden();
     await compromisos.click();
-    await expect(page.getByText(/TC no facturado/i)).toBeVisible();
+    await expect(page.getByText('TC no facturado', { exact: true })).toBeVisible();
+    await expect(page.getByText(/1\.200\.000/)).toBeVisible();
+    state.verify();
   });
 
-  test('12.4 top categorías como barras; tap abre el drill-down', async ({ page }) => {
-    await mockAuthenticatedSession(page);
-    await mockDashboard(page);
+  test('12.4 enmendado: todas las categorías y celda abre el detalle del mes', async ({ page }) => {
+    const state = await installDashboardFixtures(page);
     await page.goto('/');
-
-    await expect(page.getByText('Cuentas')).toBeVisible();
-    await expect(page.getByText('38%')).toBeVisible();
-    await page.getByText('Cuentas').click();
-    // El drawer de detalle de categoría se abre (título h6 con la categoría)
-    await expect(page.getByRole('heading', { name: 'Cuentas' })).toBeVisible();
+    const label = makeEvolution().months.at(-1).label;
+    await page.getByRole('button', { name: `Ver movimientos de Cuentas en ${label}`, exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Cuentas', exact: true })).toBeVisible();
+    await expect(page.getByText('Movimiento ficticio A', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Cerrar detalle', exact: true })).toBeVisible();
+    state.verify();
   });
 
-  test('12.5 tabs alternan los gráficos; solo uno visible', async ({ page }) => {
-    await mockAuthenticatedSession(page);
-    await mockDashboard(page);
+  test('12.5 enmendado: selección cambia la serie sin ocultar la matriz', async ({ page }) => {
+    const state = await installDashboardFixtures(page);
     await page.goto('/');
-
-    await expect(page.getByRole('tab', { name: /Evolución/i })).toBeVisible();
-    await expect(page.getByRole('tab', { name: /categoría/i })).toBeVisible();
+    const select = page.getByRole('combobox', { name: 'Categoría', exact: true });
+    await select.selectOption({ label: 'Cuentas' });
+    await expect(page.getByTestId('expense-trend')).toHaveAccessibleName('Tendencia de Cuentas');
+    await select.selectOption({ label: 'Compras casa' });
+    await expect(page.getByTestId('expense-trend')).toHaveAccessibleName('Tendencia de Compras casa');
+    await expect(page.getByRole('table', { name: 'Gastos por categoría y mes' })).toBeVisible();
+    state.verify();
   });
 
   test('12.11 sin overflow horizontal en 375px', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'mobile-375', 'Solo mobile.');
-    await mockAuthenticatedSession(page);
-    await mockDashboard(page);
+    test.skip(testInfo.project.use.viewport.width !== 375, 'Solo viewport móvil.');
+    const state = await installDashboardFixtures(page);
     await page.goto('/');
-    await expect(page.getByText('Balance', { exact: true })).toBeVisible();
-    await expect
-      .poll(async () => page.evaluate(() => document.documentElement.scrollWidth))
-      .toBeLessThanOrEqual(testInfo.project.use.viewport.width + 1);
+    await expect(page.getByTestId('expense-current-total')).toBeVisible();
+    await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(376);
+    state.verify();
   });
 
-  test('12.6 período sin datos muestra CTA', async ({ page }) => {
-    await mockAuthenticatedSession(page);
-    await mockDashboard(page, {
-      ...OVERVIEW,
-      gastos: { value: 0, deltaPct: null },
-      ingresos: { value: 0, deltaPct: null },
-      balance: { value: 0, deltaPct: null },
-      tasaAhorro: null,
-      topCategorias: [],
-      compromisos: { total: 0, tcNoFacturado: 0, cuotas: 0, intl: 0, proyectados: 0 },
-    });
+  test('12.6 período sin datos explica consulta e incorporación de movimientos', async ({ page }) => {
+    const state = await installDashboardFixtures(page, { empty: true });
     await page.goto('/');
-    await expect(page.getByText(/Importar o sincronizar/i)).toBeVisible();
+    await expect(page.getByText(/Sin movimientos registrados en el mes seleccionado/)).toBeVisible();
+    await expect(page.getByText(/Importar o sincronizar/)).toBeVisible();
+    await expect(page.getByTestId('expense-current-total')).toHaveText('$0');
+    state.verify();
   });
 });

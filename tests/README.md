@@ -53,3 +53,24 @@ npm run test:unit           # ejecuta pruebas unitarias en src/
 3. **🔁 VERIFY** — re-ejecutar la suite → todo en **verde**, sin regresiones.
 
 Ver `docs/tasks.md` para el desglose de tareas `T-*` / `I-*` / `V-*`.
+
+## Evolución de gastos por categoría — Epic15
+
+Estas verificaciones no necesitan ni deben usar la base local histórica o producción:
+
+```bash
+# Unitarias: frontend e información de salud financiera; DB/lecturas simuladas
+npm run test:unit -- --runInBand
+npm run test:backend -- --runInBand
+
+# SQL/API real: crea un cluster PostgreSQL efímero, si hay binarios PostgreSQL locales
+npm run test:dashboard:integration
+
+# Build y E2E con API ficticia; únicamente loopback y frontend estático
+CI=true BUILD_PATH=/private/tmp/finanzas-dashboard-implementation-build REACT_APP_API_BASE_URL='' npm run build
+DASHBOARD_BUILD_DIR=/private/tmp/finanzas-dashboard-implementation-build npm run test:dashboard
+```
+
+La configuración dedicada no acepta `E2E_BASE_URL` y no inicia el backend. Los fixtures bloquean destinos externos, peticiones API no declaradas y métodos de escritura. La integración crea su propia instancia PostgreSQL, carga datos ficticios y pone las lecturas bajo sesión read-only; comprueba que los registros y categorías no cambien y elimina la instancia al terminar. No carga `.env` ni utiliza credenciales reales.
+
+Los casos incluyen períodos históricos/cruce de año, ventanas3/6/12, todas las categorías, fuentes, centavos, matriz/detalle, estados de cobertura, meses futuros, permisos, caché aislada, offline, respuestas tardías y cifras completas a375px. La PWA conserva sus verificaciones en `tests/pwa-build/` y cuenta además con pruebas unitarias que impiden que Workbox reutilice caché por URL entre espacios para los endpoints del dashboard.

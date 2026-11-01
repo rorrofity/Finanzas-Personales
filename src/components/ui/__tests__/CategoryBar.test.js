@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CategoryBar from '../CategoryBar';
+import userEvent from '@testing-library/user-event';
 
 /**
  * Epic 12 — Req 12.4: fila de categoría con barra %, monto y click.
@@ -24,5 +25,14 @@ describe('CategoryBar', () => {
     render(<CategoryBar name="Cuentas" total={700000} pct={0.38} onClick={onClick} />);
     fireEvent.click(screen.getByText('Cuentas'));
     expect(onClick).toHaveBeenCalled();
+  });
+
+  test('el detalle de categoría se puede abrir con teclado', async () => {
+    const onClick = jest.fn();
+    render(<CategoryBar name="Cuentas" total={700000} pct={0.38} onClick={onClick} />);
+    const button = screen.getByRole('button', { name: /Cuentas/ });
+    button.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

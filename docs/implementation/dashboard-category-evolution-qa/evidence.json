@@ -1,0 +1,36 @@
+{
+  "fictitiousData": true,
+  "build": "/private/tmp/finanzas-dashboard-implementation-final",
+  "e2e": {
+    "passed": 59,
+    "skipped": 2,
+    "reason": "viewport375-specific check skipped on desktop and tablet"
+  },
+  "sqlIntegration": {
+    "temporaryPostgreSQL": true,
+    "readQueries": 8,
+    "immutableFixtureSnapshot": true
+  },
+  "viewports": [
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "categoryRows": 14,
+      "matrixScrollable": true,
+      "requests": 7,
+      "unexpected": 0,
+      "writes": 0,
+      "javascriptErrors": 0
+    },
+    {
+      "width": 375,
+      "scrollWidth": 375,
+      "categoryRows": 14,
+      "matrixScrollable": true,
+      "requests": 13,
+      "unexpected": 0,
+      "writes": 0,
+      "javascriptErrors": 0
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+const mockRoutes = [];
+
+jest.mock('workbox-core', () => ({ clientsClaim: () => {} }));
+jest.mock('workbox-precaching', () => ({ precacheAndRoute: () => {}, createHandlerBoundToURL: () => () => {} }));
+jest.mock('workbox-routing', () => ({
+  registerRoute: (match, handler, method = 'GET') => mockRoutes.push({ match, handler, method }),
+  NavigationRoute: class NavigationRoute {},
+}));
+jest.mock('workbox-strategies', () => ({
+  NetworkOnly: class NetworkOnly { constructor() { this.strategy = 'NetworkOnly'; } },
+  NetworkFirst: class NetworkFirst { constructor() { this.strategy = 'NetworkFirst'; } },
+  CacheFirst: class CacheFirst {},
+  StaleWhileRevalidate: class StaleWhileRevalidate {},
+}));
+jest.mock('workbox-cacheable-response', () => ({ CacheableResponsePlugin: class CacheableResponsePlugin {} }));
+jest.mock('workbox-expiration', () => ({ ExpirationPlugin: class ExpirationPlugin {} }));
+
+function routeFor(path, method = 'GET') {
+  return mockRoutes.find((route) => route.method === method && typeof route.match === 'function'
+    && route.match({ url: new URL(path, 'https://finanzas.example.invalid'), request: { method, destination: '' } }));
+}
+
+beforeEach(() => {
+  mockRoutes.length = 0;
+  jest.isolateModules(() => require('../service-worker'));
+});
+
+test.each(['/api/dashboard/expense-evolution', '/api/dashboard/expense-evolution/transactions', '/api/dashboard/overview'])('%s evita caché por URL compartida y delega en caché aislada por identidad', (path) => {
+  expect(routeFor(path).handler.strategy).toBe('NetworkOnly');
+});
+
+test('conserva la estrategia existente para otras lecturas API', () => {
+  expect(routeFor('/api/transactions').handler.strategy).toBe('NetworkFirst');
+});
+
+test('no registra escrituras del dashboard ni otro prefijo parecido', () => {
+  expect(routeFor('/api/dashboard/expense-evolution', 'POST')).toBeUndefined();
+  expect(routeFor('/api/dashboard/expense-evolution-other').handler.strategy).toBe('NetworkFirst');
+});

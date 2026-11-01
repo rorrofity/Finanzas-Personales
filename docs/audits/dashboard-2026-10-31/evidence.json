@@ -1,0 +1,473 @@
+{
+  "requests": [
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/space/memberships",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/space/members",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/dashboard/overview",
+      "query": {
+        "year": "2026",
+        "month": "10"
+      }
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/suspicious/count",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/dashboard/monthly-history",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/dashboard/category-evolution",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/dashboard/category-transactions",
+      "query": {
+        "periodYear": "2026",
+        "periodMonth": "10",
+        "category": "Vivienda y servicios del hogar"
+      }
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/dashboard/overview",
+      "query": {
+        "year": "2026",
+        "month": "2"
+      }
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/dashboard/monthly-history",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/dashboard/category-evolution",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/space/memberships",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/space/members",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/financial-health/summary",
+      "query": {
+        "year": "2026",
+        "month": "10"
+      }
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/suspicious/count",
+      "query": {}
+    },
+    {
+      "width": 1440,
+      "method": "GET",
+      "path": "/api/dashboard/categories",
+      "query": {
+        "periodYear": "2026",
+        "periodMonth": "10",
+        "mode": "projected"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/space/memberships",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/space/members",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/dashboard/overview",
+      "query": {
+        "year": "2026",
+        "month": "10"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/suspicious/count",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/dashboard/monthly-history",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/dashboard/category-evolution",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/dashboard/category-transactions",
+      "query": {
+        "periodYear": "2026",
+        "periodMonth": "10",
+        "category": "Vivienda y servicios del hogar"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/dashboard/overview",
+      "query": {
+        "year": "2026",
+        "month": "2"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/dashboard/monthly-history",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/dashboard/category-evolution",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/space/memberships",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/space/members",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/financial-health/summary",
+      "query": {
+        "year": "2026",
+        "month": "10"
+      }
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/suspicious/count",
+      "query": {}
+    },
+    {
+      "width": 768,
+      "method": "GET",
+      "path": "/api/dashboard/categories",
+      "query": {
+        "periodYear": "2026",
+        "periodMonth": "10",
+        "mode": "projected"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/space/memberships",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/space/members",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/dashboard/overview",
+      "query": {
+        "year": "2026",
+        "month": "10"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/suspicious/count",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/dashboard/monthly-history",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/dashboard/category-evolution",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/dashboard/category-transactions",
+      "query": {
+        "periodYear": "2026",
+        "periodMonth": "10",
+        "category": "Vivienda y servicios del hogar"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/dashboard/overview",
+      "query": {
+        "year": "2026",
+        "month": "2"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/dashboard/monthly-history",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/dashboard/category-evolution",
+      "query": {
+        "months": "6"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/auth/profile",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/space/memberships",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/space/members",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/financial-health/summary",
+      "query": {
+        "year": "2026",
+        "month": "10"
+      }
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/suspicious/count",
+      "query": {}
+    },
+    {
+      "width": 375,
+      "method": "GET",
+      "path": "/api/dashboard/categories",
+      "query": {
+        "periodYear": "2026",
+        "periodMonth": "10",
+        "mode": "projected"
+      }
+    }
+  ],
+  "viewports": [
+    {
+      "viewport": 1440,
+      "scrollWidth": 1440,
+      "categoryBars": 10,
+      "chartHeight": 240,
+      "drawerButtons": [
+        {
+          "label": null,
+          "text": ""
+        }
+      ],
+      "monthLabel": "febrero de 2026",
+      "healthScrollWidth": 1440,
+      "healthPercentage": "100% comprometido",
+      "omittedCategoryVisible": 0
+    },
+    {
+      "viewport": 768,
+      "scrollWidth": 768,
+      "categoryBars": 10,
+      "chartHeight": 240,
+      "drawerButtons": [
+        {
+          "label": null,
+          "text": ""
+        }
+      ],
+      "monthLabel": "febrero de 2026",
+      "healthScrollWidth": 768,
+      "healthPercentage": "100% comprometido",
+      "omittedCategoryVisible": 0
+    },
+    {
+      "viewport": 375,
+      "scrollWidth": 375,
+      "categoryBars": 10,
+      "chartHeight": 240,
+      "drawerButtons": [
+        {
+          "label": null,
+          "text": ""
+        }
+      ],
+      "monthLabel": "febrero de 2026",
+      "healthScrollWidth": 375,
+      "healthPercentage": "100% comprometido",
+      "omittedCategoryVisible": 0
+    }
+  ],
+  "writes": [],
+  "consoleErrors": []
+}

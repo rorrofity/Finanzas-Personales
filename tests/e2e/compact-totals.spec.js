@@ -1,5 +1,7 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
+const { installDashboardFixtures } = require('./helpers/expenseFixtures');
+const fixtureStates = new WeakMap();
 
 /**
  * Epic 12 Fase 3 — Req 12.10/12.11: las páginas de transacciones muestran
@@ -8,6 +10,9 @@ const { test, expect } = require('@playwright/test');
  */
 
 async function mockAuth(page) {
+  // This guard runs beneath each explicit fixture below: no unexpected request
+  // or mutation can reach a real backend when checking shared StatCard styling.
+  fixtureStates.set(page, await installDashboardFixtures(page, { period: '2026-08' }));
   await page.addInitScript(() => {
     window.localStorage.setItem('token', 'fake-jwt-token');
     window.sessionStorage.setItem('period', '2026-08');
@@ -40,6 +45,7 @@ async function totalsInOneRow(page, testId) {
 }
 
 test.describe('Totales compactos (Req 12.10)', () => {
+  test.afterEach(async ({ page }) => fixtureStates.get(page)?.verify());
   test.beforeEach(async ({}, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-375', 'Solo mobile.');
   });

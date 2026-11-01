@@ -33,4 +33,12 @@ describe('StatCard', () => {
     render(<StatCard label="Gastos" value={1800000} short />);
     expect(screen.getByText('$1.800K')).toBeInTheDocument();
   });
+
+  test('el importe exacto tiene una fila propia sin truncado al acompañarse de un delta grande (DCE-21)', () => {
+    render(<StatCard label="Gastos" value={999999999} deltaPct={1250} />);
+    const amount = screen.getByTestId('stat-card-value');
+    expect(amount).toHaveTextContent('$999.999.999');
+    expect(amount).not.toHaveClass('MuiTypography-noWrap');
+    expect(amount).toHaveStyle({ overflow: 'visible' });
+  });
 });

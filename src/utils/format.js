@@ -15,6 +15,21 @@ export function formatCLP(amount) {
   }).format(Number(amount));
 }
 
+/** Importe CLP conservando los centavos persistidos, sin añadir decimales a enteros. */
+export function formatCLPExact(amount) {
+  if (amount === undefined || amount === null || !Number.isFinite(Number(amount))) {
+    return '$0';
+  }
+  const value = Number(amount);
+  const sign = value < 0 ? '-' : '';
+  return sign + new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(Math.abs(value));
+}
+
 /** $1,8M / $45K / $990 — abreviado para stat-cards. */
 export function formatCLPShort(amount) {
   const n = Number(amount) || 0;

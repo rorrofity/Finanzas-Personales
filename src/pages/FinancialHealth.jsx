@@ -52,21 +52,30 @@ const FinancialHealth = () => {
       });
       setData(healthRes.data);
       
-      // Fetch category breakdown for pie chart (mode=projected: TC + intl + gastos fijos)
-      const catRes = await axios.get('/api/dashboard/categories', {
-        params: { periodYear: year, periodMonth: month, mode: 'projected' }
-      });
-      
-      // Transform for pie chart - top 6 categories
-      const categories = (catRes.data || [])
-        .filter(c => c.total > 0)
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 6)
-        .map((c, i) => ({
-          name: c.categoria || 'Sin categoría',
-          value: c.total,
-          color: CATEGORY_COLORS[i % CATEGORY_COLORS.length]
-        }));
+      // Explain the SAME commitment total returned by this summary. Historical
+      // expense categories use a different scope and belong in the dashboard.
+      const health = healthRes.data || {};
+      const commitments = [
+        { name: 'Tarjeta Visa', value: Number(health.creditCards?.visa?.total) || 0 },
+        { name: 'Tarjeta Mastercard', value: Number(health.creditCards?.mastercard?.total) || 0 },
+        ...(health.projected?.details?.expenses || []).map((item) => ({
+          name: item.name,
+          value: Number(item.amount) || 0,
+        })),
+      ].filter((item) => item.value > 0).sort((a, b) => b.value - a.value);
+      const undisclosed = (Number(health.summary?.totalCommitments) || 0)
+        - commitments.reduce((sum, item) => sum + item.value, 0);
+      if (undisclosed > 0.005) {
+        commitments.push({ name: 'Compromisos sin desglose', value: undisclosed });
+        commitments.sort((a, b) => b.value - a.value);
+      }
+      const visible = commitments.slice(0, 6);
+      const remaining = commitments.slice(6).reduce((sum, item) => sum + item.value, 0);
+      if (remaining > 0) visible.push({ name: 'Otros compromisos', value: remaining });
+      const categories = visible.map((item, i) => ({
+        ...item,
+        color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+      }));
       setCategoryData(categories);
       
     } catch (err) {
@@ -148,7 +157,10 @@ const FinancialHealth = () => {
   const totalCommitments = (summary?.totalCommitments || 0);
   const projectedResult = (summary?.projectedBalance || 0);
   const netBalance = totalIncome - totalCommitments; // Neteo del mes (sin considerar saldo inicial)
-  const commitmentPercent = totalIncome > 0 ? Math.min(100, Math.round((totalCommitments / totalIncome) * 100)) : 0;
+  const commitmentPercent = totalIncome > 0 ? (totalCommitments / totalIncome) * 100 : null;
+  const commitmentLabel = commitmentPercent === null
+    ? 'Sin ingresos de referencia'
+    : `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 }).format(commitmentPercent)}% comprometido`;
   
   // Month name for display
   const monthName = new Date(year, month - 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
@@ -426,12 +438,13 @@ const FinancialHealth = () => {
                   Compromisos vs Ingresos
                 </Typography>
                 <Typography variant="body2" fontWeight={600} color={commitmentPercent > 80 ? 'error.main' : 'text.primary'}>
-                  {commitmentPercent}% comprometido
+                  {commitmentLabel}
                 </Typography>
               </Box>
               <LinearProgress 
                 variant="determinate" 
-                value={commitmentPercent}
+                value={commitmentPercent === null ? 0 : Math.min(100, commitmentPercent)}
+                aria-label="Proporción visual de compromisos sobre ingresos"
                 sx={{ 
                   height: 8, 
                   borderRadius: 4,
@@ -453,7 +466,7 @@ const FinancialHealth = () => {
           <Box sx={{ flex: 1, minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 2, border: `1px solid ${theme.palette.divider}`, height: '100%' }}>
             <Typography variant="overline" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-              ¿En qué gastamos?
+              Composición de compromisos
             </Typography>
             
             {categoryData.length > 0 ? (
@@ -483,8 +496,7 @@ const FinancialHealth = () => {
                 </Grid>
                 <Grid item xs={12} md={7}>
                   {categoryData.map((cat, idx) => {
-                    const total = categoryData.reduce((sum, c) => sum + c.value, 0);
-                    const percent = total > 0 ? Math.round((cat.value / total) * 100) : 0;
+                    const percent = totalCommitments > 0 ? Math.round((cat.value / totalCommitments) * 100) : 0;
                     return (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
                         <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: cat.color, mr: 1 }} />
@@ -498,7 +510,7 @@ const FinancialHealth = () => {
               </Grid>
             ) : (
               <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography color="text.secondary">Sin gastos categorizados este mes</Typography>
+                <Typography color="text.secondary">Sin compromisos registrados este período</Typography>
               </Box>
             )}
           </Paper>

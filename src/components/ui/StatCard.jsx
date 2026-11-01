@@ -45,8 +45,8 @@ const StatCard = ({
           </Typography>
         ) : (
           <>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 0.5 }}>
-              <Typography variant="h6" fontWeight={700} noWrap>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.25, minWidth: 0 }}>
+              <Typography variant="h6" fontWeight={700} data-testid="stat-card-value" sx={{ overflow: 'visible', overflowWrap: 'anywhere', fontSize: { xs: '0.95rem', sm: '1rem' } }}>
                 {displayText}
               </Typography>
               {deltaPct !== undefined && (
