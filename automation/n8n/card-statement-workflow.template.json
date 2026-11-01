@@ -84,6 +84,7 @@
         "messageId": "={{ $json.id }}",
         "simple": false,
         "options": {
+          "downloadAttachments": true,
           "dataPropertyAttachmentsPrefixName": "attachment_"
         }
       },

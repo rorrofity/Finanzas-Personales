@@ -12,7 +12,7 @@
 
 ## Validación completada
 
-- Backend: **548 pruebas / 25 suites**. Frontend: **250 / 30 suites**. Lector Python: **40 pruebas**. Navegador: **129 aprobadas / 13 omisiones previstas por viewport**; PWA: **7**. Total: **974 pruebas aprobadas**.
+- Backend: **548 pruebas / 25 suites**. Frontend: **250 / 30 suites**. Lector Python: **40 pruebas**. Navegador: **129 aprobadas / 13 omisiones previstas por viewport**; PWA: **7**. Total: **975 pruebas aprobadas** (548 backend de regresión más una nueva prueba, 17 casos finales del workflow).
 - RED→GREEN de parser nativo/descifrado, ambas monedas, multipágina/adicionales, cuotas, signos, subtotales/ecuaciones y layout incompleto. Reauditoría corrigió abonos/traspasos internacionales contradictorios y PAN en textos con referencias adyacentes. Documentos reales aceptados privadamente con todas las secciones válidas; ningún dato real en fixtures.
 - Extractor Node verifica stdin privado, límites y timeout; los caracteres UTF-8 partidos entre chunks se conservan y fallos EPIPE terminan el proceso.
 - Servicio/matcher/rutas: metadata-only, identidad simétrica conservadora, procedencia bancaria, competencia de candidatos, reintento inválido→válido, deduplicación, revisiones y ACL. Workflow: pruebas de filtros exactos, todas las partes PDF, no mutación de correo ni mensajes salientes y salida mínima sin importes; plantilla idéntica al generador.
@@ -24,3 +24,7 @@ Comandos: `npm run test:backend -- --runInBand`, `CI=true npm run test:unit -- -
 ## Preparación operativa
 
 N8N instalado y API existente accesible; se reutiliza su credencial Gmail sin extraerla ni publicarla. La referencia de publicación es activeVersionId; active es obsoleto en esta versión. Nueva plantilla separada con polling cada minuto y rama manual de los dos últimos mensajes autorizados; ejecuciones sin adjuntos persistidos. Lector Python instalado aisladamente con versiones probadas, sin IA ni OCR externo. Configuración privada, migración033, lectura real, publicación y comparación final se documentarán al verificarse.
+
+## Ajuste verificado en el recorrido real
+
+N8N 2.7.5 obtiene el correo completo con simple:false, pero descarga adjuntos únicamente con options.downloadAttachments:true. La primera prueba controlada detectó ausencia de binarios sin realizar ingestas. Prueba RED→GREEN adicional exige descarga explícita en generador y plantilla; 17 pruebas finales del flujo aprobadas. Se actualiza únicamente el workflow nuevo y se repite el recorrido real antes de cerrar.
