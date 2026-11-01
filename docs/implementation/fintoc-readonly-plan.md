@@ -1,6 +1,6 @@
 # Epic17 — Plan y evidencia de conexión Fintoc
 
-**Estado:** conector implementado, verificado y desplegado; conexión bancaria pendiente y deshabilitada. Contrato previo: [FRO-01–12](fintoc-readonly-contract.md). Alcance: consulta por acción explícita y vista previa separada, sin alterar datos existentes ni programaciones.
+**Estado:** conector implementado y desplegado; el titular creó un vínculo personal en Fintoc live, mientras la consulta desde nuestra web permanece deshabilitada y pendiente de configuración completa y gratuidad. Contrato previo: [FRO-01–12](fintoc-readonly-contract.md). Alcance: consulta por acción explícita y vista previa separada, sin alterar datos existentes ni programaciones.
 
 ## Secuencia SDD/TDD
 
@@ -12,7 +12,7 @@
 
 ## Límites operativos
 
-El usuario todavía no tiene cuenta Fintoc. No se crea cuenta, acepta contrato ni habilita acceso bancario desde esta sesión. No existe promesa de conexión live o refresco diario, porque depende de habilitación y modalidad gratuita del proveedor. La consulta preparada no se presenta como sincronización ya operativa.
+Al iniciar el desarrollo el usuario todavía no tenía cuenta Fintoc. Después creó su cuenta y completó personalmente su vinculación bancaria; la preparación privada posterior se registra al final. No existe promesa de refresco diario o acceso API gratuito, porque depende de habilitación y modalidad del proveedor. La consulta preparada no se presenta como sincronización ya operativa.
 
 La activación está documentada en [guía](fintoc-readonly-activation.md), con variables privadas del servidor, bandera de gratuidad y sin importar los movimientos. La sincronización diaria requiere la conciliación inicial CSYNC para proteger multiplicidad, categorías e identidad de registros actuales.
 
@@ -38,3 +38,11 @@ Las huellas de nueve tablas financieras son idénticas antes y después: **0 reg
 Rollback: código anterior `319518babaa78bbfec249de584d75d8f54c0f8d6` y build en `/var/backups/finanzas/fintoc-readonly-20261031-5000d51/build`. Revertir únicamente código/build y reiniciar el proceso, sin restaurar ni modificar la base de datos.
 
 Los cambios previos del usuario en constitución, plan, tareas y documentación de recuperación se preservan separados. El alta de Fintoc y la habilitación personal gratuita siguen siendo requisitos externos para la primera consulta real.
+
+## Vinculación del titular y preparación privada posterior
+
+El titular completó la vinculación Banco de Chile Individual en el Dashboard live. Se observó Link creado, estado Activo y una cuenta, con la primera actualización todavía en curso. Autorizó expresamente guardar el token y una clave API existente en su servidor privado, manteniendo deshabilitada la consulta hasta confirmar costo cero.
+
+El Link Token se guardó en el `.env` privado del servidor con permisos 0600 y se eliminó la copia local temporal. Las banderas de habilitación y gratuidad permanecen false. El panel de API keys solo tenía una clave pública; no se usó como secreto ni se creó o rotó una clave. La clave secreta y la configuración completa de cuenta/propietario siguen pendientes. No se consultó la API de movimientos desde nuestro servidor.
+
+Se corrigió mediante TDD la aceptación de sufijos URL-safe en tokens y claves secretas: RED previo con datos exclusivamente ficticios, validación positiva del transporte simulado y rechazo de prefijo público, modo incorrecto, espacios, controles y caracteres inválidos. Regresión completa: **8 suites y 185 pruebas backend pasan**. La corrección modifica únicamente validación de configuración; no altera frontend, consultas de gastos o persistencia.

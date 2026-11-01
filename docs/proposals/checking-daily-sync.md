@@ -4,6 +4,8 @@
 
 **Consulta:** 2026-10-31, America/Santiago. **Identificadores:** `CSYNC-*`, provisionales; no asignan una épica ni cambian Epic14 o Epic15.
 
+**Actualización posterior en la sesión del titular:** se pudo abrir Conexiones en modo live, elegir Bancaria / Individual y completar personalmente la vinculación de Banco de Chile. El Dashboard mostró un Link creado, estado Activo y una cuenta; la actualización inicial seguía en curso. Esto aporta evidencia operativa para esta cuenta, sin confirmar gratuidad, frecuencia diaria ni lectura por nuestra API. La integración propia continúa deshabilitada; el titular autorizó guardar privadamente las credenciales en su servidor. No se publican IDs, tokens, claves o datos bancarios en esta documentación.
+
 ## 1. Necesidad y condiciones confirmadas
 
 La cuenta es **personal de Banco de Chile**. Hoy su cartola se descarga y se importa manualmente; ese flujo funciona y debe conservarse. El usuario no recibe por correo cartolas ni avisos de cargos/abonos. Aceptaría evaluar un proveedor externo si es factible, seguro y **sin costo adicional**. La solución debe permitir alta y uso directamente como **persona natural, sin exigir una empresa**. Esto expresa el requisito elegido, sin afirmar si el usuario dispone de una empresa.

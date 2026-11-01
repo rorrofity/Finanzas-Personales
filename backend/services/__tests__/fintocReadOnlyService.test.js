@@ -52,6 +52,75 @@ describe('Fintoc configuration is local, private and inactive by default', () =>
     expect(serialized).not.toMatch(/privateExample|acc_example|fintoc-owner/);
   });
 
+  test('accepts URL-safe link token characters and completes a mocked preview', async () => {
+    const linkToken = 'link_Fake123_token_Abc_Def-123';
+    const { service, transport } = setup({
+      env: config({ FINTOC_LINK_TOKEN: linkToken }),
+      linkData: link({ id: 'link_Fake123' }),
+    });
+
+    expect(service.getStatus(OWNER)).toMatchObject({ state: 'ready' });
+    expect(transport.get).not.toHaveBeenCalled();
+    await expect(service.preview(OWNER, QUERY)).resolves.toMatchObject({
+      total: 1, coverage: { complete: true, excludedNonConfirmed: 0 },
+      items: [{ externalId: 'mov_example' }],
+    });
+    expect(transport.get).toHaveBeenCalledTimes(2);
+    expect(transport.get.mock.calls[0][0]).toBe(`https://api.fintoc.com/v1/links/${linkToken}`);
+    expect(transport.get.mock.calls[1][1].params.link_token).toBe(linkToken);
+  });
+
+  test.each([
+    'link_Fake_123_token_Abc123',
+    'link_Fake-123_token_Abc123',
+    'link_Fake123_token_',
+    'link_Fake123_token_Abc.Def',
+    'link_Fake123_token_Abc/Def',
+    ' link_Fake123_token_Abc123',
+    'link_Fake123_token_Abc123 ',
+    `link_Fake123_token_${'A'.repeat(1024)}`,
+  ])('rejects malformed link tokens before upstream requests', async (linkToken) => {
+    const { service, transport } = setup({ env: config({ FINTOC_LINK_TOKEN: linkToken }) });
+    expect(service.getStatus(OWNER)).toMatchObject({ state: 'configuration_required' });
+    await expect(service.preview(OWNER, QUERY)).rejects.toMatchObject({ status: 503, code: 'FINTOC_NOT_READY' });
+    expect(transport.get).not.toHaveBeenCalled();
+  });
+
+  test('accepts URL-safe secret key characters and preserves the authorization header', async () => {
+    const secretKey = 'sk_live_Example_Token-123';
+    const { service, transport } = setup({
+      env: config({ FINTOC_MODE: 'live', FINTOC_SECRET_KEY: secretKey }),
+      linkData: link({ mode: 'live' }),
+    });
+
+    expect(service.getStatus(OWNER)).toMatchObject({ state: 'ready' });
+    expect(transport.get).not.toHaveBeenCalled();
+    await expect(service.preview(OWNER, QUERY)).resolves.toMatchObject({
+      mode: 'live', total: 1, coverage: { complete: true, excludedNonConfirmed: 0 },
+    });
+    expect(transport.get).toHaveBeenCalledTimes(2);
+    for (const [, options] of transport.get.mock.calls) {
+      expect(options.headers.Authorization).toBe(secretKey);
+    }
+  });
+
+  test.each([
+    'pk_live_Example_Token-123',
+    'sk_test_Example_Token-123',
+    'sk_live_',
+    ' sk_live_Example_Token-123',
+    'sk_live_Example_Token-123 ',
+    'sk_live_Example Token-123',
+    'sk_live_Example\nToken-123',
+    'sk_live_Example\u0000Token-123',
+    'sk_live_Example.Token-123',
+  ])('rejects malformed or mode-incompatible secret keys before upstream requests', async (secretKey) => {
+    const { service, transport } = setup({ env: config({ FINTOC_MODE: 'live', FINTOC_SECRET_KEY: secretKey }) });
+    expect(service.getStatus(OWNER)).toMatchObject({ state: 'configuration_required' });
+    await expect(service.preview(OWNER, QUERY)).rejects.toMatchObject({ status: 503, code: 'FINTOC_NOT_READY' });
+    expect(transport.get).not.toHaveBeenCalled();
+  });
+
   test('configuration is reevaluated without retaining old secrets or enabling traffic', async () => {
     const env = config();
     const { service, transport } = setup({ env });

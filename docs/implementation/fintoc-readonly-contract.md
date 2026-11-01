@@ -1,6 +1,6 @@
 # Epic17 — Fintoc: consulta privada de cuenta propia
 
-**Estado:** conector implementado, verificado y desplegado el 2026-10-31; conexión bancaria pendiente y deshabilitada. La especificación se escribió antes del código. Solicitud del 2026-10-31: construir la conexión Fintoc para obtener movimientos de la cuenta personal Banco de Chile. El titular confirmó que todavía no tiene cuenta Fintoc. La conexión real depende de alta, autorización del titular, credenciales y habilitación del proveedor. Se mantiene costo cero.
+**Estado:** conector implementado, verificado y desplegado el 2026-10-31. Posteriormente el titular creó su cuenta y vinculó Banco de Chile Individual en el Dashboard live; la integración de nuestra web permanece deshabilitada mientras se completa su configuración y se confirma gratuidad. La especificación se escribió antes del código. Al iniciar la implementación el titular todavía no tenía cuenta Fintoc. Se mantiene costo cero.
 
 ## Alcance y privacidad
 
@@ -13,7 +13,7 @@ Entrega: consultar movimientos confirmados de un mes, en una previsualización s
 | ID | Comportamiento obligatorio |
 |---|---|
 | FRO-01 | Sin configuración, el panel muestra que la conexión está pendiente; nunca se anuncia conectado ni se hacen peticiones a Fintoc. |
-| FRO-02 | Configuración privada del servidor: FINTOC_ENABLED, FINTOC_PERSONAL_FREE_ACCESS_CONFIRMED, FINTOC_MODE (test/live), FINTOC_OWNER_USER_ID, FINTOC_SECRET_KEY, FINTOC_LINK_TOKEN y FINTOC_ACCOUNT_ID. Ninguna variable secreta usa REACT_APP_. Ambas banderas deben ser true para hacer tráfico externo. |
+| FRO-02 | Configuración privada del servidor: FINTOC_ENABLED, FINTOC_PERSONAL_FREE_ACCESS_CONFIRMED, FINTOC_MODE (test/live), FINTOC_OWNER_USER_ID, FINTOC_SECRET_KEY, FINTOC_LINK_TOKEN y FINTOC_ACCOUNT_ID. Ninguna variable secreta usa REACT_APP_. Ambas banderas deben ser true para hacer tráfico externo. Los sufijos de la clave secreta y de Link Token admiten caracteres URL-safe alfanuméricos, guion y guion bajo, conservando validación estricta del prefijo sk y modo, del ID de Link y de la longitud máxima. Una clave pk pública nunca se acepta como secreta. |
 | FRO-03 | Todas las rutas exigen autenticación, espacio propio y coincidencia del actor con el dueño configurado. Un miembro, otro dueño o un header de espacio ajeno nunca recibe datos de la conexión. |
 | FRO-04 | Solo GET contra api.fintoc.com/v1, versión fijada 2026-02-01, sin redirects, retries, refrescos de pago, widget ni endpoints de escritura. Recupera el Link propio mediante token privado y comprueba institución cl_banco_de_chile, país cl, titular individual, modo y conexión activa. |
 | FRO-05 | Solo la cuenta configurada, checking_account CLP y no removida. IDs externos solo del proveedor y configuración, nunca elegibles desde el cliente. Los secretos no aparecen en respuestas, errores, logs ni almacenamiento del navegador. |

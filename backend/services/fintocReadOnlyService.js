@@ -29,8 +29,8 @@ function configuration(env) {
   const linkToken = env.FINTOC_LINK_TOKEN;
   const accountId = env.FINTOC_ACCOUNT_ID;
   const valid = Boolean(mode && owner
-    && nonempty(secret) && new RegExp(`^sk_${mode}_[A-Za-z0-9]+$`).test(secret)
-    && nonempty(linkToken, 1024) && /^link_[A-Za-z0-9]+_token_[A-Za-z0-9]+$/.test(linkToken)
+    && nonempty(secret) && new RegExp(`^sk_${mode}_[A-Za-z0-9_-]+$`).test(secret)
+    && nonempty(linkToken, 1024) && /^link_[A-Za-z0-9]+_token_[A-Za-z0-9_-]+$/.test(linkToken)
     && nonempty(accountId) && /^acc_[A-Za-z0-9]+$/.test(accountId));
   let state = 'disabled';
   if (env.FINTOC_ENABLED === 'true') {
