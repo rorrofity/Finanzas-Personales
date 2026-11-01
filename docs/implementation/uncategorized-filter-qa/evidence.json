@@ -1,0 +1,115 @@
+{
+  "data": "exclusively fictitious",
+  "realDatabaseAccess": false,
+  "realBankRequests": 0,
+  "cases": [
+    {
+      "name": "dashboard-desktop-nacionales-light",
+      "mode": "light",
+      "width": 1440,
+      "scroll": 1440,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-desktop-nacionales-dark",
+      "mode": "dark",
+      "width": 1440,
+      "scroll": 1440,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-desktop-internacionales-light",
+      "mode": "light",
+      "width": 1440,
+      "scroll": 1440,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-desktop-internacionales-dark",
+      "mode": "dark",
+      "width": 1440,
+      "scroll": 1440,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-desktop-cuenta-corriente-light",
+      "mode": "light",
+      "width": 1440,
+      "scroll": 1440,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-desktop-cuenta-corriente-dark",
+      "mode": "dark",
+      "width": 1440,
+      "scroll": 1440,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-mobile-nacionales-light",
+      "mode": "light",
+      "width": 375,
+      "scroll": 375,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-mobile-nacionales-dark",
+      "mode": "dark",
+      "width": 375,
+      "scroll": 375,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-mobile-internacionales-light",
+      "mode": "light",
+      "width": 375,
+      "scroll": 375,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-mobile-internacionales-dark",
+      "mode": "dark",
+      "width": 375,
+      "scroll": 375,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-mobile-cuenta-corriente-light",
+      "mode": "light",
+      "width": 375,
+      "scroll": 375,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    },
+    {
+      "name": "dashboard-mobile-cuenta-corriente-dark",
+      "mode": "dark",
+      "width": 375,
+      "scroll": 375,
+      "writes": [],
+      "jsErrors": [],
+      "unexpectedApi": []
+    }
+  ]
+}

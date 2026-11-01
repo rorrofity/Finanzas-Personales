@@ -48,6 +48,7 @@ import SyncButton from '../components/SyncButton';
 import BillingPeriodConfig from '../components/BillingPeriodConfig';
 import { usePeriod } from '../contexts/PeriodContext';
 import StatCard from '../components/ui/StatCard';
+import UncategorizedFilter, { isUncategorized } from '../components/UncategorizedFilter';
 import axios from 'axios';
 
 const hasConversion = row => row.amount_clp !== null && row.amount_clp !== undefined
@@ -66,6 +67,7 @@ const TransactionsIntl = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [hideDismissed, setHideDismissed] = useState(false);
+  const [onlyUncategorized, setOnlyUncategorized] = useState(false);
   const [openImport, setOpenImport] = useState(false);
   const [brand, setBrand] = useState('visa');
   const [rate, setRate] = useState('');
@@ -100,6 +102,7 @@ const TransactionsIntl = () => {
       if (saved) setCardFilter(saved);
     } catch {}
     setPage(0);
+    setSelectedIds([]);
   }, [year, month]);
   useEffect(() => { fetchCategories(); }, []);
 
@@ -166,7 +169,7 @@ const TransactionsIntl = () => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
   const toggleSelectAll = (checked) => {
-    if (checked) setSelectedIds(rows.map(r => r.id)); else setSelectedIds([]);
+    if (checked) setSelectedIds(filteredRows.map(r => r.id)); else setSelectedIds([]);
   };
 
   const handleOpenEdit = (row) => {
@@ -259,14 +262,25 @@ const TransactionsIntl = () => {
     }
   };
 
-  // Filtrado por tarjeta + toggle desestimados
-  const filteredRows = (hideDismissed ? rows.filter(r => r.tipo !== 'desestimar') : rows).filter(r => {
+  // Count against the other active filters, then filter before pagination.
+  const baseFilteredRows = useMemo(() => (hideDismissed ? rows.filter(r => r.tipo !== 'desestimar') : rows).filter(r => {
     if (cardFilter === 'ALL') return true;
     const b = String(r.brand || '').toLowerCase();
     if (cardFilter === 'VISA') return b === 'visa';
     if (cardFilter === 'MASTERCARD') return b === 'mastercard';
     return true;
-  });
+  }), [rows, hideDismissed, cardFilter]);
+  const uncategorizedCount = baseFilteredRows.filter(isUncategorized).length;
+  const filteredRows = useMemo(() => onlyUncategorized ? baseFilteredRows.filter(isUncategorized) : baseFilteredRows, [baseFilteredRows, onlyUncategorized]);
+  const visiblePage = Math.min(page, Math.max(0, Math.ceil(filteredRows.length / rowsPerPage) - 1));
+  useEffect(() => {
+    setPage(previous => Math.min(previous, Math.max(0, Math.ceil(filteredRows.length / rowsPerPage) - 1)));
+    const visibleIds = new Set(filteredRows.map(row => row.id));
+    setSelectedIds(previous => {
+      const visible = previous.filter(id => visibleIds.has(id));
+      return visible.length === previous.length ? previous : visible;
+    });
+  }, [filteredRows, rowsPerPage]);
   const titleBrandLabel = cardFilter === 'ALL' ? 'Todas' : (cardFilter === 'VISA' ? 'Visa' : 'Mastercard');
 
   // Calcular totales
@@ -339,7 +353,7 @@ const TransactionsIntl = () => {
         />
         <Button variant="contained" onClick={() => setOpenImport(true)}>Importar archivo</Button>
         <FormControlLabel
-          control={<Switch checked={hideDismissed} onChange={(e)=>{ setHideDismissed(e.target.checked); setPage(0); }} />}
+          control={<Switch checked={hideDismissed} onChange={(e)=>{ setHideDismissed(e.target.checked); setPage(0); setSelectedIds([]); }} />}
           label="Ocultar desestimados en tabla"
         />
         <TextField
@@ -351,6 +365,7 @@ const TransactionsIntl = () => {
             const v = e.target.value;
             setCardFilter(v);
             setPage(0);
+            setSelectedIds([]);
             try { sessionStorage.setItem(`tcFilterCard::transactionsIntl::${periodKey}`, v); } catch {}
           }}
           sx={{ minWidth: 180 }}
@@ -359,6 +374,7 @@ const TransactionsIntl = () => {
           <MenuItem value="VISA">Visa</MenuItem>
           <MenuItem value="MASTERCARD">Mastercard</MenuItem>
         </TextField>
+        <UncategorizedFilter active={onlyUncategorized} count={uncategorizedCount} onChange={active => { setOnlyUncategorized(active); setPage(0); setSelectedIds([]); }} />
         {selectedIds.length > 0 && (
           <Button color="error" variant="contained" onClick={handleBulkDelete}>
             Eliminar seleccionadas ({selectedIds.length})
@@ -413,12 +429,12 @@ const TransactionsIntl = () => {
         <Box sx={{ mb: 2 }}>
           {filteredRows.length === 0 ? (
             <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
-              No tienes transacciones internacionales no facturadas en este mes.
+              {onlyUncategorized ? 'No hay transacciones internacionales sin categoría con estos filtros.' : 'No tienes transacciones internacionales no facturadas en este mes.'}
             </Typography>
           ) : (
             <Stack spacing={1}>
               {filteredRows
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .slice(visiblePage * rowsPerPage, visiblePage * rowsPerPage + rowsPerPage)
                 .map((r) => (
                   <Card key={r.id} variant="outlined" sx={{ 
                     borderLeft: r.category_id ? '4px solid #4caf50' : '4px solid #ff9800',
@@ -492,7 +508,7 @@ const TransactionsIntl = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>
-                    <input type="checkbox" checked={selectedIds.length === rows.length && rows.length>0} onChange={(e)=>toggleSelectAll(e.target.checked)} />
+                    <input type="checkbox" aria-label="Seleccionar todas las transacciones filtradas" checked={filteredRows.length > 0 && filteredRows.every(row => selectedIds.includes(row.id))} onChange={(e)=>toggleSelectAll(e.target.checked)} />
                   </TableCell>
                   <TableCell>Fecha</TableCell>
                   <TableCell>Descripción</TableCell>
@@ -506,11 +522,11 @@ const TransactionsIntl = () => {
               </TableHead>
               <TableBody>
                 {filteredRows.length ? filteredRows
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .slice(visiblePage * rowsPerPage, visiblePage * rowsPerPage + rowsPerPage)
                   .map(r => (
                     <TableRow key={r.id}>
                       <TableCell>
-                        <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
+                        <input type="checkbox" aria-label={`Seleccionar ${r.descripcion}`} checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
                       </TableCell>
                       <TableCell>{formatDateLocal(r.fecha)}</TableCell>
                       <TableCell>
@@ -542,7 +558,7 @@ const TransactionsIntl = () => {
                     </TableRow>
                   )) : (
                   <TableRow>
-                    <TableCell colSpan={9} align="center">No tienes transacciones internacionales no facturadas en este mes. Importa un archivo para comenzar.</TableCell>
+                    <TableCell colSpan={9} align="center">{onlyUncategorized ? 'No hay transacciones internacionales sin categoría con estos filtros.' : 'No tienes transacciones internacionales no facturadas en este mes. Importa un archivo para comenzar.'}</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -556,13 +572,13 @@ const TransactionsIntl = () => {
         component="div"
         count={filteredRows.length}
         rowsPerPage={rowsPerPage}
-        page={page}
+        page={visiblePage}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
 
       <Box mt={1} textAlign="right">
-        <Typography variant="caption">Mostrando {Math.min(filteredRows.length, page*rowsPerPage + (filteredRows.slice(page*rowsPerPage, page*rowsPerPage+rowsPerPage).length))} de {filteredRows.length} transacciones ({titleBrandLabel})</Typography>
+        <Typography variant="caption">Mostrando {Math.min(filteredRows.length, visiblePage*rowsPerPage + (filteredRows.slice(visiblePage*rowsPerPage, visiblePage*rowsPerPage+rowsPerPage).length))} de {filteredRows.length} transacciones ({titleBrandLabel})</Typography>
       </Box>
 
       {/* Edit dialog */}

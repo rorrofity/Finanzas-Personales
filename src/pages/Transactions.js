@@ -58,6 +58,7 @@ import { useOfflineContext } from '../contexts/OfflineContext';
 import { useSpace } from '../contexts/SpaceContext';
 import CreatedByChip from '../components/CreatedByChip';
 import StatCard from '../components/ui/StatCard';
+import UncategorizedFilter, { isUncategorized } from '../components/UncategorizedFilter';
 import { fetchWithCache } from '../services/readCache';
 
 const Transactions = () => {
@@ -103,6 +104,7 @@ const Transactions = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState(null);
   const [hideDismissed, setHideDismissed] = useState(false);
+  const [onlyUncategorized, setOnlyUncategorized] = useState(false);
   const [showInfo, setShowInfo] = useState(() => {
     // Mostrar alerta informativa por sesión, una sola vez
     const dismissed = sessionStorage.getItem('dismiss_info_desestimar');
@@ -363,7 +365,7 @@ const Transactions = () => {
 
   const handleSelectAll = (event) => {
     if (event.target.checked) {
-      setSelectedTransactions(transactions.map((t) => t.id));
+      setSelectedTransactions(filteredTransactions.map((t) => t.id));
     } else {
       setSelectedTransactions([]);
     }
@@ -531,15 +533,31 @@ const Transactions = () => {
     } catch {}
   }, [orderBy, orderDirection, year, month]);
 
-  // Colección filtrada por tarjeta + toggle desestimados
-  const filteredTransactions = (hideDismissed ? transactions.filter(t => t.tipo !== 'desestimar') : transactions)
-    .filter(t => {
-      if (cardFilter === 'ALL') return true;
-      const net = (t.network || '').toLowerCase();
-      if (cardFilter === 'VISA') return net === 'visa';
-      if (cardFilter === 'MASTERCARD') return net === 'mastercard';
-      return true;
+  // La categoría se filtra sobre todo el mes, antes de paginar.
+  const baseFilteredTransactions = useMemo(() => transactions.filter(t => {
+    if (hideDismissed && t.tipo === 'desestimar') return false;
+    if (cardFilter !== 'VISA' && cardFilter !== 'MASTERCARD') return true;
+    return String(t.network || '').toLowerCase() === cardFilter.toLowerCase();
+  }), [transactions, hideDismissed, cardFilter]);
+  const uncategorizedCount = baseFilteredTransactions.filter(isUncategorized).length;
+  const filteredTransactions = useMemo(() => onlyUncategorized
+    ? baseFilteredTransactions.filter(isUncategorized) : baseFilteredTransactions,
+  [baseFilteredTransactions, onlyUncategorized]);
+  const visiblePage = Math.min(page, Math.max(0, Math.ceil(filteredTransactions.length / rowsPerPage) - 1));
+
+  useEffect(() => {
+    setPage(0);
+    setSelectedTransactions([]);
+  }, [onlyUncategorized, cardFilter, hideDismissed, year, month]);
+
+  useEffect(() => {
+    setPage(previous => Math.min(previous, Math.max(0, Math.ceil(filteredTransactions.length / rowsPerPage) - 1)));
+    const visibleIds = new Set(filteredTransactions.map(t => t.id));
+    setSelectedTransactions(previous => {
+      const visible = previous.filter(id => visibleIds.has(id));
+      return visible.length === previous.length ? previous : visible;
     });
+  }, [filteredTransactions, rowsPerPage]);
 
   const titleBrandLabel = cardFilter === 'ALL' ? 'Todas' : (cardFilter === 'VISA' ? 'Visa' : 'Mastercard');
 
@@ -654,6 +672,7 @@ const Transactions = () => {
           </Stack>
         </Box>
         <Box px={{ xs: 1, sm: 2 }} pb={1} display="flex" alignItems="center" gap={1} flexWrap="wrap">
+          <UncategorizedFilter active={onlyUncategorized} count={uncategorizedCount} onChange={setOnlyUncategorized} />
           <FormControlLabel
             control={
               <Switch
@@ -698,12 +717,12 @@ const Transactions = () => {
           <Box sx={{ p: 1 }}>
             {filteredTransactions.length === 0 ? (
               <Typography align="center" color="text.secondary" sx={{ py: 4 }}>
-                No hay transacciones este mes
+                {onlyUncategorized ? 'No hay transacciones sin categoría con estos filtros.' : 'No hay transacciones este mes'}
               </Typography>
             ) : (
               <Stack spacing={1}>
                 {filteredTransactions
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .slice(visiblePage * rowsPerPage, visiblePage * rowsPerPage + rowsPerPage)
                   .map((transaction) => (
                     <Card key={transaction.id} variant="outlined" sx={{ 
                       borderLeft: transaction.category_id ? '4px solid #4caf50' : '4px solid #ff9800',
@@ -781,7 +800,7 @@ const Transactions = () => {
                   <TableCell>
                     <input
                       type="checkbox"
-                      checked={selectedTransactions.length === transactions.length && transactions.length > 0}
+                      checked={filteredTransactions.length > 0 && filteredTransactions.every(t => selectedTransactions.includes(t.id))}
                       onChange={handleSelectAll}
                     />
                   </TableCell>
@@ -799,12 +818,12 @@ const Transactions = () => {
                 {filteredTransactions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} align="center">
-                      No hay transacciones este mes
+                      {onlyUncategorized ? 'No hay transacciones sin categoría con estos filtros.' : 'No hay transacciones este mes'}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredTransactions
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .slice(visiblePage * rowsPerPage, visiblePage * rowsPerPage + rowsPerPage)
                     .map((transaction) => (
                       <TableRow key={transaction.id}>
                         <TableCell>
@@ -918,7 +937,7 @@ const Transactions = () => {
           component="div"
           count={filteredTransactions.length}
           rowsPerPage={rowsPerPage}
-          page={page}
+          page={visiblePage}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
           labelRowsPerPage={isMobile ? "" : "Filas por página:"}

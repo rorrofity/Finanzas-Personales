@@ -1,0 +1,15 @@
+# UCF — acceso rápido a movimientos sin categoría
+
+Solicitud y especificación antes del código: 2026-11-01 America/Santiago. Facilitar la revisión de movimientos aún sin categorizar en tarjetas nacionales, internacionales y cuenta corriente. Cambio de presentación: no modifica gastos, categorías, notas, importaciones, conciliaciones o configuración bancaria.
+
+- **UCF-01:** Las tres vistas muestran un mismo botón visible `Sin categoría (N)` que activa/desactiva el filtro con un clic y anuncia su estado seleccionado. No queda deshabilitado si N=0; se puede volver a todos.
+- **UCF-02:** Sin categoría significa category_id null, ausente o cadena vacía; una categoría asignada no se deduce del texto legacy categoria ni del nombre visible. El contador usa el mes y los otros filtros activos (tarjeta/tipo/desestimados), antes del filtro de categoría.
+- **UCF-03:** Filtrar sobre el mes completo ya cargado, antes de paginar. Se combina con tarjeta/tipo/desestimados, vuelve a la primera página al cambiar filtros y limita la página al reducirse resultados. Sin persistencia nueva ni solicitudes adicionales al activar el filtro.
+- **UCF-04:** Seleccionar todos en las vistas de tarjetas opera únicamente sobre la colección filtrada; retirar selecciones que quedan ocultas al filtrar/categorizar/cambiar período. El filtro no ejecuta escrituras. La edición explícita existente conserva su comportamiento; al categorizar una fila, deja de pertenecer al filtro inmediatamente tras respuesta exitosa.
+- **UCF-05:** Cuenta corriente integra `Sin categoría` en su selector existente y en el acceso rápido: activar el acceso sustituye una categoría específica, desactivar vuelve a todas. Mantener intactos saldo bancario/calculado y los totales mensuales de referencia; mostrar cantidad de resultados filtrados por separado.
+- **UCF-06:** En tarjetas, totales y cantidades siguen su actual criterio de la colección filtrada. Estado vacío específico cuando el filtro no tiene coincidencias. No confundir cero resultados con ausencia de movimientos del mes.
+- **UCF-07:** Accesible con teclado y lector de pantalla, claro/oscuro, tarjetas móviles y tabla escritorio; 375px sin desplazamiento lateral. Conservar permisos/offline y demás controles.
+- **UCF-08:** TDD RED→GREEN de componentes y páginas con datos ficticios: null/assigned, combinaciones, conteo, paginación, selección, estado vacío, actualización tras categorizar y ninguna escritura por filtrar. Playwright en las tres vistas/móvil/temas. Validaciones existentes pertinentes sin debilitar.
+- **UCF-09:** Desplegar el build en el servidor autorizado y actualizar repo. Solo frontend, ninguna migración/reinicio del backend/cambio de sincronización. Evidencia pública con fixtures/booleans, sin datos personales. Preservar cambios previos del usuario en docs.
+
+Componente común `UncategorizedFilter({active,count,onChange})`, helper `isUncategorized(row)`. Valor booleano onChange. Sin endpoints nuevos ni filtros persistidos en storage. El resto de los filtros existentes mantiene su semántica.

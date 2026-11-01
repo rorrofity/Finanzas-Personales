@@ -43,6 +43,7 @@ import { useSpace } from '../contexts/SpaceContext';
 import StatCard from '../components/ui/StatCard';
 import FintocCheckingPreview from '../components/FintocCheckingPreview';
 import FintocBankBalance from '../components/FintocBankBalance';
+import UncategorizedFilter, { isUncategorized } from '../components/UncategorizedFilter';
 
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
@@ -112,13 +113,22 @@ export default function Checking() {
     return () => { request.current.controller?.abort(); request.current.version += 1; };
   }, [year, month, scope]);
 
-  const filteredRows = useMemo(() => {
-    return rows.filter(r => {
-      if (filter.tipo !== 'todos' && r.tipo !== filter.tipo) return false;
-      if (filter.category_id && r.category_id !== filter.category_id) return false;
-      return true;
-    });
-  }, [rows, filter]);
+  const typeFilteredRows = useMemo(() => rows.filter(r => filter.tipo === 'todos' || r.tipo === filter.tipo), [rows, filter.tipo]);
+  const uncategorizedCount = typeFilteredRows.filter(isUncategorized).length;
+  const onlyUncategorized = filter.category_id === 'uncategorized';
+  const filteredRows = useMemo(() => typeFilteredRows.filter(r => {
+    if (filter.category_id === 'uncategorized') return isUncategorized(r);
+    return !filter.category_id || String(r.category_id) === String(filter.category_id);
+  }), [typeFilteredRows, filter.category_id]);
+
+  useEffect(() => { setPage(0); }, [year, month, scope]);
+  useEffect(() => { setPage(previous => Math.min(previous, Math.max(0, Math.ceil(filteredRows.length / pageSize) - 1))); }, [filteredRows.length]);
+
+  const changeFilter = (field, value) => {
+    setFilter(previous => ({ ...previous, [field]: value }));
+    setPage(0);
+  };
+  const emptyMessage = onlyUncategorized ? 'No hay movimientos sin categoría con estos filtros.' : 'No hay movimientos este mes.';
 
   const openNewMove = () => {
     // Fecha hoy en America/Santiago
@@ -268,13 +278,13 @@ export default function Checking() {
         </Grid>
       </Grid>
 
-      <Stack direction={{ xs:'column', sm:'row' }} spacing={2} sx={{ mb: 1 }}>
+      <Stack direction={{ xs:'column', sm:'row' }} spacing={2} useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
         <TextField
           select
           size="small"
           label="Tipo"
           value={filter.tipo}
-          onChange={(e)=>setFilter(prev=>({ ...prev, tipo: e.target.value }))}
+          onChange={(e) => changeFilter('tipo', e.target.value)}
           sx={{ minWidth: 160 }}
         >
           <MenuItem value="todos">Todos</MenuItem>
@@ -286,22 +296,26 @@ export default function Checking() {
           size="small"
           label="Categoría"
           value={filter.category_id || 'todas'}
-          onChange={(e)=>setFilter(prev=>({ ...prev, category_id: e.target.value === 'todas' ? '' : e.target.value }))}
+          onChange={(e) => changeFilter('category_id', e.target.value === 'todas' ? '' : e.target.value)}
           sx={{ minWidth: 200 }}
         >
           <MenuItem value="todas">Todas</MenuItem>
+          <MenuItem value="uncategorized">Sin categoría</MenuItem>
           {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
         </TextField>
+        <UncategorizedFilter active={onlyUncategorized} count={uncategorizedCount} onChange={active => changeFilter('category_id', active ? 'uncategorized' : '')} />
         <Box sx={{ flex: 1 }} />
         <Button variant="outlined" startIcon={<FileUpload />} onClick={() => setOpenImport(true)}>Importar cartola</Button>
         <Button variant="contained" startIcon={<Add />} onClick={openNewMove}>Nuevo movimiento</Button>
       </Stack>
 
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Mostrando {filteredRows.length} de {total} movimientos</Typography>
+
       {isMobile ? (
         <Stack spacing={1.5}>
           {filteredRows.length === 0 ? (
             <Paper sx={{ p: 3 }}>
-              <Typography align="center" color="text.secondary">No hay movimientos este mes.</Typography>
+              <Typography align="center" color="text.secondary">{emptyMessage}</Typography>
             </Paper>
           ) : (
             filteredRows.map((r) => (
@@ -354,7 +368,7 @@ export default function Checking() {
               <TableBody>
                 {filteredRows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} align="center">No hay movimientos este mes.</TableCell>
+                    <TableCell colSpan={7} align="center">{emptyMessage}</TableCell>
                   </TableRow>
                 )}
                 {filteredRows.map(r => (
@@ -400,7 +414,7 @@ export default function Checking() {
       {/* Pagination */}
       <Box mt={2} display="flex" justifyContent="flex-end">
         <Pagination
-          count={Math.max(1, Math.ceil(total / pageSize))}
+          count={Math.max(1, Math.ceil(filteredRows.length / pageSize))}
           page={page + 1}
           onChange={(_, p) => setPage(p - 1)}
           color="primary"
