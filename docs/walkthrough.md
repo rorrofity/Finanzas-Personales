@@ -252,3 +252,16 @@ A solicitud expresa del titular se compararon los pendientes iniciales con todo 
 TDD: 49 pruebas del motor y 13 de CLI; regresión backend completa 342/15 suites. Integración en PostgreSQL efímero verifica inmutabilidad, rollback, multiplicidad, fechas, tombstones, planes obsoletos y concurrencia con cartola/otro apply. Reauditoría independiente aprobada. Ningún dato real se incorporó a fixtures o repo.
 
 Herramienta publicada e instalada, sin migraciones, build, reinicio, cambios de configuración ni consultas nuevas a Fintoc. Fecha bancaria, corte, última consulta y cron diario conservados. Repetir preview o evaluar el cron con los IDs conciliados produce cero nuevas inserciones. API autenticada y web de producción verificadas; respaldos y detalles reales solo en el servidor privado.
+
+
+## PARTE 10 — Saldo bancario exacto y clasificación por historial
+
+**Verificado el 2026-11-01 a las 01:04:09 America/Santiago.** [Contrato previo FBA/FHC](implementation/fintoc-balance-classification-contract.md), [plan y pruebas](implementation/fintoc-balance-classification-plan.md), [evidencia sin valores financieros](implementation/fintoc-balance-classification-deployment.json).
+
+La web muestra disponible bancario exacto, contable, fecha bancaria y diferencia frente al cálculo histórico identificado. El snapshot separado se capturó mediante GET autorizado y se actualiza por el cron existente tras lotes completos. No se usa la línea de crédito ni se alteran saldos de cartolas para forzar una igualdad. UI clara en móvil/ambos temas y aislamiento por sesión/espacio, sin caché bancaria.
+
+Se clasificaron únicamente importados aún NULL con descripción completa/tipo y categoría histórica unánime del titular; contradicciones o falta de antecedentes permanecen sin categoría. Se excluyen inferencias previas del aprendizaje. Solo category_id y updated_at autorizados cambiaron; todos los demás campos originales y las otras ocho tablas financieras permanecen idénticos. Nueva ejecución no añade asignaciones duplicadas.
+
+SDD→TDD: 451 pruebas backend, 217 frontend, 113 navegador y 7 PWA; 11 omisiones previstas de viewport. PostgreSQL efímero verifica ambos flujos, monotonicidad, rollback, preservación, cron completo/incompleto y planes obsoletos. Reauditoría independiente corrigió respuestas antiguas demoradas y descripciones truncadas; QA móvil corrigió etiquetas cortadas, con 4 pruebas de Checking, 15 recorridos específicos y 7 PWA sobre el build final.
+
+Código construido y desplegado en el servidor, únicamente migración aditiva 032. API, web, assets y cron real verificados; configuración, estado diario y TC/N8N conservados. Los valores reales, planes e IDs permanecen exclusivamente en el servidor. Repo actualizado y cambios previos del usuario preservados separados.

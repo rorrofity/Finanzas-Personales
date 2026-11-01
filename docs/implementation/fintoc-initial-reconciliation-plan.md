@@ -30,3 +30,8 @@ Preview repetido: cero nuevas inserciones o enlaces. El plan puro del cron tampo
 [Evidencia pública sin movimientos ni importes](fintoc-initial-reconciliation-deployment.json). Planes, conteos reales, resultados y huellas de filas permanecen solo en `/var/backups/finanzas/fintoc-initial-20261101-fb99412/`, directorio privado del servidor. La configuración .env conserva su huella; los cambios documentales previos del usuario se preservan separados.
 
 Al revertir código de la herramienta, conservar movimientos y referencias añadidos: no borrar ni reescribir información financiera. El proceso diario continúa con sus reglas originales y reconoce los IDs conciliados.
+
+
+## Clasificación posterior autorizada
+
+El titular autorizó después clasificar las incorporaciones todavía NULL según el historial y mostrar el saldo bancario separado. La [enmienda FBA/FHC](fintoc-balance-classification-contract.md) y su [verificación](fintoc-balance-classification-plan.md) documentan esa operación explícita posterior, conservando las clasificaciones que ya existían antes de la importación.

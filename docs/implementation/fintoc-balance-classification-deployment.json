@@ -1,0 +1,20 @@
+{
+  "verifiedAt": "2026-11-01T04:04:09.884Z",
+  "sourceSha": "5cc51561c161286d118a70b5be427258311d1d0e",
+  "bankSnapshot": "captured from authenticated GET Link",
+  "bankApiMatchesCapturedAvailableAndCurrent": true,
+  "creditLineExcluded": true,
+  "bankDataAccess": "owner200 other403 anonymous401 no-store",
+  "migration": "032 only; additive bank snapshot table",
+  "unchangedFinancialTables": 8,
+  "checkingChanges": "only reviewed category_id and updated_at of imported NULL rows",
+  "allOtherCheckingFieldsAndRowsIdentical": true,
+  "existingCategoriesNotesAmountsDatesAndStoredBalancesPreserved": true,
+  "classificationRepeatNewAssignments": 0,
+  "dailyStateUnchanged": true,
+  "dailySchedule": "unchanged 07:00 America/Santiago",
+  "configurationUnchanged": true,
+  "appAndAssets": 200,
+  "previousAssetsRetained": true,
+  "privateFinancialDetails": "server only"
+}
