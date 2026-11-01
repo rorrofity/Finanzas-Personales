@@ -741,8 +741,8 @@ El período se basa en facturación persistida. Ventanas3/6/12 terminan en el me
 
 ## 12. Epic16 — Apariencia y lectura móvil
 
-**Estado:** autorizada para implementación el 2026-10-31. Requisitos [AP-01–05 y MOB-01–09](implementation/appearance-mobile-contract.md), con [plan y evidencia TDD](implementation/appearance-mobile-plan.md).
+**Estado:** implementada, verificada y desplegada el 2026-10-31. Requisitos [AP-01–05 y MOB-01–09](implementation/appearance-mobile-contract.md), con [plan y evidencia TDD](implementation/appearance-mobile-plan.md).
 
-El usuario elige Claro,Oscuro oAutomático por dispositivo sin base de datos. En menos de 900 px, la lista de categorías e historial mensual vertical reemplazan la matriz lateral; escritorio conserva tabla completa. Se mantienen importes exactos,fuentes, períodos, detalle, caché, offline y permisos. Esta enmienda refuerza DCE-18: móvil no requiere desplazamiento horizontal dentro ni fuera de la sección de categorías.
+El usuario elige Claro, Oscuro o Automático por dispositivo sin base de datos. En menos de 900 px, la lista de categorías e historial mensual vertical reemplazan la matriz lateral; escritorio conserva tabla completa. Se mantienen importes exactos, fuentes, períodos, detalle, caché, offline y permisos. Esta enmienda refuerza DCE-18: móvil no requiere desplazamiento horizontal dentro ni fuera de la sección de categorías.
 
 La posible sincronización diaria de cuenta corriente permanece como [propuesta CSYNC](proposals/checking-daily-sync.md): exige un acceso habilitable para persona natural, costo cero y autorización de la fuente. No forma parte de la implementación o del despliegue de apariencia.

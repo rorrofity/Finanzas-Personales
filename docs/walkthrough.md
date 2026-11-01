@@ -204,3 +204,15 @@ Implementada y desplegada en `finanzas.rocketflow.cl`, código `9993630426605f4b
 **Datos preservados:** comparación de huellas de nueve tablas financieras antes/después:0 registros modificados,0 eliminados y0 añadidos. Sin migraciones, nuevas dependencias, login, registro, importaciones ni sincronizaciones. Rollback limitado a código/build, con respaldo en `/var/backups/finanzas/dashboard-20261031-9993630`.
 
 Contrato, pruebas y detalle operativo en [el plan de Epic15](implementation/dashboard-category-evolution-plan.md). La conciliación bancaria de Epic14 y los cambios documentales previos permanecen independientes de esta entrega.
+
+---
+
+# PARTE 6 — Epic16: apariencia y lectura móvil (2026-10-31)
+
+Desplegada la interfaz `134d065d3716e8a7313d3640388f3b139c439672` en `finanzas.rocketflow.cl`. Modo Claro, Oscuro y Automático por dispositivo, accesible desde navegación e inicio de sesión. En móvil, lista completa de categorías con importe y variación e historial mensual vertical; la matriz queda en escritorio. Se compactaron filtros, resumen y detalles de cobertura y se preserva la categoría al cambiar la ventana.
+
+**SDD/TDD:** AP-01–05 y MOB-01–09, con RED observado para apariencia, lista vertical, selección y contraste. Verificación final: 124 pruebas frontend, 67 backend, 72 E2E y 7 PWA pasan; 7 E2E se omiten por ancho de pantalla. Capturas con datos ficticios y evidencia en [QA](implementation/appearance-mobile-qa/evidence.json).
+
+**Servidor:** construcción de frontend en el servidor, respaldo del build anterior y conservación de assets para clientes sin actualizar. Backend con el mismo PID y tiempo de inicio, sin reiniciar ni modificar scheduler. App/assets/SW responden 200 y API mantiene 401 sin autenticación. Comparación de nueve tablas financieras: 0 modificaciones, 0 eliminaciones y 0 inserciones.
+
+La sincronización de cuenta corriente quedó como [propuesta](proposals/checking-daily-sync.md), ajustada a persona natural y costo cero. No se conectó el banco, contrató un proveedor, activó una programación o modificó el importador. [Plan y despliegue de Epic16](implementation/appearance-mobile-plan.md).

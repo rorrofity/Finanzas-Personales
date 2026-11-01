@@ -1,6 +1,6 @@
 # Epic16 — ejecución de apariencia y lectura móvil
 
-**Estado:** implementada y verificada localmente; publicación y despliegue pendientes. Fecha: 2026-10-31. Especificación: [AP-01–05 y MOB-01–09](appearance-mobile-contract.md). Datos, clasificaciones, backend, importador y sincronizaciones existentes permanecen fuera del alcance de modificación.
+**Estado:** implementada, verificada y desplegada en producción. Fecha: 2026-10-31. Especificación: [AP-01–05 y MOB-01–09](appearance-mobile-contract.md). Datos, clasificaciones, backend, importador y sincronizaciones existentes se conservaron sin modificaciones.
 
 ## Decisiones de producto
 
@@ -26,7 +26,7 @@ Las pruebas de porcentajes sin base se adaptaron para consultar las tarjetas de 
 
 Las pruebas de navegador usan únicamente `127.0.0.1`, frontend estático y respuestas ficticias explícitas. Se bloquean peticiones API inesperadas, escrituras y destinos externos. Capturas: [QA](appearance-mobile-qa/evidence.json), exclusivamente con datos ficticios.
 
-No se añadieron dependencias ni se modificaron backend o esquema. El despliegue construirá en el servidor, conservará el build previo y actualizará únicamente el frontend, sin reiniciar el backend ni tocar el scheduler. Se compararán huellas de las nueve tablas financieras antes y después y se verificará entrega de assets y PWA.
+No se añadieron dependencias ni se modificaron backend o esquema. El despliegue construyó en el servidor, conservó el build previo y actualizó únicamente el frontend, sin reiniciar el backend ni tocar el scheduler. Se compararon huellas de las nueve tablas financieras antes y después y se verificó entrega de assets y PWA.
 
 ## Resultado de verificación local
 
@@ -39,4 +39,14 @@ No se añadieron dependencias ni se modificaron backend o esquema. El despliegue
 
 **Total: 270 pruebas pasan**, además de las comprobaciones visuales. Las 7 omisiones de navegador no corresponden a fallos. Los comandos principales son `npm run test:unit -- --runInBand`, `npm run test:backend -- --runInBand` y `DASHBOARD_BUILD_DIR=/private/tmp/finanzas-appearance-mobile-final npm run test:dashboard`; PWA se ejecutó con configuración local sobre el mismo build.
 
-El commit y resultado del despliegue se completarán al publicar. Los cambios documentales previos de Epic14 y recuperación operativa se preservan separados. La propuesta de cuenta corriente refleja el requisito definitivo de alta como persona natural y costo cero; ninguna conexión o programación bancaria nueva se activa con esta entrega.
+## Despliegue e integridad
+
+Código publicado en `origin/main`: **134d065d3716e8a7313d3640388f3b139c439672**. Construido en `/var/www/finanzas-personales` y verificado el **2026-10-31 a las 22:21:52 America/Santiago**. Se reemplazó el build de forma acotada, conservando los assets anteriores necesarios para pestañas y PWAs todavía no actualizadas.
+
+El proceso `finanzas-backend` permaneció online con el mismo PID y tiempo de inicio; no se reinició ni se modificó su programación. App, JS principal, módulo de categorías móviles y SW públicos responden 200. Los endpoints del dashboard conservan 401 sin autenticación. La apariencia y la lista vertical están presentes en los assets activos.
+
+Se compararon huellas por llave primaria y contenido de `categories`, `transactions`, `intl_unbilled`, `checking_transactions`, `checking_balances`, `installment_plans`, `installment_occurrences`, `projected_templates` y `projected_occurrences`. Resultado: **0 registros modificados, 0 eliminados y 0 añadidos**. Las huellas completas permanecen únicamente en el servidor; la [evidencia de despliegue](appearance-mobile-deployment.json) no contiene movimientos reales.
+
+Rollback: código anterior `b92104db5fc2c828bac1ded63d7fcb4dea085f14` y build en `/var/backups/finanzas/appearance-mobile-20261031-134d065/build`. Revertir esta entrega requiere únicamente código/build, nunca restaurar la base.
+
+Los cambios documentales previos de Epic14 y recuperación operativa se preservan separados. La propuesta de cuenta corriente refleja el requisito definitivo de alta como persona natural y costo cero; ninguna conexión o programación bancaria nueva se activó con esta entrega.

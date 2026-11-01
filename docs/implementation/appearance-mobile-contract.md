@@ -1,6 +1,6 @@
 # Epic16 — Apariencia y lectura móvil del dashboard
 
-**Estado:** autorizado para implementación el 2026-10-31. Responde al pedido de modo claro/oscuro y a la dificultad de lectura y desplazamiento lateral en móvil. El estudio de sincronización bancaria se registra aparte como propuesta; no activa conexiones ni procesos de importación.
+**Estado:** implementado, verificado y desplegado el 2026-10-31. Responde al pedido de modo claro/oscuro y a la dificultad de lectura y desplazamiento lateral en móvil. El estudio de sincronización bancaria se registra aparte como propuesta; no activa conexiones ni procesos de importación.
 
 Subordinación: constitución, protección de datos y TDD del proyecto; conserva DCE-01–21 y los endpoints de Epic15. Esta enmienda reemplaza la concesión de matriz con desplazamiento lateral en móvil por una presentación nativa vertical. El escritorio conserva su matriz completa.
 
