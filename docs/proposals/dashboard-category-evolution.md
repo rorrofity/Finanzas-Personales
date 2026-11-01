@@ -1,6 +1,6 @@
 # Propuesta — Evolución mensual de gastos por categoría
 
-**Estado:** Implementada y validada localmente por instrucción del usuario el 2026-10-31; publicación y despliegue registrados en [el plan](../implementation/dashboard-category-evolution-plan.md). Ver [contrato definitivo](../implementation/dashboard-category-evolution-contract.md).
+**Estado:** Implementada, verificada y desplegada por instrucción del usuario el 2026-10-31; resultados registrados en [el plan](../implementation/dashboard-category-evolution-plan.md). Ver [contrato definitivo](../implementation/dashboard-category-evolution-contract.md).
 **Fecha:** 2026-10-31.
 **Identificadores:** `DCE-*`, provisionales y exclusivos de esta propuesta; no asignan una nueva épica ni modifican Epic 14.
 **Subordinación:** [constitution.md](../constitution.md), [spec.md](../spec.md), [tests/README.md](../../tests/README.md). El plan y las tareas actuales corresponden a conciliación bancaria y permanecen intactos.

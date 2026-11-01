@@ -190,3 +190,17 @@ Si cambió `Caddyfile.secure` (p.ej. CSP): copiarlo al contenedor Caddy y `caddy
 - En producción Emotion inyecta CSS vía CSSOM (`insertRule`), por lo que el test de safe-area revisa `document.styleSheets`, no solo `<style>`.
 
 *Última actualización: 2026-07-18*
+
+---
+
+# PARTE 5 — Epic15: evolución de gastos por categoría (2026-10-31)
+
+Implementada y desplegada en `finanzas.rocketflow.cl`, código `9993630426605f4bf7efdb1df83fc973aacbc8bf`. El dashboard ahora muestra matriz completa categoría×mes, tendencia seleccionable, ventanas3/6/12, fuentes explícitas y detalle paginado de la celda elegida, usando períodos de facturación persistidos e importes exactos. La caché se aísla por usuario, espacio y alcance, con fecha de consulta, offline y protección frente a respuestas tardías o revocación. Salud Financiera presenta composición del mismo resumen de compromisos y porcentajes reales superiores a100%.
+
+**SDD/TDD:** enmienda de Req12.4/12.5 y requisitos DCE-01–21, con RED observado antes de GREEN y VERIFY. Resultado:101 pruebas frontend,67 backend,59 E2E y7 PWA pasan;2 E2E se omiten por tamaño de pantalla. Integración SQL/API sobre PostgreSQL efímero: totales/detalle/permisos y ausencia de mutaciones comprobados. Capturas con datos ficticios en [QA](implementation/dashboard-category-evolution-qa/evidence.json).
+
+**Despliegue real al servidor:** actualización desde Git, construcción nueva en `/var/www/finanzas-personales`, conservación del build anterior y reinicio únicamente de `finanzas-backend`. App/assets/SW públicos200 y API401 sin sesión. Lecturas autenticadas en el servidor verificaron cuatro alcances de fuente y conciliación matriz/detalle.
+
+**Datos preservados:** comparación de huellas de nueve tablas financieras antes/después:0 registros modificados,0 eliminados y0 añadidos. Sin migraciones, nuevas dependencias, login, registro, importaciones ni sincronizaciones. Rollback limitado a código/build, con respaldo en `/var/backups/finanzas/dashboard-20261031-9993630`.
+
+Contrato, pruebas y detalle operativo en [el plan de Epic15](implementation/dashboard-category-evolution-plan.md). La conciliación bancaria de Epic14 y los cambios documentales previos permanecen independientes de esta entrega.

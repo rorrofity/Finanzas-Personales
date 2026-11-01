@@ -1,0 +1,20 @@
+{
+  "deployedCodeSha": "9993630426605f4bf7efdb1df83fc973aacbc8bf",
+  "verifiedAt": "2026-11-01T00:43:49.199299Z",
+  "timezone": "America/Santiago",
+  "application": "https://finanzas.rocketflow.cl",
+  "serverDirectory": "/var/www/finanzas-personales",
+  "builtOnServer": true,
+  "process": "finanzas-backend",
+  "processStatus": "online",
+  "tests": { "frontend": 101, "backend": 67, "e2ePassed": 59, "e2eViewportSkipped": 2, "pwa": 7, "temporaryPostgreSQLIntegration": true },
+  "productionReads": { "sourceScopes": 4, "months": 6, "matrixReconciled": true, "detailReconciled": true, "loginPerformed": false },
+  "publicHttp": { "application": 200, "mainJavaScript": 200, "serviceWorker": 200, "evolutionUnauthenticated": 401, "detailUnauthenticated": 401 },
+  "financialIntegrity": { "tablesCompared": 9, "existingRowsModified": 0, "existingRowsRemoved": 0, "newRows": 0 },
+  "migrationsRun": false,
+  "dependenciesInstalled": false,
+  "importsRun": false,
+  "syncTriggered": false,
+  "rollback": { "previousCodeSha": "23c3e188b4ed2588f372d2bbf6fce11ee861d120", "previousBuild": "/var/backups/finanzas/dashboard-20261031-9993630/build", "databaseRestoreRequired": false },
+  "evidenceContainsFinancialRecords": false
+}

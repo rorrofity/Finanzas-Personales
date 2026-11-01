@@ -1,6 +1,6 @@
 # Evolución de gastos por categoría — contrato de implementación
 
-Estado: implementado y validado localmente el 2026-10-31 por instrucción del usuario; ver [evidencia de pruebas y despliegue](dashboard-category-evolution-plan.md). Subordinado a la constitución y a los requisitos DCE-01–21 de [la propuesta](../proposals/dashboard-category-evolution.md). Esta iniciativa es independiente de Epic 14: no implementa conciliación ni cambia registros financieros.
+Estado: implementado, validado y desplegado el 2026-10-31 por instrucción del usuario; ver [evidencia de pruebas y despliegue](dashboard-category-evolution-plan.md). Subordinado a la constitución y a los requisitos DCE-01–21 de [la propuesta](../proposals/dashboard-category-evolution.md). Esta iniciativa es independiente de Epic 14: no implementa conciliación ni cambia registros financieros.
 
 ## Decisiones adoptadas
 

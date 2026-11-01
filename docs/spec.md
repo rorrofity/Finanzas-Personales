@@ -731,7 +731,7 @@ Workbox simplifica el caching, routing, y background sync con APIs probadas y bi
 
 ## 11. Epic 15 — Evolución mensual de gastos por categoría
 
-**Estado:** aceptada para implementación y despliegue el 2026-10-31. Esta iniciativa es independiente de la conciliación de Epic14 y no autoriza cambios de gastos, clasificaciones, períodos persistidos ni esquema.
+**Estado:** implementada, verificada y desplegada el 2026-10-31. Esta iniciativa es independiente de la conciliación de Epic14 y no autoriza cambios de gastos, clasificaciones, períodos persistidos ni esquema.
 
 Los requisitos normativos son **DCE-01–21** de [la propuesta aceptada](proposals/dashboard-category-evolution.md), concretados en [la enmienda funcional](implementation/dashboard-category-evolution-spec-addendum.md) y [el contrato de lectura e interfaz](implementation/dashboard-category-evolution-contract.md). [El plan](implementation/dashboard-category-evolution-plan.md) registra RED → GREEN → VERIFY y despliegue.
 

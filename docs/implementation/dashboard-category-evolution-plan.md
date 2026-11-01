@@ -1,6 +1,6 @@
 # Epic 15 — Evolución de gastos por categoría: plan SDD/TDD
 
-**Estado:** implementada y validada localmente el 2026-10-31; despliegue pendiente de la publicación de este cambio. **Datos y clasificaciones:** fuera del alcance de modificación. **Epic14:** permanece independiente, sin activar conciliación ni migraciones.
+**Estado:** implementada, verificada y desplegada en producción el 2026-10-31. **Datos y clasificaciones:** conservados sin modificaciones. **Epic14:** permanece independiente, sin activar conciliación ni migraciones.
 
 Especificación: DCE-01–21 de [la propuesta aceptada](../proposals/dashboard-category-evolution.md). Contrato exacto: [API e interfaz](dashboard-category-evolution-contract.md). La selección de fuentes se inicia en TC nacional y conserva el período global; meses futuros y cobertura desconocida se identifican expresamente.
 
@@ -51,4 +51,12 @@ Un fallo de permisos de navegador o infraestructura no acredita RED: se resuelve
 
 ## Ejecución y despliegue
 
-No se añadieron dependencias ni migraciones. La construcción productiva se realiza en el servidor, en una carpeta de build nueva. Se conserva el SHA y build anterior para rollback y se comprueba el estado del checkout y del proceso. Las lecturas productivas se verificarán sin login, registro, sincronización ni datos de prueba; se contrastarán huellas de registros y categorías antes/después. El resultado y SHA del despliegue se registrarán aquí al completarlo.
+Código publicado en `origin/main`: **9993630426605f4bf7efdb1df83fc973aacbc8bf**. Construido **en el servidor** `/var/www/finanzas-personales`, en una carpeta nueva, antes de reemplazar el build activo. No se instalaron dependencias ni se ejecutaron migraciones. Se reinició únicamente `finanzas-backend`; PM2 confirmó estado online.
+
+**Verificación productiva:** 2026-10-31 21:43:49 America/Santiago. App pública, JS principal y Service Worker responden200; ambos endpoints nuevos responden401 sin autenticación. Las lecturas autenticadas, con credencial breve confinada al servidor y sin login, confirmaron las cuatro selecciones de fuente, seis meses y conciliación matriz/total/detalle. No se ejecutaron registros de usuarios, imports ni sincronizaciones.
+
+**Integridad:** huellas por llave primaria y contenido de nueve tablas financieras, guardadas antes/después exclusivamente en el servidor: `categories`, `transactions`, `intl_unbilled`, `checking_transactions`, `checking_balances`, `installment_plans`, `installment_occurrences`, `projected_templates`, `projected_occurrences`. Resultado: **0 registros modificados,0 eliminados,0 añadidos**. No se copiaron datos financieros al repositorio ni a las evidencias locales.
+
+**Rollback disponible:** código anterior `23c3e188b4ed2588f372d2bbf6fce11ee861d120` y build anterior en `/var/backups/finanzas/dashboard-20261031-9993630/build`. La carpeta conserva logs y comprobaciones de integridad con acceso restringido. Un rollback de esta entrega recupera solo código/build; nunca restaura la base.
+
+La evidencia pública del procedimiento, sin importes ni registros reales, está en [deployment.json](dashboard-category-evolution-deployment.json). Las capturas de escritorio/móvil y Salud Financiera en [QA](dashboard-category-evolution-qa/evidence.json) usan exclusivamente datos ficticios. Los cambios documentales previos de Epic14 y recuperación operativa se conservaron fuera de los commits de esta tarea.
