@@ -1,0 +1,27 @@
+{
+  "verifiedAt": "2026-11-01T19:53:15.522Z",
+  "sourceSha": "dc991050e198c12fc218996401b82d876db15238",
+  "migrations": [
+    "034",
+    "035"
+  ],
+  "originalFinancialTablesAudited": 9,
+  "originalRowsPreserved": true,
+  "existingClassificationsUnchanged": true,
+  "onlyReviewedNewCharges": true,
+  "newChargesUncategorized": true,
+  "noArtificialBalanceAdjustments": true,
+  "officialStatementTotalsExact": true,
+  "unresolvedDifferencesRemainOpen": true,
+  "replayHasZeroNewCharges": true,
+  "lateEmailGuardVerifiedByIntegration": true,
+  "lateEmailGuardVerifiedInProduction": true,
+  "legacyImportInsertGuardVerifiedByIntegration": true,
+  "legacyImportInsertGuardVerifiedInProduction": true,
+  "usdConversion": "original USD; missing FX/CLP explicitly pending",
+  "privateAutoPostEnabled": true,
+  "otherPrivateConfigurationUnchanged": true,
+  "access": "owner200 other403 anonymous401 no-store",
+  "currentAndPreviousAssetsVerified": true,
+  "workflow": "separate verification artifact"
+}

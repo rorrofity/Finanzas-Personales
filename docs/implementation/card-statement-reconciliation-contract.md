@@ -1,5 +1,7 @@
 # Conciliación de estados de tarjetas recibidos por N8N
 
+**Modo vigente en producción:** [enmienda CSN](card-statement-nightly-settlement-contract.md): horario nocturno mensual e incorporación controlada de faltantes, conservando todos los gastos existentes. CSR documenta la etapa inicial y las garantías del lector/aislamiento.
+
 **Solicitud y especificación antes del código:** 2026-11-01 America/Santiago. El titular autoriza un nuevo flujo N8N al recibir desde `enviodigital@bancochile.cl` el asunto `Estado de Cuenta Tarjeta de Crédito`, descargar sus PDF protegidos y conciliarlos contra los cargos existentes. Los dos ejemplos son PDF nativos con secciones nacional e internacional; no requieren OCR ni IA. Contraseña exclusivamente en configuración privada del servidor, jamás en repo, workflow exportado, logs o argumentos de proceso.
 
 Esta entrega automatiza lectura y contraste, con resultados visibles. **No inserta, actualiza ni elimina gastos, cuotas, clasificaciones, pagos o saldos financieros.** Faltantes, contradicciones y diferencias se presentan para revisión. No modifica los flujos bancarios existentes. Es una ampliación específica del diseño de Epic14: PDF facturado por correo, independiente del importador Excel no implementado. No reutilizar importadores que ejecutan DDL/deduplicación por parecido.

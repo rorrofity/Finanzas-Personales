@@ -1,6 +1,6 @@
 # Plan CSN
 
-Estado: implementación y validación completas; despliegue pendiente. Contrato CSN escrito antes del código.
+Estado: desplegado y verificado en producción. Contrato CSN escrito antes del código.
 
 1. Auditar esquema, reglas de duplicados, fuentes, programación N8N y diferencias de total bancario frente a consumos.
 2. TDD del horario nocturno/ventana de búsqueda; motor de preview/aplicación conservador y tabla de acciones.
@@ -31,3 +31,15 @@ Las tablas históricas de producción tienen un propietario distinto del rol de 
 Compatibilidad de producción: transactions no tiene columna notas. La escritura omite ese campo sin añadir columnas; las notas históricas en metadata permanecen idénticas. Se corrigió la fixture que añadía una columna inexistente, se observó RED real sin ella y GREEN con el esquema auténtico. Ambos intentos previos de aplicación se revirtieron íntegros, sin inserciones ni cambios de originales.
 
 El lote N8N usa un bucle real de un PDF por iteración; la salida de finalización acumula las respuestas. Un retraso entre solicitudes HTTP no garantiza serialización en 2.7.5. TDD 2 RED→22 GREEN y comprobación autenticada de disponibilidad tras reinicio antes del ensayo final. Esto evita comparar el segundo documento con el estado anterior a la incorporación del primero.
+
+## Entrega verificada
+
+Verificada el 2026-11-01 a las 16:53:15 America/Santiago. [Evidencia de despliegue](card-statement-nightly-settlement-deployment.json), [programación N8N](card-statement-nightly-settlement-n8n.json) y [recorrido Gmail real](card-statement-nightly-settlement-gmail.json). Los artefactos públicos solo contienen comprobaciones operativas; sin importes, clasificaciones, movimientos ni credenciales.
+
+Interfaz construida en el servidor (`4dafa29`), backend compatible con el esquema real (`f41a1ea`) y procesamiento secuencial del workflow (`dc99105`). Solo 034/035, respaldos privados y configuración AUTO_POST privada. Nuevo horario publicado: 23:00 America/Santiago, días 25–30, máximo seis ejecuciones al mes, búsqueda completa de 40 días y nueve nodos. Otros workflows idénticos, incluidos estado/versiones/settings; ninguna mutación de mensajes. Ejecuciones sin retención de adjuntos.
+
+Se revisaron los previews reales y se incorporaron únicamente faltantes inequívocos, sin categoría ni notas. Comparación por huella de todas las filas originales en nueve tablas financieras, más imports/tarjetas: originales intactos, ninguna categoría o nota histórica modificada, solo nuevas filas autorizadas. Cada inserción nueva también se cotejó con fecha, descripción, importe, identidad y vencimiento del documento. Los detalles y conteos reales permanecen privados.
+
+Prueba Gmail real de Visa y Mastercard, CLP y USD, con backend disponible: ambas respuestas HTTP contienen settlement y demuestran que PM2 cargó la configuración automática. Repetición sin nuevas inserciones. Guard de avisos tardíos y barrera de INSERT ensayados con el rol real, en transacciones revertidas; ambas impiden duplicados. Contexto interno no persiste tras la aplicación.
+
+Total oficial literal preservado por sección; datos inciertos, cuotas, períodos editados y cargos extra mantienen conciliación abierta, sin ajustes artificiales ni cambios de historia. USD nuevo conserva importe original; conversión pendiente explícita y CLP parciales en las vistas afectadas. API titular200/no-store, otro403, anónimo401, assets actuales y previos comprobados por contenido. Configuración privada anterior conservada.

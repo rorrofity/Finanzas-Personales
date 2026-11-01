@@ -278,3 +278,18 @@ La web incorpora Estados de tarjetas, por mes de vencimiento y solo para el titu
 SDD→TDD y revisión independiente: 975 pruebas únicas aprobadas, más integración PostgreSQL efímera que verifica idempotencia, concurrencia, rollback e inmutabilidad. QA móvil Claro/Oscuro sin desplazamiento lateral. Prueba RED→GREEN adicional cubre el requisito instalado de descarga explícita de adjuntos; 17 casos finales del workflow aprobados.
 
 Aplicación construida en el servidor, migración aditiva033 y lector aislado. Permisos y assets actuales/anteriores verificados, reenvío sin duplicación y nueve tablas financieras idénticas antes/después de toda la operación. Clave PDF y credencial de ingesta privadas; datos reales fuera del repo y retención N8N deshabilitada. Repositorio y servidor actualizados; cambios previos del usuario preservados separados.
+
+
+## PARTE 12 — Cartolas por la noche y gastos faltantes
+
+**Verificado el 2026-11-01 a las 16:53:15 America/Santiago.** [Contrato CSN-01–19 previo al código](implementation/card-statement-nightly-settlement-contract.md), [plan y pruebas](implementation/card-statement-nightly-settlement-plan.md), [despliegue](implementation/card-statement-nightly-settlement-deployment.json), [N8N](implementation/card-statement-nightly-settlement-n8n.json) y [Gmail](implementation/card-statement-nightly-settlement-gmail.json).
+
+A solicitud del titular se sustituyó el polling por una ejecución a las 23:00 de Chile, del 25 al 30. Consulta todos los correos autorizados de 40 días y procesa un PDF por vez, acumulando ambos resultados. Otros flujos y mensajes conservados. Backend automático verificado mediante el recorrido real, con repetición sin nuevos cargos y sin retención de ejecuciones.
+
+La autorización nueva permite incorporar exclusivamente faltantes inequívocos, sin categoría/notas. Preview/digest revalidado, transacción y bitácora persistente protegen originales, multiplicidad, referencias eliminadas y posibles ediciones. Locks al inicio del lote de avisos y barrera de INSERT para importadores previenen duplicación tardía. Solo INSERT nuevos: ninguna fecha, importe, período, nota o categoría anterior se sobrescribe. Contexto de aplicación interno y local a la transacción, no falsificable mediante metadata.
+
+La web muestra total oficial literal del documento separado de consumos, cobertura y diferencias, con cargos extra identificables. No cierra si faltan identidades, cuotas u otras comprobaciones aunque la diferencia neta sea cero. USD permanece en moneda original sin inventar conversión; vistas de transacciones, liquidez y salud advierten importes CLP parciales. No se crean gastos de ajuste para igualar saldos.
+
+SDD→TDD: 1109 pruebas aprobadas (651 backend, 270 frontend, 141 navegador, 7 PWA y 40 lector), 13 omisiones previstas por viewport; además dos integraciones PostgreSQL temporales. Esquema auténtico sin columna notas, Unicode, rollback, carrera con escritores legacy, snapshots antiguos, contexto transaccional, tombstones y réplicas verificados. QA ficticia móvil/temas sin escrituras, errores o desplazamiento lateral.
+
+Build realizado en el servidor y únicamente migraciones 034/035 con propietario adecuado. Huellas originales en nueve tablas financieras, imports y tarjetas intactas; nuevas filas cotejadas con evidencia bancaria. Permisos, guards de duplicados con rol real, assets actuales/anteriores y configuración privada conservados. Fuente y evidencia públicas actualizadas; datos reales y respaldos solo privados. Cambios previos del usuario preservados separados.
