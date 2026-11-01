@@ -10,7 +10,7 @@ La cuenta es **personal de Banco de Chile**. Hoy su cartola se descarga y se imp
 
 Objetivo: incorporar cargos, abonos y saldo con una actualización bancaria comprobable al menos una vez al día, sin tener que descargar y cargar el archivo manualmente. No modificar gastos, clasificaciones ni información bancaria histórica existente.
 
-**Conclusión a esta fecha:** existen conectores para Banco de Chile Personas, pero no se ha confirmado una contratación gratuita de producción que pueda abrir directamente una persona natural para este proyecto. La gratuidad publicada por Fintoc no acredita esa habilitación y su alta empresarial no es una alternativa aplicable a este diseño. La prioridad de evaluación es confirmar con Banco de Chile si ofrece acceso oficial gratuito para esta cuenta personal; como alternativa, evaluar descarga asistida desde el dispositivo propio, sin cuota de proveedor. Ninguna de estas vías se presenta como conexión ya habilitada ni como garantía de ejecución diaria desatendida ante MFA.
+**Conclusión a esta fecha, tras la segunda revisión:** existen conectores para Banco de Chile Personas, pero no se ha confirmado una contratación gratuita de producción que pueda abrir directamente una persona natural para este proyecto. Los términos gratuitos de Fintoc siguen publicados y contradicen sus requisitos operativos de alta: corresponde solicitar una aclaración escrita antes de declarar disponible o descartada la modalidad personal. Banco de Chile ofrece una API real, pero su circuito público es empresarial y contempla tarifas contractuales. Debe confirmar expresamente una eventual excepción personal gratuita. Ninguna de estas vías se presenta como conexión ya habilitada ni como garantía de ejecución diaria desatendida ante MFA.
 
 ## 2. Tres alternativas
 
@@ -32,13 +32,17 @@ Los términos actuales para desarrolladores publican, en la cláusula **2.3**, a
 
 Sin embargo, las guías actuales de Movements exigen para producción RUT de empresa, cuenta bancaria de la empresa, correo corporativo y al menos seis meses de actividad; excluyen expresamente el alta de personas naturales, incluso con giro, y señalan que aplica a todos los productos. El quickstart distingue la prueba de la habilitación live. **Soportar una cuenta bancaria personal no equivale a admitir como desarrollador a su titular persona natural.** [Requisitos actuales y frecuencia según plan](https://docs.fintoc.com/guides/movements/overview-data-aggregation), [Quickstart y modo live](https://docs.fintoc.com/guides/movements/overview-data-aggregation/quickstart).
 
-Por ello, la gratuidad publicada no se presenta aquí como plan personal habilitable garantizado. Con los requisitos actuales de producción, **el alta empresarial de Fintoc se descarta para este diseño**, que debe funcionar sin exigir una empresa. Solo una modalidad de alta personal documentada y gratuita permitiría reconsiderarlo; no se ha verificado esa modalidad. La existencia de una cláusula de gratuidad no basta para prometer actualización bancaria diaria incluida ni ausencia de cargos adicionales.
+Por ello, la gratuidad publicada no se presenta aquí como plan personal habilitable garantizado. La vía empresarial no cumple este diseño, pero **la contradicción documental no permite afirmar que la cláusula gratuita haya desaparecido o sea exclusivamente para clientes antiguos**. Se necesita una aclaración escrita de Fintoc sobre nuevas altas individuales, acceso productivo y refresco diario incluido. No se ha verificado una excepción operativa ni su alcance.
 
 El flujo documentado usa Widget y tokens; nuestra aplicación no necesita almacenar la contraseña bancaria, pero el proveedor sí interviene en la conexión y procesa información financiera. No equivale a afirmar que los datos permanecen exclusivamente en el servidor personal. [Flujo de integración](https://docs.fintoc.com/guides/movements/integration-with-exchange-token).
 
 ### Banco de Chile: API oficial publicada, habilitación personal no confirmada
 
 APIStore publica **Consultas → MovimientosySaldos**, con operaciones para obtener movimientos, resumen y período. Su descripción se orienta a software de gestión empresarial. No se pudo verificar una oferta contractual de producción para esta cuenta personal con costo cero. El registro gratuito en el portal y los límites del sandbox no prueban gratuidad o acceso productivo. Confirmar elegibilidad, autenticación, disponibilidad y tarifa directamente con el banco sería un paso de evaluación, sin contratar ni enviar credenciales en esta entrega. [Portal oficial](https://apistore.bancochile.cl/banco-chile/sandbox/), [Consultas](https://apistore.bancochile.cl/banco-chile/sandbox/product/883).
+
+**Segunda revisión del sitio comercial oficial:** el centro de ayuda indica contratación mediante ejecutivo cash, tarifas pactadas con cobro fijo mensual o por volumen y un límite de 5.000 consultas por cliente al mes. Describe acceso a información equivalente a la cartola en línea, habilitación aproximada de cuatro semanas, token de una hora y certificado firmado por una CA. Las facultades exigidas incluyen una referencia explícita a Canales Remotos Empresa. Se leyó el contenido dinámico en navegador, sin enviar formularios. [Centro de ayuda API Store](https://sitiospublicos.bancochile.cl/api-store/help-center).
+
+El formulario de contratación pide **Nombre Empresa y RUT Empresa**. Es evidencia de un proceso empresarial, no una prohibición legal expresa de cualquier excepción individual. No aparece un alta productiva de autoservicio para el titular de una cuenta de Personas. [Formulario oficial](https://sitiospublicos.bancochile.cl/api-store/start-integration), [producto Saldos y movimientos](https://sitiospublicos.bancochile.cl/api-store/saldos-y-movimientos).
 
 ### Otros conectores revisados
 
@@ -50,6 +54,14 @@ No se encontraron pruebas oficiales suficientes para prometer un proveedor gratu
 ## 4. Sistema de Finanzas Abiertas: calendario relevante
 
 No debe suponerse que en 2026 ya exista una API bancaria obligatoria universal lista para una app personal. La CMF modificó la NCG 514 mediante **NCG 569, de 1 de junio de 2026**, y pospuso la entrada en vigor del sistema hasta julio de 2027, con implementación gradual. El sandbox ATENA se lanzó el 30 de septiembre de 2026 para pruebas previas. Esto es contexto de disponibilidad; no constituye una conexión bancaria ni garantiza gratuidad futura. [Comunicado CMF de modificación](https://www.cmfchile.cl/portal/prensa/625/w4-article-110881.html), [NCG 569](https://www.cmfchile.cl/portal/normativa/624/w4-article-111273.html), [lanzamiento ATENA](https://www.cmfchile.cl/portal/prensa/625/w4-article-113897.html).
+
+### Acceso a los datos propios y API diaria
+
+Al 2026-10-31, el artículo 12 de la Ley 19.628 reconoce el derecho a solicitar información sobre los datos personales y su tratamiento. Banco de Chile reconoce ese acceso en su política y establece el canal Derechos ARCO; publica `protecciondatos@bancochile.cl` como contacto de protección de datos. La política no entrega un enlace accionable al formulario ARCO, por lo que no se inventa una dirección. [Ley vigente hasta el 2026-11-30](https://www.bcn.cl/leychile/Navegar/imprimir?idNorma=141599&idParte=), [política del banco](https://sitiospublicos.bancochile.cl/personas/politica-de-privacidad).
+
+**Interpretación para este proyecto:** ser titular y tener derecho de acceso no acredita por sí solo un derecho actual a credenciales de API gratuitas, permanentes y con consultas diarias. Una solicitud de datos y una conexión recurrente tienen alcances distintos.
+
+La reforma de la Ley 21.719 entra en vigor el **2026-12-01**. Su artículo 9 incorpora portabilidad bajo condiciones: tratamiento automatizado y basado en consentimiento, con transmisión directa cuando sea técnicamente posible. No permite prometer que toda cartola contractual quedará automáticamente cubierta ni una API bancaria diaria gratuita. El SFA tiene su propio calendario gradual; julio de 2027 no es una fecha garantizada de acceso a esta cuenta personal. [Ley 21.719, artículo 9 y transitorio primero](https://www.bcn.cl/leychile/navegar?i=1209272), [fecha oficial de vigencia](https://www.consejotransparencia.cl/datos-personales/).
 
 ## 5. Encaje con el proyecto actual
 
@@ -112,7 +124,9 @@ El conector necesita persistencia de identidad/cursor/ejecuciones que hoy no exi
 
 ## 9. Decisiones pendientes
 
-- ¿Banco de Chile ofrece habilitación API de producción para esta cuenta personal, con alta de persona natural y sin costo adicional, o entrega programada completa gratuita? Es la primera validación recomendada; no se verificó que así sea y no se ha contactado al banco.
+- Primero, pedir aclaración escrita a Fintoc sobre la contradicción entre sus términos para desarrolladores y las guías de producción. Canal publicado: `hello@fintoc.com`. Consulta concreta: ¿habilitan Movements live para una persona natural que conecta únicamente su cuenta Banco de Chile a una aplicación privada, bajo la cláusula 2.3, sin mensualidad, cobro por uso ni vencimiento de prueba, y con refresco bancario diario? Si no, ¿qué alcance mantiene esa cláusula y existe una modalidad personal o excepción? No se ha enviado esta consulta.
+- ¿Banco de Chile ofrece habilitación API de producción para esta cuenta personal, con alta de persona natural y sin costo adicional, o entrega programada completa gratuita? Es la validación complementaria a la aclaración de Fintoc; no se verificó que así sea y no se ha contactado al banco.
+- Para el banco, precisar cuenta corriente de Personas, RUT personal sin empresa, uso propio y solo lectura; pedir requisitos de autorización, costo total, rango de movimientos y mecanismo de actualización diaria. El circuito API público remite al ejecutivo cash. Separadamente, el canal ARCO permite solicitar los datos y preguntar por su entrega electrónica; no reemplaza la habilitación API.
 - Si no hay acceso personal gratuito confirmado, ¿se prefiere conservar el Excel manual o probar una descarga asistida desde el dispositivo propio, sin cuota de proveedor, con autenticación del titular y limitaciones explícitas?
 - ¿Se aprueba compartir datos con el proveedor y la correspondiente excepción de privacidad, o se mantiene todo el tratamiento bajo el servidor y dispositivo propios?
 
