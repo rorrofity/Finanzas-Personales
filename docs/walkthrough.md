@@ -293,3 +293,14 @@ La web muestra total oficial literal del documento separado de consumos, cobertu
 SDD→TDD: 1109 pruebas aprobadas (651 backend, 270 frontend, 141 navegador, 7 PWA y 40 lector), 13 omisiones previstas por viewport; además dos integraciones PostgreSQL temporales. Esquema auténtico sin columna notas, Unicode, rollback, carrera con escritores legacy, snapshots antiguos, contexto transaccional, tombstones y réplicas verificados. QA ficticia móvil/temas sin escrituras, errores o desplazamiento lateral.
 
 Build realizado en el servidor y únicamente migraciones 034/035 con propietario adecuado. Huellas originales en nueve tablas financieras, imports y tarjetas intactas; nuevas filas cotejadas con evidencia bancaria. Permisos, guards de duplicados con rol real, assets actuales/anteriores y configuración privada conservados. Fuente y evidencia públicas actualizadas; datos reales y respaldos solo privados. Cambios previos del usuario preservados separados.
+
+
+## PARTE 13 — Filtro de movimientos sin categoría
+
+**Verificado el 2026-11-01 a las 18:19:33 America/Santiago.** [Contrato UCF previo al código](implementation/uncategorized-filter-contract.md), [plan](implementation/uncategorized-filter-plan.md), [QA ficticia](implementation/uncategorized-filter-qa/evidence.json) y [producción](implementation/uncategorized-filter-deployment.json).
+
+Las tres páginas de transacciones incorporan un acceso rápido Sin categoría con contador. Activa/desactiva con un clic y compone tarjeta, tipo y desestimados. Cuenta corriente también ofrece la opción en su selector existente y mantiene saldo/totales mensuales de referencia. Filtra en memoria el mes cargado; no añade consultas ni escrituras. La selección masiva se limita a resultados filtrados y se ajusta al retirar filas.
+
+TDD RED→GREEN y revisión independiente; 306 pruebas unitarias, 150 navegador y 7 PWA aprobadas, 13 omisiones previstas por viewport. Móvil/escritorio/tableta, ambos temas, teclado, paginación, vacío y categorización explícita simulada. Datos exclusivamente ficticios en pruebas y capturas.
+
+Build construido y publicado en servidor conservando los assets anteriores. Tres rutas verificadas y nueve tablas financieras idénticas en huellas READ ONLY, sin escrituras ni migraciones. Backend y sincronizaciones sin cambios; ningún reinicio. Fuente/documentación publicadas y modificaciones previas del usuario preservadas.

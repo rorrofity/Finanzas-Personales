@@ -1,6 +1,6 @@
 # Plan y evidencia UCF
 
-Estado: implementación y validación completas; despliegue pendiente. Contrato UCF escrito antes del código.
+Estado: desplegado y verificado en producción. Contrato UCF escrito antes del código.
 
 1. Acceso rápido compartido y helper, pruebas de semántica y accesibilidad.
 2. Integrar en nacionales, internacionales y cuenta corriente; pruebas de composición, selección y paginación, sin escrituras por filtrar.
@@ -15,3 +15,7 @@ Estado: implementación y validación completas; despliegue pendiente. Contrato 
 - Revisión independiente de cambios: sin mutaciones de datos ni consultas nuevas por filtrar. No cambia el backend ni los flujos bancarios. Checking conserva sus totales de referencia y comportamiento de listado del mes.
 
 Comandos: `CI=true npm run test:unit -- --runInBand`, `CI=true GENERATE_SOURCEMAP=false BUILD_PATH=/private/tmp/finanzas-ucf-build REACT_APP_API_BASE_URL='' npm run build`, `DASHBOARD_BUILD_DIR=/private/tmp/finanzas-ucf-build npm run test:dashboard`; PWA contra ese mismo build. Se respaldará el build de producción, se construirá en servidor y se conservarán assets previos; la única conexión a base será para huellas de solo lectura antes y después del cambio.
+
+## Entrega
+
+Verificada el 2026-11-01 a las 18:19:33 America/Santiago. [Evidencia pública sin valores financieros](uncategorized-filter-deployment.json). Fuente `cae20cb` construida en el servidor, tres rutas y assets actuales/anteriores verificados por contenido. Sin migraciones, reinicio del backend ni cambios de sincronización. Comparación READ ONLY de nueve tablas antes/después idéntica; cero escrituras financieras. Repo y servidor actualizados, cambios previos del usuario preservados separados.

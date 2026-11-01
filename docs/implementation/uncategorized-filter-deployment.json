@@ -1,0 +1,13 @@
+{
+  "verifiedAt": "2026-11-01T21:19:33.482Z",
+  "sourceSha": "cae20cbbb48b8f252aacecc778446a51dcdad64a",
+  "scope": "frontend only; no backend or sync configuration changes",
+  "pagesVerified": 3,
+  "currentAndPreviousAssetsVerified": true,
+  "databaseStatements": "READ ONLY snapshots only",
+  "expenseWrites": 0,
+  "financialTablesAudited": 9,
+  "financialSnapshotMatched": true,
+  "migrations": 0,
+  "backendRestarted": false
+}
