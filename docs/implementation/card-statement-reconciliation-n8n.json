@@ -1,0 +1,18 @@
+{
+  "verifiedAt": "2026-11-01T05:47:15.985976+00:00",
+  "newWorkflowId": "WkSXNHaCXILXMIvD",
+  "gmailReadAndAttachmentDownload": "verified with both card networks",
+  "mailboxMutations": false,
+  "pdfsDecryptedOnOwnServer": true,
+  "bothCurrencies": true,
+  "endToEndHttpIngest": true,
+  "finalNode": "Resultado de conciliaci\u00f3n",
+  "isolatedCliRunner": true,
+  "rawMailExecutionLogRetained": false,
+  "published": true,
+  "automaticPollingInitialized": true,
+  "polling": "every minute",
+  "timezone": "America/Santiago",
+  "previousWorkflowsUnchanged": true,
+  "retentionDisabled": true
+}

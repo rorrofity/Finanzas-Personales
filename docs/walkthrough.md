@@ -265,3 +265,16 @@ Se clasificaron únicamente importados aún NULL con descripción completa/tipo 
 SDD→TDD: 451 pruebas backend, 217 frontend, 113 navegador y 7 PWA; 11 omisiones previstas de viewport. PostgreSQL efímero verifica ambos flujos, monotonicidad, rollback, preservación, cron completo/incompleto y planes obsoletos. Reauditoría independiente corrigió respuestas antiguas demoradas y descripciones truncadas; QA móvil corrigió etiquetas cortadas, con 4 pruebas de Checking, 15 recorridos específicos y 7 PWA sobre el build final.
 
 Código construido y desplegado en el servidor, únicamente migración aditiva 032. API, web, assets y cron real verificados; configuración, estado diario y TC/N8N conservados. Los valores reales, planes e IDs permanecen exclusivamente en el servidor. Repo actualizado y cambios previos del usuario preservados separados.
+
+
+## PARTE 11 — Estados Visa y Mastercard desde Gmail
+
+**Verificado el 2026-11-01 a las 02:47:50 America/Santiago.** [Contrato CSR-01–16 previo al código](implementation/card-statement-reconciliation-contract.md), [plan y pruebas](implementation/card-statement-reconciliation-plan.md), [despliegue](implementation/card-statement-reconciliation-deployment.json) y [recorrido N8N](implementation/card-statement-reconciliation-n8n.json).
+
+Nuevo flujo independiente con remitente y asunto exactos autorizados. Reutiliza la conexión Gmail existente, descarga cada PDF, lo descifra con configuración privada del servidor y lee texto nativo localmente, sin IA/OCR externo. Ambos ejemplos contienen secciones nacional CLP e internacional USD. Sondeo cada minuto y recorrido real de descarga/ingesta verificados. No modifica mensajes ni los workflows anteriores.
+
+La web incorpora Estados de tarjetas, por mes de vencimiento y solo para el titular. Compara en vivo con el historial y distingue coincidencias, faltantes, revisión e informativos. Identidades insuficientes y cuotas ambiguas permanecen para revisión. No inserta, actualiza ni elimina gastos, categorías, cuotas, períodos o saldos para forzar una conciliación.
+
+SDD→TDD y revisión independiente: 975 pruebas únicas aprobadas, más integración PostgreSQL efímera que verifica idempotencia, concurrencia, rollback e inmutabilidad. QA móvil Claro/Oscuro sin desplazamiento lateral. Prueba RED→GREEN adicional cubre el requisito instalado de descarga explícita de adjuntos; 17 casos finales del workflow aprobados.
+
+Aplicación construida en el servidor, migración aditiva033 y lector aislado. Permisos y assets actuales/anteriores verificados, reenvío sin duplicación y nueve tablas financieras idénticas antes/después de toda la operación. Clave PDF y credencial de ingesta privadas; datos reales fuera del repo y retención N8N deshabilitada. Repositorio y servidor actualizados; cambios previos del usuario preservados separados.

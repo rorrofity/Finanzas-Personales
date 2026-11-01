@@ -1,0 +1,19 @@
+{
+  "verifiedAt": "2026-11-01T05:47:50.979Z",
+  "sourceSha": "4b34d020c86f871e29a81d14808d623b671c59bb",
+  "migration": "033 only; additive evidence tables",
+  "realExamplesValid": true,
+  "bothCurrenciesParsed": true,
+  "extraction": "native PDF local; no OCR or AI",
+  "financialTablesIdentical": 9,
+  "financialWrites": 0,
+  "existingClassificationsPreserved": true,
+  "repeatAndForwardedFilesIdempotent": true,
+  "liveComparison": true,
+  "access": "owner200 other403 anonymous401 no-store",
+  "unauthenticatedIngest": 401,
+  "appAndAssets": 200,
+  "previousAssetsRetained": true,
+  "privateDocumentsAndPassword": "server only",
+  "workflowVerification": "separate verified N8N artifact"
+}

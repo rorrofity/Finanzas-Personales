@@ -783,3 +783,5 @@ La cobertura corresponde a cuenta corriente CLP. No trae compras de tarjeta de c
 ### Enmienda CSR — estados de tarjeta por correo
 
 **Solicitud:** 2026-11-01. Nuevo flujo N8N del remitente/asunto autorizados, PDF protegido leído localmente sin IA/OCR externo, ambas monedas y conciliación viva contra cargos/cuotas existentes. La ingesta solo escribe evidencia aditiva; no altera gastos, categorías, períodos o saldos. Faltantes/diferencias quedan visibles para revisión. [Contrato CSR-01–16 previo al código](implementation/card-statement-reconciliation-contract.md) y [plan](implementation/card-statement-reconciliation-plan.md).
+
+**Resultado CSR:** desplegado y verificado el 2026-11-01. Nuevo flujo publicado, polling inicializado y recorrido real Gmail→PDF→conciliación aprobado para ambas redes/monedas. UI por vencimiento, sin escrituras financieras; nueve tablas y clasificaciones intactas, duplicados evitados y flujos previos conservados. [Despliegue](implementation/card-statement-reconciliation-deployment.json) y [N8N](implementation/card-statement-reconciliation-n8n.json).
