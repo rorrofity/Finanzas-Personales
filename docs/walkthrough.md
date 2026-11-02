@@ -304,3 +304,14 @@ Las tres páginas de transacciones incorporan un acceso rápido Sin categoría c
 TDD RED→GREEN y revisión independiente; 306 pruebas unitarias, 150 navegador y 7 PWA aprobadas, 13 omisiones previstas por viewport. Móvil/escritorio/tableta, ambos temas, teclado, paginación, vacío y categorización explícita simulada. Datos exclusivamente ficticios en pruebas y capturas.
 
 Build construido y publicado en servidor conservando los assets anteriores. Tres rutas verificadas y nueve tablas financieras idénticas en huellas READ ONLY, sin escrituras ni migraciones. Backend y sincronizaciones sin cambios; ningún reinicio. Fuente/documentación publicadas y modificaciones previas del usuario preservadas.
+
+
+## PARTE 14 — Sincronización horaria y espacio recuperado
+
+**Verificado el 2026-11-01 a las 21:06 America/Santiago.** [Contrato HSM previo al código](implementation/hourly-sync-maintenance-contract.md), [plan y TDD](implementation/hourly-sync-maintenance-plan.md) y [producción](implementation/hourly-sync-maintenance-deployment.json).
+
+Emails de cargos de tarjetas: cada hora desde las 08:00 hasta las 00:00 inclusive, 17 oportunidades diarias en America/Santiago. Conciliación mensual: días 25–30 a las 23:10. Fintoc diario sigue a las 07:00. Mismo importador y preferencias; registro idempotente, callback esperado y noOverlap, concurrencia N8N uno. Interfaz de Automatización actualizada y configuración de ejemplo versionada.
+
+TDD RED→GREEN observado antes del código; 657 pruebas backend y 309 frontend aprobadas, builds local/servidor correctos. Despliegue con assets anteriores conservados, PM2 online y comprobaciones autenticadas de lectura. Otros workflows intactos; ninguna carga real usada como prueba. Once tablas financieras comparadas fila por fila mediante huellas privadas: todos los gastos, clasificaciones, notas, fechas y saldos idénticos. Sin migraciones.
+
+Limpieza limitada a respaldos SQLite comprimidos y páginas libres de N8N: ~7,3 GB netos recuperados y ~9,1 GB disponibles. Ambos originales recuperables con SHA-256 verificado; base operativa de 4,07 GB a 933.888 bytes, 61 tablas/esquema preservados y pausa de 2,134 segundos. No se borraron PDFs, otros respaldos, workflows ni credenciales. Pruebas desechables de compactación y restauración por fallo aprobadas. Configuración privada y respaldos quedan solamente en el servidor; documentación preexistente del usuario conservada.

@@ -1,0 +1,85 @@
+{
+  "contract": "HSM-01\u201307",
+  "deployment": {
+    "verifiedAt": "2026-11-02T00:06:20.821Z",
+    "sourceSha": "dce92b4840bbbc94e116b3a11567bd1b3acf971a",
+    "appHealth": "authenticated API and database verified",
+    "pm2": "online",
+    "schedule": "0 8-23 * * *,0 0 * * *",
+    "timezone": "America/Santiago",
+    "runsPerDay": 17,
+    "ownerOptInPreserved": true,
+    "fintocDailyScheduleUnchanged": "07:00 America/Santiago",
+    "runtimeCronRegistered": true,
+    "configurationOnlyScheduleChanged": true,
+    "currentAndPreviousAssetsAvailable": true,
+    "updatedSettingsTextPublished": true,
+    "manualImportsExecuted": false
+  },
+  "tests": {
+    "tdd": "RED then GREEN before implementation",
+    "backend": 657,
+    "frontend": 309,
+    "schedulerFocused": 10,
+    "settingsFocused": 3,
+    "monthlyWorkflowFocused": 22,
+    "localProductionBuild": true,
+    "serverProductionBuild": true,
+    "disposableSQLiteCompactionAndRollbackVerified": true
+  },
+  "financialPreservation": {
+    "financialTablesAudited": 11,
+    "allFinancialRowsIdentical": true,
+    "existingClassificationsUnchanged": true,
+    "manualImportExecuted": false,
+    "verifiedAt": "2026-11-02T00:06:21.195Z"
+  },
+  "n8nSchedule": {
+    "published": true,
+    "schedule": "0 10 23 25-30 * *",
+    "timezone": "America/Santiago",
+    "onlyMonthlyCronChanged": true,
+    "otherWorkflowsUnchanged": true,
+    "realImportsExecutedForTesting": false
+  },
+  "n8nHealth": {
+    "running": true,
+    "healthHttpStatus": 200,
+    "productionConcurrency": 1
+  },
+  "cleanup": {
+    "oldBackup": {
+      "backupRetained": true,
+      "compressedBytes": 432192419,
+      "decompressedSha256Matches": true,
+      "originalBytes": 4071706624
+    },
+    "activeDatabase": {
+      "allTablesLogicallyIdentical": true,
+      "compactedBytes": 933888,
+      "foreignKeyCheckUnchanged": true,
+      "integrityCheck": "ok",
+      "journalModePreserved": true,
+      "originalBytes": 4071706624,
+      "pauseSeconds": 2.134,
+      "permissionsPreserved": true,
+      "schemaIdentical": true,
+      "tableCount": 61
+    },
+    "currentBackup": {
+      "backupRetained": true,
+      "compressedBytes": 432196227,
+      "decompressedSha256Matches": true,
+      "originalBytes": 4071706624
+    },
+    "diskBeforeFreeBytes": 1858031616,
+    "diskAfterFreeBytes": 9142947840,
+    "diskNetRecoveredBytes": 7284916224,
+    "diskTotalBytes": 25821052928,
+    "deletedOtherBackups": false,
+    "deletedStatements": false,
+    "deletedWorkflowsOrCredentials": false,
+    "postgresMaintenanceOrMigrations": false,
+    "uncompressedCopiesRemovedOnlyAfterVerifiedCompression": true
+  }
+}

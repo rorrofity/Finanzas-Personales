@@ -797,3 +797,10 @@ La cobertura corresponde a cuenta corriente CLP. No trae compras de tarjeta de c
 ### Enmienda UCF — acceso rápido a movimientos sin categoría
 
 **Solicitud y entrega:** 2026-11-01. Botón compartido Sin categoría con contador en nacionales, internacionales y cuenta corriente; combinación con filtros existentes, mes completo antes de paginar, selección limitada a resultados y actualización al categorizar explícitamente. Ninguna escritura al filtrar; saldo/totales de referencia de cuenta corriente conservados. [Contrato previo UCF-01–09](implementation/uncategorized-filter-contract.md), [plan y pruebas](implementation/uncategorized-filter-plan.md) y [despliegue](implementation/uncategorized-filter-deployment.json).
+
+
+### Enmienda HSM — captura horaria y mantenimiento sin cambios financieros
+
+**Solicitud:** 2026-11-01. El titular autoriza sincronizar emails bancarios cada hora de 08:00 a 00:00 inclusive (17 ejecuciones diarias, America/Santiago), mover exclusivamente la conciliación mensual al 25–30 a las 23:10 y liberar espacio operativo conservando todos los gastos y clasificaciones. Sustituye los horarios anteriores de Req 13.1 y CSN; Fintoc diario a las 07:00 sigue igual. [Contrato HSM previo al código](implementation/hourly-sync-maintenance-contract.md) y [plan/TDD](implementation/hourly-sync-maintenance-plan.md). Sin migraciones ni ejecución manual de importaciones para validar.
+
+**Resultado HSM:** horario activado y verificado en producción, 657 pruebas backend y 309 frontend aprobadas. Dos respaldos N8N comprimidos/verificados y SQLite compactado con equivalencia de sus 61 tablas; ~7,3 GB netos recuperados. Once tablas financieras exactamente iguales, sin migraciones ni importaciones manuales; repo/fuente desplegados. [Evidencia](implementation/hourly-sync-maintenance-deployment.json).
