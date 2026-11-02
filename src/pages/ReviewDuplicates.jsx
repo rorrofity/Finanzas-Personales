@@ -1,3 +1,4 @@
+import useSpacePermissions from '../hooks/useSpacePermissions';
 import React, { useState, useEffect } from 'react';
 import {
   Container,
@@ -22,6 +23,7 @@ import {
 import { getSuspiciousTransactions, resolveSuspicious } from '../services/suspiciousService';
 
 const ReviewDuplicates = () => {
+  const { canEdit, canDelete } = useSpacePermissions();
   const [suspicious, setSuspicious] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
@@ -47,6 +49,7 @@ const ReviewDuplicates = () => {
   }, []);
 
   const handleResolve = async (suspiciousId, action, transactionIdToDelete = null, type = 'national') => {
+    if (action === 'delete' ? !canDelete : !canEdit) return;
     try {
       setProcessing(suspiciousId);
       setError(null);
@@ -184,7 +187,7 @@ const ReviewDuplicates = () => {
                       startIcon={<DeleteIcon />}
                       fullWidth
                       sx={{ mt: 2 }}
-                      disabled={processing === item.suspicious_id}
+                      disabled={!canDelete || processing === item.suspicious_id}
                       onClick={() => handleResolve(item.suspicious_id, 'delete', item.transaction1_id, item.type)}
                     >
                       Eliminar esta
@@ -226,7 +229,7 @@ const ReviewDuplicates = () => {
                       startIcon={<DeleteIcon />}
                       fullWidth
                       sx={{ mt: 2 }}
-                      disabled={processing === item.suspicious_id}
+                      disabled={!canDelete || processing === item.suspicious_id}
                       onClick={() => handleResolve(item.suspicious_id, 'delete', item.transaction2_id, item.type)}
                     >
                       Eliminar esta
@@ -242,7 +245,7 @@ const ReviewDuplicates = () => {
                   variant="contained"
                   color="success"
                   startIcon={<CheckCircleIcon />}
-                  disabled={processing === item.suspicious_id}
+                  disabled={!canEdit || processing === item.suspicious_id}
                   onClick={() => handleResolve(item.suspicious_id, 'keep_both', null, item.type)}
                 >
                   {processing === item.suspicious_id ? (

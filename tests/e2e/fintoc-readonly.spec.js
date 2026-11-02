@@ -122,13 +122,16 @@ test.describe('Epic17 — Fintoc de solo lectura', () => {
     state.verify();
   });
 
-  test('FRO-03 un miembro con permisos de edición no consulta esta conexión', async ({ page }) => {
+  test('HRO-07 miembro consulta saldo y estado guardados sin consultar proveedor', async ({ page }) => {
     const state = await fixtures(page, { shared: true });
     await page.goto('/checking');
     await expect(page.getByTestId('space-switcher')).toContainText('Hogar compartido');
     await expect(page.getByText('Gasto ficticio ya clasificado', { exact: true })).toBeVisible();
     await expect(panel(page)).toHaveCount(0);
-    expect(state.fintocRequests).toHaveLength(0);
+    await expect(page.getByText(clp(Number(bankBalance.available)), { exact: true })).toBeVisible();
+    expect(state.fintocRequests.some(r=>r.path.endsWith('/bank-balance'))).toBe(true);
+    expect(state.fintocRequests.some(r=>r.path.endsWith('/daily-status'))).toBe(true);
+    expect(state.fintocRequests.some(r=>r.path.endsWith('/status')||r.path.endsWith('/preview'))).toBe(false);
     state.verify();
   });
 

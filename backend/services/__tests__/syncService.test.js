@@ -24,6 +24,8 @@ describe('syncService.runSync', () => {
   const queryMock = db.query;
 
   beforeEach(() => {
+    process.env.N8N_SYNC_SECRET = 'fixture-sync-header';
+    process.env.N8N_SYNC_OWNER_USER_ID = USER_ID;
     queryMock.mockReset();
     axios.post.mockReset();
     // Por defecto: SELECT nombre del usuario, luego INSERT en sync_runs
@@ -79,3 +81,24 @@ describe('syncService.runSync', () => {
     expect(result.imported).toBe(1);
   });
 });
+
+
+test('HRO webhook sends the private sync header, never as URL or payload', async () => {
+  process.env.N8N_SYNC_SECRET = 'fixture-sync-header';
+  process.env.N8N_SYNC_OWNER_USER_ID = 'u';
+  db.query.mockResolvedValue({rows:[{id:'u',nombre:'Fixture'}]});
+  axios.post.mockResolvedValue({data:{imported:0}});
+  await runSync('u','manual');
+  expect(axios.post).toHaveBeenLastCalledWith(expect.any(String),expect.not.objectContaining({secret:expect.anything()}),expect.objectContaining({headers:expect.objectContaining({'X-Finanzas-Sync-Key':'fixture-sync-header'})}));
+});
+test('HRO missing webhook secret cannot contact N8N', async () => {
+  delete process.env.N8N_SYNC_SECRET;
+  db.query.mockResolvedValue({rows:[{id:'u',nombre:'Fixture'}]});
+  const before=axios.post.mock.calls.length;
+  const result=await runSync('u','manual');
+  expect(result.error).toBe('N8N_SYNC_NOT_CONFIGURED');
+  expect(axios.post.mock.calls.length).toBe(before);
+});
+
+test('HRO another own-space user cannot invoke the configured bank Gmail',async()=>{process.env.N8N_SYNC_SECRET='fixture-sync-header';process.env.N8N_SYNC_OWNER_USER_ID='actual-owner';db.query.mockClear();axios.post.mockClear();const result=await runSync('new-household-member','manual');expect(result.error).toBe('N8N_SYNC_FORBIDDEN');expect(axios.post).not.toHaveBeenCalled();expect(db.query).not.toHaveBeenCalled();});
+test('HRO missing bank owner fails before SQL or provider calls',async()=>{process.env.N8N_SYNC_SECRET='fixture-sync-header';delete process.env.N8N_SYNC_OWNER_USER_ID;delete process.env.CARD_STATEMENTS_OWNER_USER_ID;delete process.env.FINTOC_OWNER_USER_ID;db.query.mockClear();axios.post.mockClear();const result=await runSync('u','manual');expect(result.error).toBe('N8N_SYNC_NOT_CONFIGURED');expect(axios.post).not.toHaveBeenCalled();expect(db.query).not.toHaveBeenCalled();});

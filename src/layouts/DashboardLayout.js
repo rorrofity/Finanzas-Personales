@@ -110,14 +110,13 @@ const DashboardLayout = () => {
     navigate('/login');
   };
 
-  const ownSpace = Boolean(user?.id && activeSpace?.isOwner && String(activeSpace.ownerId) === String(user.id));
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: '💰 Salud Financiera', icon: <HealthIcon color="primary" />, path: '/financial-health' },
     { text: 'Transacciones No Facturadas (TC)', icon: <ReceiptIcon />, path: '/transactions' },
     { text: 'Transacciones No Facturadas Internacionales (TC)', icon: <ReceiptIcon />, path: '/transactions-intl' },
     { text: 'Compras en Cuotas (TC)', icon: <ReceiptIcon />, path: '/installments' },
-    ...(ownSpace ? [{ text: 'Estados de tarjetas', icon: <ReceiptIcon />, path: '/card-statements' }] : []),
+    { text: 'Estados de tarjetas', icon: <ReceiptIcon />, path: '/card-statements' },
     { text: 'Cuenta Corriente', icon: <ReceiptIcon />, path: '/checking' },
     { text: 'Transacciones Proyectadas', icon: <ReceiptIcon />, path: '/projected-transactions' },
     { text: 'Categorías', icon: <CategoryIcon />, path: '/categories' },

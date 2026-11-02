@@ -1,3 +1,4 @@
+import useSpacePermissions from '../hooks/useSpacePermissions';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -25,6 +26,7 @@ import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 
 const Categories = () => {
+  const { canEdit, canDelete } = useSpacePermissions();
   const [categories, setCategories] = useState([]);
   const [open, setOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -57,6 +59,7 @@ const Categories = () => {
 
   // Abrir diálogo
   const handleOpen = (category = null) => {
+    if (!canEdit) return;
     if (category) {
       setEditingCategory(category);
       setFormData({ name: category.name, description: category.description || '' });
@@ -81,6 +84,7 @@ const Categories = () => {
 
   // Guardar categoría
   const handleSubmit = async () => {
+    if (!canEdit) return;
     try {
       if (editingCategory) {
         await axios.put(`/api/categories/${editingCategory.id}`, formData);
@@ -101,6 +105,7 @@ const Categories = () => {
 
   // Eliminar categoría
   const handleDelete = async (id) => {
+    if (!canDelete) return;
     if (window.confirm('¿Estás seguro de que deseas eliminar esta categoría?')) {
       try {
         await axios.delete(`/api/categories/${id}`);
@@ -132,7 +137,7 @@ const Categories = () => {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={() => handleOpen()}
+          disabled={!canEdit} onClick={() => handleOpen()}
         >
           Nueva Categoría
         </Button>
@@ -155,13 +160,13 @@ const Categories = () => {
                 <TableCell>
                   <IconButton
                     color="primary"
-                    onClick={() => handleOpen(category)}
+                    aria-label="Editar categoría" disabled={!canEdit} onClick={() => handleOpen(category)}
                   >
                     <EditIcon />
                   </IconButton>
                   <IconButton
                     color="error"
-                    onClick={() => handleDelete(category.id)}
+                    aria-label="Eliminar categoría" disabled={!canDelete} onClick={() => handleDelete(category.id)}
                   >
                     <DeleteIcon />
                   </IconButton>
@@ -202,7 +207,7 @@ const Categories = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
+          <Button disabled={!canEdit} onClick={handleSubmit} variant="contained" color="primary">
             {editingCategory ? 'Actualizar' : 'Crear'}
           </Button>
         </DialogActions>

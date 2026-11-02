@@ -17,8 +17,8 @@ function createCardStatementRouter({env=process.env,controller=createCardStateme
   if(!['application/pdf','application/octet-stream'].includes(file.mimetype)||!/\.pdf$/i.test(file.originalname||'')){const error=new Error('PDF required');error.code='CARD_STATEMENT_INVALID_PDF';error.status=400;callback(error);return;}callback(null,true);
  }});
  router.post('/ingest',createIngestGuard(env),upload.single('file'),controller.ingest||((req,res)=>res.status(503).end()));
- router.use(authMiddleware||require('../middleware/auth').auth,spaceMiddleware||require('../middleware/resolveSpace').resolveSpace,ownerMiddleware||require('../middleware/requirePermission').requireOwner);
- router.use(function configuredOwner(req,res,next){const owner=env.CARD_STATEMENTS_OWNER_USER_ID||env.FINTOC_OWNER_USER_ID;if(!owner||req.actorId!==owner)return res.status(403).json({error:'La conciliación solo está disponible para su titular.',code:'CARD_STATEMENT_FORBIDDEN'});next();});
+ router.use(authMiddleware||require('../middleware/auth').auth,spaceMiddleware||require('../middleware/resolveSpace').resolveSpace);
+ router.use(function configuredOwner(req,res,next){const owner=env.CARD_STATEMENTS_OWNER_USER_ID||env.FINTOC_OWNER_USER_ID;if(!owner||require('../utils/spaceReadOwner').spaceReadOwner(req)!==owner)return res.status(403).json({error:'La conciliación solo está disponible para su titular.',code:'CARD_STATEMENT_FORBIDDEN'});next();});
  router.get('/',controller.list||((req,res)=>res.status(503).end()));
  router.get('/:id',controller.detail||((req,res)=>res.status(503).end()));
  router.use((req,res)=>{res.setHeader('Allow','GET');res.status(req.method==='GET'?404:405).json({error:'Consulta no disponible.',code:req.method==='GET'?'CARD_STATEMENT_NOT_FOUND':'CARD_STATEMENT_METHOD_NOT_ALLOWED'});});

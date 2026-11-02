@@ -1,3 +1,4 @@
+import useSpacePermissions from '../hooks/useSpacePermissions';
 import React, { useEffect, useState, useMemo } from 'react';
 import { formatDateLocal } from '../utils/dateUtils';
 import {
@@ -56,6 +57,7 @@ const hasConversion = row => row.amount_clp !== null && row.amount_clp !== undef
   && Number.isFinite(Number(row.amount_clp)) && Number.isFinite(Number(row.exchange_rate)) && Number(row.exchange_rate) > 0;
 
 const TransactionsIntl = () => {
+  const { canEdit, canDelete } = useSpacePermissions();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
@@ -116,6 +118,7 @@ const TransactionsIntl = () => {
   };
 
   const onImport = async () => {
+    if (!canEdit) return;
     const r = Number(rate);
     if (!r || r <= 0) return alert('Ingresa un tipo de cambio válido (> 0)');
     if (!selectedFile) return alert('Selecciona un archivo CSV/Excel');
@@ -173,6 +176,7 @@ const TransactionsIntl = () => {
   };
 
   const handleOpenEdit = (row) => {
+    if (!canEdit) return;
     setEditing(row);
     setFormData({
       fecha: row.fecha?.split('T')[0] || row.fecha,
@@ -192,6 +196,7 @@ const TransactionsIntl = () => {
   };
 
   const submitEdit = async (e) => {
+    if (!canEdit) return;
     e?.preventDefault?.();
     const rateText = formData.exchange_rate.trim(), amountText = formData.amount_usd.trim();
     if ((rateText !== '' && (!Number.isFinite(Number(rateText)) || Number(rateText) <= 0))
@@ -218,6 +223,7 @@ const TransactionsIntl = () => {
   };
 
   const changeCategoryInline = async (rowId, newCat) => {
+    if (!canEdit) return;
     try {
       await axios.put(`/api/intl-unbilled/${rowId}`, { category_id: newCat || null });
       setRows(prev => prev.map(r => r.id === rowId ? { ...r, category_id: newCat || null } : r));
@@ -226,6 +232,7 @@ const TransactionsIntl = () => {
   };
 
   const changeTypeInline = async (rowId, newType) => {
+    if (!canEdit) return;
     try {
       await axios.put(`/api/intl-unbilled/${rowId}`, { tipo: newType });
       setRows(prev => prev.map(r => r.id === rowId ? { ...r, tipo: newType } : r));
@@ -234,6 +241,7 @@ const TransactionsIntl = () => {
   };
 
   const handleDelete = async (rowId) => {
+    if (!canDelete) return;
     if (!window.confirm('¿Eliminar esta transacción internacional?')) return;
     try {
       await axios.delete(`/api/intl-unbilled/${rowId}`);
@@ -246,6 +254,7 @@ const TransactionsIntl = () => {
   };
 
   const handleBulkDelete = async () => {
+    if (!canDelete) return;
     if (!selectedIds.length) return;
     if (!window.confirm(`¿Eliminar ${selectedIds.length} transacción(es) seleccionadas?`)) return;
     try {
@@ -351,7 +360,7 @@ const TransactionsIntl = () => {
           variant="outlined"
           size="small"
         />
-        <Button variant="contained" onClick={() => setOpenImport(true)}>Importar archivo</Button>
+        <Button variant="contained" disabled={!canEdit} onClick={() => setOpenImport(true)}>Importar archivo</Button>
         <FormControlLabel
           control={<Switch checked={hideDismissed} onChange={(e)=>{ setHideDismissed(e.target.checked); setPage(0); setSelectedIds([]); }} />}
           label="Ocultar desestimados en tabla"
@@ -376,7 +385,7 @@ const TransactionsIntl = () => {
         </TextField>
         <UncategorizedFilter active={onlyUncategorized} count={uncategorizedCount} onChange={active => { setOnlyUncategorized(active); setPage(0); setSelectedIds([]); }} />
         {selectedIds.length > 0 && (
-          <Button color="error" variant="contained" onClick={handleBulkDelete}>
+          <Button color="error" variant="contained" disabled={!canDelete} onClick={handleBulkDelete}>
             Eliminar seleccionadas ({selectedIds.length})
           </Button>
         )}
@@ -421,7 +430,7 @@ const TransactionsIntl = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenImport(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={onImport}>Importar</Button>
+          <Button variant="contained" disabled={!canEdit} onClick={onImport}>Importar</Button>
         </DialogActions>
       </Dialog>
 
@@ -467,6 +476,7 @@ const TransactionsIntl = () => {
                       
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Select
+                          disabled={!canEdit}
                           size="small"
                           value={r.category_id || ''}
                           onChange={(e) => changeCategoryInline(r.id, e.target.value)}
@@ -479,6 +489,7 @@ const TransactionsIntl = () => {
                           ))}
                         </Select>
                         <Select
+                          disabled={!canEdit}
                           size="small"
                           value={r.tipo}
                           onChange={(e) => changeTypeInline(r.id, e.target.value)}
@@ -488,10 +499,10 @@ const TransactionsIntl = () => {
                           <MenuItem value="pago">Pago</MenuItem>
                           <MenuItem value="desestimar">Desest.</MenuItem>
                         </Select>
-                        <IconButton size="small" aria-label="Editar transacción internacional" onClick={() => handleOpenEdit(r)}>
+                        <IconButton size="small" aria-label="Editar transacción internacional" disabled={!canEdit} onClick={() => handleOpenEdit(r)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" onClick={() => handleDelete(r.id)}>
+                        <IconButton size="small" disabled={!canDelete} onClick={() => handleDelete(r.id)}>
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Stack>
@@ -508,7 +519,7 @@ const TransactionsIntl = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>
-                    <input type="checkbox" aria-label="Seleccionar todas las transacciones filtradas" checked={filteredRows.length > 0 && filteredRows.every(row => selectedIds.includes(row.id))} onChange={(e)=>toggleSelectAll(e.target.checked)} />
+                    <input type="checkbox" disabled={!canDelete} aria-label="Seleccionar todas las transacciones filtradas" checked={filteredRows.length > 0 && filteredRows.every(row => selectedIds.includes(row.id))} onChange={(e)=>toggleSelectAll(e.target.checked)} />
                   </TableCell>
                   <TableCell>Fecha</TableCell>
                   <TableCell>Descripción</TableCell>
@@ -526,7 +537,7 @@ const TransactionsIntl = () => {
                   .map(r => (
                     <TableRow key={r.id}>
                       <TableCell>
-                        <input type="checkbox" aria-label={`Seleccionar ${r.descripcion}`} checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
+                        <input type="checkbox" disabled={!canDelete} aria-label={`Seleccionar ${r.descripcion}`} checked={selectedIds.includes(r.id)} onChange={()=>toggleSelect(r.id)} />
                       </TableCell>
                       <TableCell>{formatDateLocal(r.fecha)}</TableCell>
                       <TableCell>
@@ -536,14 +547,14 @@ const TransactionsIntl = () => {
                       <TableCell align="right">{Number(r.amount_usd).toFixed(2)}</TableCell>
                       <TableCell align="right">{hasConversion(r) ? formatCurrency(r.amount_clp) : 'Conversión pendiente'}</TableCell>
                       <TableCell>
-                        <Select size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
+                        <Select disabled={!canEdit} size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
                           <MenuItem value="gasto">Gasto</MenuItem>
                           <MenuItem value="pago">Pago</MenuItem>
                           <MenuItem value="desestimar">Desestimar</MenuItem>
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Select size="small" value={r.category_id || ''} displayEmpty onChange={(e)=>changeCategoryInline(r.id, e.target.value)} sx={{ minWidth: 140 }}>
+                        <Select disabled={!canEdit} size="small" value={r.category_id || ''} displayEmpty onChange={(e)=>changeCategoryInline(r.id, e.target.value)} sx={{ minWidth: 140 }}>
                           <MenuItem value=""><em>Sin categoría</em></MenuItem>
                           {categoriesList.map(c => (
                             <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
@@ -552,8 +563,8 @@ const TransactionsIntl = () => {
                       </TableCell>
                       <TableCell>{String(r.brand).toUpperCase()}</TableCell>
                       <TableCell>
-                        <Tooltip title="Editar"><IconButton size="small" onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
-                        <Tooltip title="Eliminar"><IconButton size="small" onClick={()=>handleDelete(r.id)}><DeleteIcon/></IconButton></Tooltip>
+                        <Tooltip title="Editar"><IconButton size="small" disabled={!canEdit} onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
+                        <Tooltip title="Eliminar"><IconButton size="small" disabled={!canDelete} onClick={()=>handleDelete(r.id)}><DeleteIcon/></IconButton></Tooltip>
                       </TableCell>
                     </TableRow>
                   )) : (
@@ -613,7 +624,7 @@ const TransactionsIntl = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseEdit}>Cancelar</Button>
-          <Button variant="contained" onClick={submitEdit}>Guardar</Button>
+          <Button variant="contained" disabled={!canEdit} onClick={submitEdit}>Guardar</Button>
         </DialogActions>
       </Dialog>
 

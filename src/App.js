@@ -20,6 +20,7 @@ import InstallPrompt from './components/InstallPrompt';
 
 // Pages (lazy: code-splitting por ruta — Req 9.5 / tarea 5.4).
 // Los chunks quedan precacheados por el Service Worker (Workbox).
+const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -79,6 +80,7 @@ function App() {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/invite" element={<AcceptInvitation />} />
 
                 <Route
                   path="/"

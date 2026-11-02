@@ -2,29 +2,24 @@ const jwt = require('jsonwebtoken');
 
 const auth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
+    const header = req.header('Authorization');
+    if (typeof header !== 'string' || !header.startsWith('Bearer ') || !header.slice(7)) {
+      return res.status(401).json({ message: 'Debes iniciar sesión.' });
     }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(header.slice(7), process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    if (process.env.AUTH_SESSION_VERSION && decoded.sessionVersion !== process.env.AUTH_SESSION_VERSION) {
+      return res.status(401).json({ message: 'Por seguridad, vuelve a iniciar sesión.', code: 'AUTH_SESSION_EXPIRED' });
+    }
     req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ message: 'Token inválido o expirado' });
+    return next();
+  } catch (_) {
+    return res.status(401).json({ message: 'Token inválido o expirado' });
   }
 };
 
-const generateToken = (userId) => {
-  return jwt.sign(
-    { id: userId },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' }
-  );
-};
-
-module.exports = {
-  auth,
-  generateToken
-};
+const generateToken = userId => jwt.sign(
+  { id: userId, ...(process.env.AUTH_SESSION_VERSION ? { sessionVersion: process.env.AUTH_SESSION_VERSION } : {}) },
+  process.env.JWT_SECRET,
+  { expiresIn: '24h', algorithm: 'HS256' }
+);
+module.exports = { auth, generateToken };

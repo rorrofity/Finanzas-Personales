@@ -38,7 +38,14 @@ test.beforeAll(async ({ request }) => {
     headers: authHeaders(owner.token),
     data: { email: PARTNER.email, canEdit: false, canDelete: false },
   });
-  membershipId = (await inv.json()).member.id;
+  const created = await inv.json();
+  expect(created.member.status).toBe('pending');
+  membershipId = created.member.id;
+  const invitationToken = new URLSearchParams(new URL(created.invitationUrl).hash.slice(1)).get('token');
+  const acceptance = await request.post('/api/space/invitations/accept', {
+    headers: authHeaders(partner.token), data: { token: invitationToken },
+  });
+  expect(acceptance.status()).toBe(200);
 });
 
 test.afterAll(async () => {

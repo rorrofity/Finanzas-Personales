@@ -6,7 +6,7 @@ const { defineConfig, devices } = require('@playwright/test');
 const baseURL = 'http://127.0.0.1:3105';
 module.exports = defineConfig({
   testDir: './tests/e2e',
-  testMatch: ['expense-evolution.spec.js', 'dashboard-redesign.spec.js', 'compact-totals.spec.js', 'appearance-mobile.spec.js', 'fintoc-readonly.spec.js', 'card-statements.spec.js', 'uncategorized-filter.spec.js'],
+  testMatch: ['expense-evolution.spec.js', 'dashboard-redesign.spec.js', 'compact-totals.spec.js', 'appearance-mobile.spec.js', 'fintoc-readonly.spec.js', 'card-statements.spec.js', 'uncategorized-filter.spec.js', 'household-readonly.spec.js'],
   timeout: 30000,
   expect: { timeout: 8000 },
   forbidOnly: !!process.env.CI,

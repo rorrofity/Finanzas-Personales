@@ -1,3 +1,4 @@
+import useSpacePermissions from '../hooks/useSpacePermissions';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateLocal, parseDateLocal } from '../utils/dateUtils';
 import {
@@ -48,6 +49,7 @@ import UncategorizedFilter, { isUncategorized } from '../components/Uncategorize
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
 export default function Checking() {
+  const { canEdit, canDelete } = useSpacePermissions();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
@@ -131,6 +133,7 @@ export default function Checking() {
   const emptyMessage = onlyUncategorized ? 'No hay movimientos sin categoría con estos filtros.' : 'No hay movimientos este mes.';
 
   const openNewMove = () => {
+    if (!canEdit) return;
     // Fecha hoy en America/Santiago
     const now = new Date();
     const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -140,11 +143,13 @@ export default function Checking() {
     setOpenMove(true);
   };
   const openEditMove = (row) => {
+    if (!canEdit) return;
     setMoveForm({ id: row.id, fecha: row.fecha?.split('T')[0] || row.fecha, descripcion: row.descripcion, tipo: row.tipo, amount: String(row.amount), category_id: row.category_id || '', notas: row.notas || '' });
     setOpenMove(true);
   };
   const closeMove = () => setOpenMove(false);
   const saveMove = async () => {
+    if (!canEdit) return;
     try {
       // Derivar año/mes de la fecha
       const d = new Date(moveForm.fecha);
@@ -164,6 +169,7 @@ export default function Checking() {
     }
   };
   const deleteMove = async (row) => {
+    if (!canDelete) return;
     if (!window.confirm('¿Eliminar movimiento?')) return;
     try {
       await axios.delete(`/api/checking/${row.id}`);
@@ -176,6 +182,7 @@ export default function Checking() {
 
   // Actualizar categoría inline
   const handleCategoryChange = async (transactionId, newCategoryId) => {
+    if (!canEdit) return;
     try {
       await axios.put(`/api/checking/${transactionId}`, { category_id: newCategoryId || null });
       // Actualizar localmente sin recargar
@@ -201,6 +208,7 @@ export default function Checking() {
   };
 
   const onImport = async () => {
+    if (!canEdit) return;
     if (!selectedFile) return;
     
     const fd = new FormData();
@@ -305,8 +313,8 @@ export default function Checking() {
         </TextField>
         <UncategorizedFilter active={onlyUncategorized} count={uncategorizedCount} onChange={active => changeFilter('category_id', active ? 'uncategorized' : '')} />
         <Box sx={{ flex: 1 }} />
-        <Button variant="outlined" startIcon={<FileUpload />} onClick={() => setOpenImport(true)}>Importar cartola</Button>
-        <Button variant="contained" startIcon={<Add />} onClick={openNewMove}>Nuevo movimiento</Button>
+        <Button variant="outlined" startIcon={<FileUpload />} disabled={!canEdit} onClick={() => setOpenImport(true)}>Importar cartola</Button>
+        <Button variant="contained" startIcon={<Add />} disabled={!canEdit} onClick={openNewMove}>Nuevo movimiento</Button>
       </Stack>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Mostrando {filteredRows.length} de {total} movimientos</Typography>
@@ -332,7 +340,7 @@ export default function Checking() {
                     <Select
                       size="small"
                       value={r.category_id || ''}
-                      onChange={(e) => handleCategoryChange(r.id, e.target.value)}
+                      disabled={!canEdit} onChange={(e) => handleCategoryChange(r.id, e.target.value)}
                       displayEmpty
                       sx={{ width: '100%', bgcolor: r.category_id ? 'transparent' : 'warning.light', borderRadius: 1 }}
                     >
@@ -341,8 +349,8 @@ export default function Checking() {
                     </Select>
                     {!!r.notas && <Typography variant="caption" color="text.secondary">{r.notas}</Typography>}
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button size="small" startIcon={<Edit fontSize="small" />} onClick={() => openEditMove(r)}>Editar</Button>
-                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} onClick={() => deleteMove(r)}>Eliminar</Button>
+                      <Button size="small" startIcon={<Edit fontSize="small" />} disabled={!canEdit} onClick={() => openEditMove(r)}>Editar</Button>
+                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} disabled={!canDelete} onClick={() => deleteMove(r)}>Eliminar</Button>
                     </Stack>
                   </Stack>
                 </CardContent>
@@ -381,7 +389,7 @@ export default function Checking() {
                       <Select
                         size="small"
                         value={r.category_id || ''}
-                        onChange={(e) => handleCategoryChange(r.id, e.target.value)}
+                        disabled={!canEdit} onChange={(e) => handleCategoryChange(r.id, e.target.value)}
                         displayEmpty
                         sx={{ 
                           minWidth: 120, 
@@ -397,10 +405,10 @@ export default function Checking() {
                     <TableCell>{r.notas || ''}</TableCell>
                     <TableCell align="right">
                       <Tooltip title="Editar">
-                        <IconButton size="small" onClick={()=>openEditMove(r)}><Edit fontSize="small" /></IconButton>
+                        <IconButton size="small" disabled={!canEdit} onClick={()=>openEditMove(r)}><Edit fontSize="small" /></IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
-                        <IconButton size="small" onClick={()=>deleteMove(r)}><Delete fontSize="small" /></IconButton>
+                        <IconButton size="small" disabled={!canDelete} onClick={()=>deleteMove(r)}><Delete fontSize="small" /></IconButton>
                       </Tooltip>
                     </TableCell>
                   </TableRow>
@@ -474,7 +482,7 @@ export default function Checking() {
         </DialogContent>
         <DialogActions>
           <Button onClick={closeMove}>Cancelar</Button>
-          <Button variant="contained" onClick={saveMove}>Guardar</Button>
+          <Button variant="contained" disabled={!canEdit} onClick={saveMove}>Guardar</Button>
         </DialogActions>
       </Dialog>
 
@@ -502,7 +510,7 @@ export default function Checking() {
           <Button 
             variant="contained" 
             onClick={onImport} 
-            disabled={!selectedFile || importing}
+            disabled={!canEdit || !selectedFile || importing}
           >
             {importing ? 'Importando...' : 'Importar'}
           </Button>

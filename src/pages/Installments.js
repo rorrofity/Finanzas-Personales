@@ -1,3 +1,4 @@
+import useSpacePermissions from '../hooks/useSpacePermissions';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
@@ -52,6 +53,7 @@ const emptyPlan = (year, month) => ({
 });
 
 export default function Installments() {
+  const { canEdit, canDelete } = useSpacePermissions();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
@@ -109,6 +111,7 @@ export default function Installments() {
   }, [occurrences]);
 
   const onOpenCreate = () => {
+    if (!canEdit) return;
     setForm(emptyPlan(year, month));
     setError('');
     setOpen(true);
@@ -130,6 +133,7 @@ export default function Installments() {
   };
 
   const onSubmit = async () => {
+    if (!canEdit) return;
     const err = validate();
     if (err) { setError(err); return; }
     try {
@@ -148,12 +152,14 @@ export default function Installments() {
   };
 
   const handleDeleteOccurrence = async (occ) => {
+    if (!canDelete) return;
     if (!window.confirm('¿Eliminar esta cuota del mes?')) return;
     await axios.delete(`/api/installments/occurrences/${occ.id}`);
     await load();
   };
 
   const openEditOccurrence = (occ) => {
+    if (!canEdit) return;
     setOccForm({
       id: occ.id,
       year: occ.year,
@@ -166,6 +172,7 @@ export default function Installments() {
   };
 
   const saveOccurrence = async () => {
+    if (!canEdit) return;
     try {
       await axios.put(`/api/installments/occurrences/${occForm.id}`, {
         year: Number(occForm.year),
@@ -184,6 +191,7 @@ export default function Installments() {
   };
 
   const changeOccurrenceCategoryInline = async (occ, newCatId) => {
+    if (!canEdit) return;
     try {
       await axios.put(`/api/installments/occurrences/${occ.id}`, { category_id: newCatId || null });
       setOccurrences(prev => prev.map(o => o.id === occ.id ? { ...o, category_id: newCatId || null } : o));
@@ -194,6 +202,7 @@ export default function Installments() {
   };
 
   const handleDeletePlanForward = async (plan) => {
+    if (!canDelete) return;
     if (!window.confirm('¿Eliminar plan desde este mes en adelante?')) return;
     await axios.delete(`/api/installments/plans/${plan.id}`, { params: { fromYear: year, fromMonth: month } });
     await load();
@@ -206,7 +215,7 @@ export default function Installments() {
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
         <Grid item>
-          <Button variant="contained" startIcon={<Add />} onClick={onOpenCreate}>Nueva compra en cuotas</Button>
+          <Button variant="contained" startIcon={<Add />} disabled={!canEdit} onClick={onOpenCreate}>Nueva compra en cuotas</Button>
         </Grid>
         <Grid item>
           <Chip label={`Visa mes: ${currency(totals.visa || 0)}`} color="primary" variant="outlined" />
@@ -243,7 +252,7 @@ export default function Installments() {
                       <Typography variant="caption" color="text.secondary">Cuota actual: {currentLabel}</Typography>
                       <Typography variant="caption" color="text.secondary">Total cuotas: {p.total_installments}</Typography>
                       <Stack direction="row" justifyContent="flex-end">
-                        <Button size="small" color="error" startIcon={<Delete fontSize="small" />} onClick={() => handleDeletePlanForward(p)}>Eliminar plan</Button>
+                        <Button size="small" color="error" startIcon={<Delete fontSize="small" />} disabled={!canDelete} onClick={() => handleDeletePlanForward(p)}>Eliminar plan</Button>
                       </Stack>
                     </Stack>
                   </CardContent>
@@ -286,7 +295,7 @@ export default function Installments() {
                       <TableCell>{p.category_id || '-'}</TableCell>
                       <TableCell align="right">
                         <Tooltip title="Eliminar plan (desde este mes)">
-                          <IconButton size="small" color="error" onClick={() => handleDeletePlanForward(p)}><Delete fontSize="small" /></IconButton>
+                          <IconButton size="small" color="error" disabled={!canDelete} onClick={() => handleDeletePlanForward(p)}><Delete fontSize="small" /></IconButton>
                         </Tooltip>
                       </TableCell>
                     </TableRow>
@@ -321,7 +330,7 @@ export default function Installments() {
                     <Select
                       size="small"
                       value={o.category_id || ''}
-                      onChange={(e) => changeOccurrenceCategoryInline(o, e.target.value)}
+                      disabled={!canEdit} onChange={(e) => changeOccurrenceCategoryInline(o, e.target.value)}
                       displayEmpty
                       sx={{ width: '100%' }}
                     >
@@ -331,8 +340,8 @@ export default function Installments() {
                       ))}
                     </Select>
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button size="small" startIcon={<Edit fontSize="small" />} onClick={() => openEditOccurrence(o)}>Editar</Button>
-                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} onClick={() => handleDeleteOccurrence(o)}>Eliminar</Button>
+                      <Button size="small" startIcon={<Edit fontSize="small" />} disabled={!canEdit} onClick={() => openEditOccurrence(o)}>Editar</Button>
+                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} disabled={!canDelete} onClick={() => handleDeleteOccurrence(o)}>Eliminar</Button>
                     </Stack>
                   </Stack>
                 </CardContent>
@@ -376,7 +385,7 @@ export default function Installments() {
                       <Select
                         size="small"
                         value={o.category_id || ''}
-                        onChange={(e) => changeOccurrenceCategoryInline(o, e.target.value)}
+                        disabled={!canEdit} onChange={(e) => changeOccurrenceCategoryInline(o, e.target.value)}
                         displayEmpty
                         sx={{ minWidth: 160 }}
                       >
@@ -388,10 +397,10 @@ export default function Installments() {
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title="Editar cuota">
-                        <IconButton size="small" onClick={() => openEditOccurrence(o)}><Edit fontSize="small" /></IconButton>
+                        <IconButton size="small" disabled={!canEdit} onClick={() => openEditOccurrence(o)}><Edit fontSize="small" /></IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar cuota">
-                        <IconButton size="small" onClick={() => handleDeleteOccurrence(o)}><Delete fontSize="small" /></IconButton>
+                        <IconButton size="small" disabled={!canDelete} onClick={() => handleDeleteOccurrence(o)}><Delete fontSize="small" /></IconButton>
                       </Tooltip>
                     </TableCell>
                   </TableRow>
@@ -438,7 +447,7 @@ export default function Installments() {
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button onClick={onSubmit} variant="contained" disabled={loading}>Crear</Button>
+          <Button onClick={onSubmit} variant="contained" disabled={!canEdit || loading}>Crear</Button>
         </DialogActions>
       </Dialog>
 
@@ -472,7 +481,7 @@ export default function Installments() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditOccOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={saveOccurrence}>Guardar</Button>
+          <Button variant="contained" disabled={!canEdit} onClick={saveOccurrence}>Guardar</Button>
         </DialogActions>
       </Dialog>
 

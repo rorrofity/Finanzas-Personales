@@ -67,7 +67,6 @@ test('consulta solo el estado local sin parámetros, presenta horario, fechas, r
 
 test.each([
   { user: null, space: { ownerId: 'owner-1', isOwner: true } },
-  { user: { id: 'member-1' }, space: { ownerId: 'owner-1', isOwner: false } },
   { user: { id: 'owner-1' }, space: { ownerId: 'owner-2', isOwner: true } },
 ])('solo el propietario de su espacio ve el estado: %j', ({ user, space }) => {
   useAuth.mockReturnValue({ user });
@@ -222,7 +221,7 @@ test('cambiar período aborta el estado anterior y descarta una respuesta tardí
 test.each(['period', 'user', 'space'])('cambiar %s borra y aborta revisión pendiente de la identidad anterior', async (change) => {
   const pending = deferred();
   axios.get.mockResolvedValueOnce({ data: daily() }).mockImplementationOnce(() => pending.promise).mockResolvedValueOnce({ data: daily({ pendingReviewCount: 0 }) });
-  const { rerender, container } = mount();
+  const { rerender } = mount();
   fireEvent.click(await screen.findByRole('button', { name: 'Ver movimientos pendientes' }));
   const signal = axios.get.mock.calls[1][1].signal;
   if (change === 'user') {
@@ -234,10 +233,8 @@ test.each(['period', 'user', 'space'])('cambiar %s borra y aborta revisión pend
   expect(signal.aborted).toBe(true);
   await act(async () => pending.resolve({ data: review() }));
   expect(screen.queryByText('Supermercado pendiente')).not.toBeInTheDocument();
-  if (change === 'space') {
-    expect(container).toBeEmptyDOMElement();
-    expect(axios.get).toHaveBeenCalledTimes(2);
-  } else expect(await screen.findByText(/0 pendientes/)).toBeInTheDocument();
+  expect(await screen.findByText(/0 pendientes/)).toBeInTheDocument();
+  if (change === 'space') expect(axios.get).toHaveBeenCalledTimes(3);
 });
 
 test('desmontar aborta estado y revisión pendientes', async () => {
@@ -261,3 +258,5 @@ test('el preview opta al estado diario dentro del panel conservando su consulta 
   expect(await within(preview).findByRole('button', { name: 'Consultar movimientos con Fintoc' })).toBeInTheDocument();
   expect(axios.get.mock.calls.map(([path]) => path).sort()).toEqual([STATUS_PATH, '/api/checking/fintoc/status'].sort());
 });
+
+test('HRO: miembro ve estado y pendientes guardados sin consulta externa',async()=>{useAuth.mockReturnValue({user:{id:'member-1'}});useSpace.mockReturnValue({activeSpace:{ownerId:'owner-1',isOwner:false,canEdit:false,canDelete:false}});axios.get.mockImplementation(path=>Promise.resolve({data:path===STATUS_PATH?daily():review()}));mount();await screen.findByText(/07:00.*America\/Santiago/);fireEvent.click(screen.getByRole('button',{name:/pendientes/i}));await screen.findByText('Supermercado pendiente');expect(axios.get.mock.calls.every(call=>[STATUS_PATH,REVIEW_PATH].includes(call[0]))).toBe(true);});

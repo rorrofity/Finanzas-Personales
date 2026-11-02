@@ -15,12 +15,10 @@ jest.mock('../../config/axios', () => ({
   delete: jest.fn(),
 }));
 
-jest.mock('../AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'u-owner-1', nombre: 'Rodrigo', email: 'r@test.local' },
-    isAuthenticated: true,
-  }),
-}));
+jest.mock('../AuthContext', () => {
+  const user = { id: 'u-owner-1', nombre: 'Rodrigo', email: 'r@test.local' };
+  return { useAuth: () => ({ user, isAuthenticated: true }) };
+});
 
 const MEMBERSHIPS = {
   spaces: [
@@ -30,13 +28,14 @@ const MEMBERSHIPS = {
 };
 
 const Probe = () => {
-  const { spaces, activeSpace, switchSpace } = useSpace();
+  const { spaces, activeSpace, switchSpace, refreshMemberships } = useSpace();
   return (
     <div>
       <div data-testid="count">{spaces.length}</div>
       <div data-testid="active">{activeSpace?.ownerId}</div>
       <div data-testid="canDelete">{String(activeSpace?.canDelete)}</div>
       <button onClick={() => switchSpace('u-owner-2')}>go-shared</button>
+      <button onClick={() => refreshMemberships('u-new-shared')}>accept-new-shared</button>
     </div>
   );
 };
@@ -117,3 +116,7 @@ describe('SpaceContext (Req 11.13)', () => {
     expect(screen.getByTestId('active')).toHaveTextContent('u-owner-1');
   });
 });
+
+test('aceptación carga y activa un hogar que no estaba en el cierre anterior',async()=>{axios.get.mockImplementation(path=>Promise.resolve({data:path.includes('memberships')?{spaces:[MEMBERSHIPS.spaces[0]]}:{members:[]}}));renderProbe();await waitFor(()=>expect(screen.getByTestId('count')).toHaveTextContent('1'));axios.get.mockImplementation(path=>Promise.resolve({data:path.includes('memberships')?{spaces:[MEMBERSHIPS.spaces[0],{ownerId:'u-new-shared',ownerName:'Nuevo hogar',isOwner:false,canEdit:false,canDelete:false}]}:{members:[]}}));act(()=>screen.getByText('accept-new-shared').click());await waitFor(()=>expect(screen.getByTestId('active')).toHaveTextContent('u-new-shared'));expect(screen.getByTestId('canDelete')).toHaveTextContent('false');expect(localStorage.getItem('activeSpaceOwner::u-owner-1')).toBe('u-new-shared');});
+
+test('una carga inicial tardía no deshace la selección de una invitación recién aceptada',async()=>{localStorage.clear();let finishInitial;const initial=new Promise(resolve=>{finishInitial=resolve});const newSpaces={spaces:[MEMBERSHIPS.spaces[0],{ownerId:'u-new-shared',ownerName:'Nuevo hogar',isOwner:false,canEdit:false,canDelete:false}]};axios.get.mockReset();axios.get.mockReturnValueOnce(initial).mockImplementation(path=>Promise.resolve({data:path.includes('memberships')?newSpaces:{members:[]}}));renderProbe();act(()=>screen.getByText('accept-new-shared').click());await waitFor(()=>expect(screen.getByTestId('active')).toHaveTextContent('u-new-shared'));await act(async()=>finishInitial({data:{spaces:[MEMBERSHIPS.spaces[0]]}}));expect(screen.getByTestId('active')).toHaveTextContent('u-new-shared');expect(screen.getByTestId('count')).toHaveTextContent('2');});

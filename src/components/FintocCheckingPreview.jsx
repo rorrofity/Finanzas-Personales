@@ -128,7 +128,9 @@ export default function FintocCheckingPreview({ year, month, showDailyStatus = f
     }
   };
 
-  if (!ownSpace || visible.forbidden) return null;
+  if (!ownSpace) return user?.id && activeSpace?.ownerId && activeSpace.isOwner === false && showDailyStatus
+    ? <Paper variant="outlined" sx={{p:2,mb:2,minWidth:0}}><FintocDailySyncStatus year={year} month={month} /></Paper> : null;
+  if (visible.forbidden) return null;
   const result = visible.preview;
   const ready = visible.config?.state === 'ready';
   const monthLabel = new Intl.DateTimeFormat('es-CL', { month: 'long', year: 'numeric', timeZone: 'UTC' })

@@ -1,5 +1,6 @@
 const axios = require('axios');
 const db = require('../config/database');
+const { configuredSyncOwner } = require('../middleware/requireN8nSyncSecret');
 
 /**
  * Servicio de sincronización de emails vía N8N (Epic 13).
@@ -54,6 +55,10 @@ async function logSyncRun(userId, trigger, { imported, skipped, error }) {
  */
 async function runSync(userId, trigger) {
   const startTime = Date.now();
+  const syncSecret = process.env.N8N_SYNC_SECRET;
+  const owner = configuredSyncOwner();
+  if (typeof syncSecret !== 'string' || !syncSecret || !owner) return { imported: 0, skipped: 0, errors: [], error: 'N8N_SYNC_NOT_CONFIGURED' };
+  if (userId !== owner) return { imported: 0, skipped: 0, errors: [], error: 'N8N_SYNC_FORBIDDEN' };
 
   try {
     const userCheck = await db.query('SELECT id, nombre FROM users WHERE id = $1', [userId]);
@@ -67,7 +72,7 @@ async function runSync(userId, trigger) {
     const n8nResponse = await axios.post(
       n8nUrl,
       { userId, timestamp: new Date().toISOString(), userName: userCheck.rows[0].nombre },
-      { timeout: 60000, headers: { 'Content-Type': 'application/json' } }
+      { timeout: 60000, headers: { 'Content-Type': 'application/json', 'X-Finanzas-Sync-Key': syncSecret } }
     );
 
     const parsed = parseN8nResult(n8nResponse.data);

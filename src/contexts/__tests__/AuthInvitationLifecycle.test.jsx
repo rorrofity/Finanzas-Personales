@@ -1,0 +1,20 @@
+import React from 'react';
+import {MemoryRouter} from 'react-router-dom';
+import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import axios from '../../config/axios';
+import {AuthProvider,useAuth} from '../AuthContext';
+import {clearReadCache} from '../../services/readCache';
+import {setActiveSpaceOwner} from '../../services/activeSpace';
+import AcceptInvitation from '../../pages/AcceptInvitation';
+jest.mock('../../config/axios',()=>({get:jest.fn(),post:jest.fn()}));
+jest.mock('../../services/readCache',()=>({clearReadCache:jest.fn()}));
+jest.mock('../../services/activeSpace',()=>({setActiveSpaceOwner:jest.fn()}));
+jest.mock('../SpaceContext',()=>({useSpace:()=>({refreshMemberships:jest.fn()})}));
+const token='a'.repeat(43);
+beforeEach(()=>{jest.clearAllMocks();clearReadCache.mockReset();sessionStorage.clear();localStorage.clear();window.history.replaceState(null,'','/invite#token='+token);});
+test('sesión anterior rechazada limpia datos locales y conserva enlace recién abierto para iniciar sesión',async()=>{localStorage.setItem('token','expired-jwt');axios.get.mockRejectedValue({response:{status:401}});render(<MemoryRouter><AuthProvider><AcceptInvitation/></AuthProvider></MemoryRouter>);await screen.findByRole('link',{name:'Iniciar sesión'});expect(localStorage.getItem('token')).toBeNull();expect(clearReadCache).toHaveBeenCalledTimes(1);expect(sessionStorage.getItem('householdInvitation')).toBe(token);expect(window.location.hash).toBe('');expect(axios.post).not.toHaveBeenCalled();});
+const Logout=()=>{const {logout}=useAuth();return <button onClick={logout}>Salir</button>};
+test('salir explícitamente borra invitación y caché financiero local',async()=>{sessionStorage.setItem('householdInvitation',token);render(<AuthProvider><Logout/></AuthProvider>);fireEvent.click(await screen.findByRole('button',{name:'Salir'}));await waitFor(()=>expect(sessionStorage.getItem('householdInvitation')).toBeNull());expect(clearReadCache).toHaveBeenCalledTimes(1);});
+
+const SwitchAccount=()=>{const auth=useAuth();return <><div data-testid="signed-user">{auth.user?.email}</div><button onClick={()=>auth.login('new@example.com','password')}>local</button><button onClick={()=>auth.loginWithGoogle('google-fixture')}>google</button><button onClick={()=>auth.register({email:'new@example.com'})}>register</button></>};
+test.each(['local','google','register'])('cambiar identidad por %s espera limpieza antes de publicar sesión nueva y conserva invitación',async method=>{localStorage.setItem('token','old-token');sessionStorage.setItem('householdInvitation',token);axios.get.mockResolvedValue({data:{user:{id:'old',email:'old@example.com'}}});axios.post.mockResolvedValue({data:{user:{id:'new',email:'new@example.com'},token:'new-token'}});let completeClear;clearReadCache.mockImplementation(()=>new Promise(resolve=>{completeClear=resolve}));render(<AuthProvider><SwitchAccount/></AuthProvider>);await screen.findByText('old@example.com');fireEvent.click(screen.getByRole('button',{name:method}));await waitFor(()=>expect(clearReadCache).toHaveBeenCalledTimes(1));expect(screen.getByTestId('signed-user')).toHaveTextContent('old@example.com');expect(localStorage.getItem('token')).toBe('old-token');completeClear();await screen.findByText('new@example.com');expect(setActiveSpaceOwner).toHaveBeenCalledWith(null);expect(localStorage.getItem('token')).toBe('new-token');expect(sessionStorage.getItem('householdInvitation')).toBe(token);});

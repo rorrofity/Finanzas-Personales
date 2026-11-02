@@ -65,7 +65,6 @@ test('snapshot ausente no inventa saldo cero', async () => {
 });
 test.each([
   { user: null, space: { ownerId: 'owner-fixture', isOwner: true } },
-  { user: { id: 'member-fixture' }, space: { ownerId: 'owner-fixture', isOwner: false } },
   { user: { id: 'owner-fixture' }, space: { ownerId: 'other-fixture', isOwner: true } },
 ])('no muestra ni consulta saldos de otro espacio: %j', ({ user, space }) => {
   useAuth.mockReturnValue({ user }); useSpace.mockReturnValue({ activeSpace: space }); const { container } = mount(); expect(container).toBeEmptyDOMElement(); expect(axios.get).not.toHaveBeenCalled();
@@ -99,3 +98,5 @@ test('desmontar aborta el request pendiente', () => { const pending = deferred()
 test('un cálculo inválido o ausente no produce una diferencia falsa', async () => {
   axios.get.mockResolvedValue({ data: bank() }); mount({ calculatedBalance: null }); await screen.findByText('$1.234.567'); expect(screen.queryByText(/Diferencia con el historial/)).not.toBeInTheDocument();
 });
+
+test('HRO: miembro consulta saldo guardado del hogar sin acciones de proveedor',async()=>{useAuth.mockReturnValue({user:{id:'member-fixture'}});useSpace.mockReturnValue({activeSpace:{ownerId:'owner-fixture',isOwner:false,canEdit:false,canDelete:false}});axios.get.mockResolvedValue({data:bank()});mount();expect(await screen.findByText('$1.234.567')).toBeInTheDocument();expect(axios.get.mock.calls.map(call=>call[0])).toEqual([PATH]);expect(screen.queryByRole('button')).not.toBeInTheDocument();});

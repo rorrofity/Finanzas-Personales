@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { Alert, Snackbar } from '@mui/material';
@@ -49,6 +50,7 @@ export const useSpace = () => {
 export const SpaceProvider = ({ children }) => {
   const { user } = useAuth();
   const [spaces, setSpaces] = useState([]);
+  const membershipRequest = useRef(0);
   const [activeSpace, setActiveSpace] = useState(null);
   const [hasMembers, setHasMembers] = useState(false);
   const [forbiddenNotice, setForbiddenNotice] = useState(false);
@@ -72,7 +74,8 @@ export const SpaceProvider = ({ children }) => {
     );
   }, []);
 
-  const refreshMemberships = useCallback(async () => {
+  const refreshMemberships = useCallback(async (preferredOwnerId = null) => {
+    const version = ++membershipRequest.current;
     if (!user?.id) return;
 
     let loaded = [ownSpaceOf(user)];
@@ -84,27 +87,36 @@ export const SpaceProvider = ({ children }) => {
     } catch (e) {
       // Sin backend de espacios disponible: operar solo con el propio
     }
+    if (version !== membershipRequest.current) return null;
     setSpaces(loaded);
 
     try {
       const { data } = await axios.get('/api/space/members');
+      if (version !== membershipRequest.current) return null;
       setHasMembers((data?.members || []).some((m) => m.status === 'linked' && m.isActive));
     } catch (e) {
+      if (version !== membershipRequest.current) return null;
       setHasMembers(false);
     }
 
     // Restaurar selección persistida si sigue siendo válida
     const persisted = localStorage.getItem(storageKey(user.id));
     const target =
+      loaded.find((s) => s.ownerId === preferredOwnerId) ||
       loaded.find((s) => s.ownerId === persisted) ||
       loaded.find((s) => s.isOwner) ||
       loaded[0];
+    if (preferredOwnerId && target?.ownerId === preferredOwnerId) {
+      localStorage.setItem(storageKey(user.id), preferredOwnerId);
+      applyActive(target);
+    }
     return target;
-  }, [user, ownSpaceOf]);
+  }, [user, ownSpaceOf, applyActive]);
 
   // Carga inicial al autenticar
   useEffect(() => {
     if (!user?.id) {
+      membershipRequest.current += 1;
       setSpaces([]);
       setActiveSpace(null);
       setActiveSpaceOwner(null);
@@ -112,8 +124,9 @@ export const SpaceProvider = ({ children }) => {
     }
     let cancelled = false;
     (async () => {
+      const version = membershipRequest.current + 1;
       const target = await refreshMemberships();
-      if (!cancelled && target) applyActive(target);
+      if (!cancelled && target && version === membershipRequest.current) applyActive(target);
     })();
     return () => {
       cancelled = true;

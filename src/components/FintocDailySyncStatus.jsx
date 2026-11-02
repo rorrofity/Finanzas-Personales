@@ -95,8 +95,8 @@ function safeError(error, reviewing = false) {
 export default function FintocDailySyncStatus({ year, month }) {
   const { user } = useAuth();
   const { activeSpace } = useSpace();
-  const ownSpace = Boolean(user?.id && activeSpace?.isOwner && String(activeSpace.ownerId) === String(user.id));
-  const scope = `${user?.id || ''}:${activeSpace?.ownerId || ''}:${ownSpace}:${year}:${month}`;
+  const canReadSpace = Boolean(user?.id && activeSpace?.ownerId && (activeSpace.isOwner === false || (activeSpace.isOwner === true && String(activeSpace.ownerId) === String(user.id))));
+  const scope = `${user?.id || ''}:${activeSpace?.ownerId || ''}:${canReadSpace}:${year}:${month}`;
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const generation = useRef(0);
@@ -109,7 +109,7 @@ export default function FintocDailySyncStatus({ year, month }) {
     const controller = new AbortController();
     reviewRequest.current?.abort();
     setState({ ...EMPTY, scope });
-    if (ownSpace) {
+    if (canReadSpace) {
       axios.get(STATUS_PATH, { signal: controller.signal, headers: { 'Cache-Control': 'no-store' } })
         .then(({ data }) => {
           if (controller.signal.aborted || version !== generation.current || currentScope.current !== scope) return;
@@ -127,10 +127,10 @@ export default function FintocDailySyncStatus({ year, month }) {
       controller.abort();
       reviewRequest.current?.abort();
     };
-  }, [scope, ownSpace]);
+  }, [scope, canReadSpace]);
 
   const queryReview = async (more = false) => {
-    if (!ownSpace || !visible.status || visible.reviewLoading) return;
+    if (!canReadSpace || !visible.status || visible.reviewLoading) return;
     const previousItems = more ? visible.review?.items || [] : [];
     const offset = previousItems.length;
     const version = generation.current;
@@ -154,7 +154,7 @@ export default function FintocDailySyncStatus({ year, month }) {
     }
   };
 
-  if (!ownSpace || visible.forbidden) return null;
+  if (!canReadSpace || visible.forbidden) return null;
   const status = visible.status;
   const review = visible.review;
   return (

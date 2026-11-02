@@ -35,6 +35,7 @@ const SpaceMembersSettings = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [invitationUrl, setInvitationUrl] = useState('');
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -58,7 +59,7 @@ const SpaceMembersSettings = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.post('/api/space/members', {
+      const { data } = await axios.post('/api/space/members', {
         email: email.trim(),
         canEdit: inviteCanEdit,
         canDelete: inviteCanDelete,
@@ -66,7 +67,8 @@ const SpaceMembersSettings = () => {
       setEmail('');
       setInviteCanEdit(false);
       setInviteCanDelete(false);
-      notify('Invitación enviada');
+      setInvitationUrl(data.invitationUrl || '');
+      notify('Invitación preparada');
       await fetchMembers();
       refreshMemberships();
     } catch (e) {
@@ -74,6 +76,20 @@ const SpaceMembersSettings = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const renewInvitation = async member => {
+    setError(null);
+    try {
+      const { data } = await axios.post(`/api/space/members/${member.id}/renew-invitation`);
+      setInvitationUrl(data.invitationUrl || '');
+      notify('Nuevo enlace preparado. El anterior dejó de funcionar.');
+      await fetchMembers();
+    } catch (e) { setError(e.response?.data?.error || 'No se pudo generar el enlace'); }
+  };
+  const copyInvitation = async () => {
+    try { await navigator.clipboard.writeText(invitationUrl); notify('Enlace copiado'); }
+    catch (_) { setError('Selecciona y copia el enlace para compartirlo.'); }
   };
 
   const handleUpdate = async (member, changes) => {
@@ -108,7 +124,7 @@ const SpaceMembersSettings = () => {
         Invita a un miembro de tu hogar a ver tus finanzas. Tú controlas sus
         permisos y puedes desactivar su acceso en cualquier momento (máximo 2
         miembros). Si aún no tiene cuenta, el acceso se activará cuando se
-        registre con ese email.
+        registre con ese email y acepte el enlace privado que le compartas.
       </Typography>
 
       {error && (
@@ -167,6 +183,11 @@ const SpaceMembersSettings = () => {
         </Button>
       </Stack>
 
+      {invitationUrl && <Alert severity="success" sx={{mb:2}}>
+        <Typography variant="body2">Copia y envía este enlace a la persona invitada por un canal privado. Debe iniciar sesión con el correo invitado y aceptarlo. El enlace vence en siete días.</Typography>
+        <TextField fullWidth label="Enlace de invitación" value={invitationUrl} InputProps={{readOnly:true}} size="small" sx={{mt:1}} />
+        <Button onClick={copyInvitation} sx={{mt:1}}>Copiar enlace</Button>
+      </Alert>}
       <TableContainer sx={{ overflowX: 'auto' }}>
         <Table size="small">
           <TableHead>
@@ -195,6 +216,7 @@ const SpaceMembersSettings = () => {
                     <Typography variant="body2">
                       {m.memberName || m.invitedEmail}
                     </Typography>
+                    {m.status === 'pending' && <Button size="small" onClick={()=>renewInvitation(m)}>Generar nuevo enlace</Button>}
                     {m.memberName && (
                       <Typography variant="caption" color="text.secondary">
                         {m.invitedEmail}

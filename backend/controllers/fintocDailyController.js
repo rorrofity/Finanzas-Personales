@@ -1,3 +1,5 @@
+const { createHash } = require('crypto');
+const { spaceReadOwner } = require('../utils/spaceReadOwner');
 let defaultService;
 function loadDefaultService() {
   if (!defaultService) {
@@ -30,12 +32,23 @@ function createFintocDailyController({ getService = loadDefaultService } = {}) {
       if (typeof query !== 'object' || Array.isArray(query) || Object.keys(query).length) {
         return res.status(400).json({ error: 'Esta consulta no acepta parámetros.', code: 'FINTOC_DAILY_INVALID_QUERY' });
       }
-      return res.json(await getService().getDailyStatus(req.actorId));
+      return res.json(await getService().getDailyStatus(spaceReadOwner(req)));
     } catch (failure) { return safeError(res, failure); }
   }
 
   async function getReview(req, res) {
-    try { return res.json(await getService().getReview(req.actorId, req.query || {})); }
+    try {
+      const result = await getService().getReview(spaceReadOwner(req), req.query || {});
+      if (req.spacePerms?.isOwner === false) {
+        return res.json({ total: result.total, limit: result.limit, offset: result.offset,
+          items: (result.items || []).map(item => ({
+            externalId: 'movement_' + createHash('sha256').update(String(item.externalId)).digest('hex'),
+            date: item.date, description: item.description, type: item.type, amount: item.amount,
+            status: item.status, reason: item.reason, candidateCount: item.candidateCount,
+          })) });
+      }
+      return res.json(result);
+    }
     catch (failure) { return safeError(res, failure); }
   }
 

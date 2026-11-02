@@ -15,6 +15,7 @@ const {
 
 // Todas las rutas requieren autenticación + espacio activo (Epic 11)
 const { resolveSpace } = require('../middleware/resolveSpace');
+const { requireEdit } = require('../middleware/requirePermission');
 router.use(auth);
 router.use(resolveSpace);
 
@@ -25,9 +26,9 @@ router.get('/summary', getSummary);
 router.get('/alerts', getAlerts);
 
 // PUT /api/financial-health/alerts/:id/dismiss - Descartar alerta
-router.put('/alerts/:id/dismiss', dismissAlert);
+router.put('/alerts/:id/dismiss', requireEdit, dismissAlert);
 
 // PUT /api/financial-health/alerts/:id/read - Marcar como leída
-router.put('/alerts/:id/read', markAlertRead);
+router.put('/alerts/:id/read', requireEdit, markAlertRead);
 
 module.exports = router;

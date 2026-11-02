@@ -34,8 +34,8 @@ function difference(available, calculated) {
 export default function FintocBankBalance({ year, month, calculatedBalance = null }) {
   const { user } = useAuth();
   const { activeSpace } = useSpace();
-  const ownSpace = Boolean(user?.id && activeSpace?.isOwner && String(activeSpace.ownerId) === String(user.id));
-  const scope = `${user?.id || ''}:${activeSpace?.ownerId || ''}:${ownSpace}:${year}:${month}`;
+  const canReadSpace = Boolean(user?.id && activeSpace?.ownerId && (activeSpace.isOwner === false || (activeSpace.isOwner === true && String(activeSpace.ownerId) === String(user.id))));
+  const scope = `${user?.id || ''}:${activeSpace?.ownerId || ''}:${canReadSpace}:${year}:${month}`;
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const generation = useRef(0);
@@ -46,7 +46,7 @@ export default function FintocBankBalance({ year, month, calculatedBalance = nul
     const version = ++generation.current;
     const controller = new AbortController();
     setState({ ...EMPTY, scope });
-    if (ownSpace) {
+    if (canReadSpace) {
       axios.get(PATH, { signal: controller.signal, headers: { 'Cache-Control': 'no-store' } })
         .then(({ data }) => {
           if (controller.signal.aborted || generation.current !== version || currentScope.current !== scope) return;
@@ -61,9 +61,9 @@ export default function FintocBankBalance({ year, month, calculatedBalance = nul
         });
     }
     return () => { generation.current += 1; controller.abort(); };
-  }, [scope, ownSpace]);
+  }, [scope, canReadSpace]);
 
-  if (!ownSpace || visible.forbidden) return null;
+  if (!canReadSpace || visible.forbidden) return null;
   const balance = visible.balance;
   const delta = balance?.state === 'available' ? difference(balance.available, calculatedBalance) : null;
   return (

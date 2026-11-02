@@ -1,3 +1,4 @@
+import useSpacePermissions from '../hooks/useSpacePermissions';
 import React, { useEffect, useMemo, useState } from 'react';
 import { formatDateLocal, parseDateLocal } from '../utils/dateUtils';
 import {
@@ -52,6 +53,7 @@ const emptyForm = (year, month) => ({
 });
 
 export default function ProjectedTransactions() {
+  const { canEdit, canDelete } = useSpacePermissions();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { year, month } = usePeriod();
@@ -86,12 +88,14 @@ export default function ProjectedTransactions() {
   };
 
   const onOpenCreate = () => {
+    if (!canEdit) return;
     setEditing(null);
     setForm(emptyForm(year, month));
     setOpen(true);
   };
 
   const onOpenEdit = (occ) => {
+    if (!canEdit) return;
     setEditing(occ);
     setForm({
       nombre: occ.nombre,
@@ -126,6 +130,7 @@ export default function ProjectedTransactions() {
   };
 
   const onSubmit = async () => {
+    if (!canEdit) return;
     const err = validate();
     if (err) { setError(err); return; }
     try {
@@ -155,12 +160,14 @@ export default function ProjectedTransactions() {
   };
 
   const onDeleteOccurrence = async (occ) => {
+    if (!canDelete) return;
     if (!window.confirm('¿Eliminar proyección de este mes?')) return;
     await axios.delete(`/api/projected/${occ.occurrence_id}`);
     await load();
   };
 
   const onDeleteTemplateForward = async (occ) => {
+    if (!canDelete) return;
     if (!window.confirm('¿Eliminar la plantilla y todas sus repeticiones desde este mes en adelante?')) return;
     await axios.delete(`/api/projected/template/${occ.template_id}`, { params: { fromYear: year, fromMonth: month } });
     await load();
@@ -236,7 +243,7 @@ export default function ProjectedTransactions() {
           {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
         </TextField>
         <Box sx={{ flex: 1 }} />
-        <Button variant="contained" startIcon={<Add />} onClick={onOpenCreate}>Nueva proyección</Button>
+        <Button variant="contained" startIcon={<Add />} disabled={!canEdit} onClick={onOpenCreate}>Nueva proyección</Button>
       </Stack>
 
       {isMobile ? (
@@ -261,7 +268,8 @@ export default function ProjectedTransactions() {
                       select
                       size="small"
                       value={it.category_id || ''}
-                      onChange={async (e) => {
+                      disabled={!canEdit} onChange={async (e) => {
+                          if (!canEdit) return;
                         const newCatId = e.target.value || null;
                         try {
                           await axios.put(`/api/projected/${it.occurrence_id}`, { category_id: newCatId });
@@ -281,9 +289,9 @@ export default function ProjectedTransactions() {
                       <Chip label={it.active ? 'Activo' : 'Inactivo'} color={it.active ? 'success' : 'default'} size="small" />
                     </Stack>
                     <Stack direction="row" spacing={1} justifyContent="flex-end" useFlexGap flexWrap="wrap">
-                      <Button size="small" startIcon={<Edit fontSize="small" />} onClick={() => onOpenEdit(it)}>Editar</Button>
-                      <Button size="small" color="warning" startIcon={<Delete fontSize="small" />} onClick={() => onDeleteOccurrence(it)}>Eliminar mes</Button>
-                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} onClick={() => onDeleteTemplateForward(it)}>Eliminar plantilla</Button>
+                      <Button size="small" startIcon={<Edit fontSize="small" />} disabled={!canEdit} onClick={() => onOpenEdit(it)}>Editar</Button>
+                      <Button size="small" color="warning" startIcon={<Delete fontSize="small" />} disabled={!canDelete} onClick={() => onDeleteOccurrence(it)}>Eliminar mes</Button>
+                      <Button size="small" color="error" startIcon={<Delete fontSize="small" />} disabled={!canDelete} onClick={() => onDeleteTemplateForward(it)}>Eliminar plantilla</Button>
                     </Stack>
                   </Stack>
                 </CardContent>
@@ -327,7 +335,8 @@ export default function ProjectedTransactions() {
                         select
                         size="small"
                         value={it.category_id || ''}
-                        onChange={async (e) => {
+                        disabled={!canEdit} onChange={async (e) => {
+                          if (!canEdit) return;
                           const newCatId = e.target.value || null;
                           try {
                             await axios.put(`/api/projected/${it.occurrence_id}`, { category_id: newCatId });
@@ -349,13 +358,13 @@ export default function ProjectedTransactions() {
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => onOpenEdit(it)}><Edit fontSize="small" /></IconButton>
+                        <IconButton size="small" disabled={!canEdit} onClick={() => onOpenEdit(it)}><Edit fontSize="small" /></IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar (solo este mes)">
-                        <IconButton size="small" onClick={() => onDeleteOccurrence(it)}><Delete fontSize="small" /></IconButton>
+                        <IconButton size="small" disabled={!canDelete} onClick={() => onDeleteOccurrence(it)}><Delete fontSize="small" /></IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar plantilla (desde este mes en adelante)">
-                        <IconButton size="small" color="error" onClick={() => onDeleteTemplateForward(it)}><Delete fontSize="small" /></IconButton>
+                        <IconButton size="small" color="error" disabled={!canDelete} onClick={() => onDeleteTemplateForward(it)}><Delete fontSize="small" /></IconButton>
                       </Tooltip>
                     </TableCell>
                   </TableRow>
@@ -410,7 +419,7 @@ export default function ProjectedTransactions() {
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button onClick={onSubmit} variant="contained" disabled={loading}>{editing ? 'Guardar cambios' : 'Crear'}</Button>
+          <Button onClick={onSubmit} variant="contained" disabled={!canEdit || loading}>{editing ? 'Guardar cambios' : 'Crear'}</Button>
         </DialogActions>
       </Dialog>
     </Box>

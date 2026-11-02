@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { getInvitationToken } from '../services/invitation';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -75,7 +76,7 @@ const Register = () => {
       const { confirmPassword, ...registerData } = formData;
       const success = await register(registerData);
       if (success) {
-        navigate('/');
+        navigate(getInvitationToken() ? '/invite' : '/');
       }
     }
   };

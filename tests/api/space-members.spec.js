@@ -44,7 +44,7 @@ test.afterAll(async () => {
 test.describe.serial('Fase 1 — Membresías y ACL', () => {
   let membershipId;
 
-  test('1.T1 invitar email existente crea membresía activa y aparece en memberships del miembro', async ({
+  test('1.T1 invitar email existente requiere aceptar enlace antes de aparecer en memberships', async ({
     request,
   }) => {
     const inv = await request.post('/api/space/members', {
@@ -53,12 +53,30 @@ test.describe.serial('Fase 1 — Membresías y ACL', () => {
     });
     expect(inv.status()).toBe(201);
     const created = await inv.json();
-    expect(created.member.status).toBe('linked');
+    expect(created.member.status).toBe('pending');
+    expect(created.member.memberUserId).toBeNull();
     expect(created.member.canEdit).toBe(true);
     expect(created.member.canDelete).toBe(false);
     membershipId = created.member.id;
 
-    // El miembro ve el espacio compartido (Req 11.4)
+    // HRO: knowing/owning an account email alone never grants household access.
+    const beforeAcceptance = await request.get('/api/space/memberships', {
+      headers: authHeaders(partner.token),
+    });
+    expect((await beforeAcceptance.json()).spaces.some(s => s.ownerId === owner.user.id)).toBe(false);
+    const link = new URL(created.invitationUrl);
+    expect(link.pathname).toBe('/invite');
+    expect(link.search).toBe('');
+    const invitationToken = new URLSearchParams(link.hash.slice(1)).get('token');
+    expect(invitationToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const acceptance = await request.post('/api/space/invitations/accept', {
+      headers: authHeaders(partner.token), data: { token: invitationToken },
+    });
+    expect(acceptance.status()).toBe(200);
+    expect((await acceptance.json()).member.status).toBe('linked');
+
+    // El miembro ve el espacio compartido después de aceptar (Req 11.4/HRO).
+
     const res = await request.get('/api/space/memberships', {
       headers: authHeaders(partner.token),
     });
@@ -73,7 +91,7 @@ test.describe.serial('Fase 1 — Membresías y ACL', () => {
     expect(shared.canDelete).toBe(false);
   });
 
-  test('1.T2 invitar email sin cuenta queda pending y se vincula al registrarse', async ({
+  test('1.T2 registrarse conserva pending hasta aceptar el enlace privado', async ({
     request,
   }) => {
     const inv = await request.post('/api/space/members', {
@@ -84,7 +102,7 @@ test.describe.serial('Fase 1 — Membresías y ACL', () => {
     const created = await inv.json();
     expect(created.member.status).toBe('pending');
 
-    // La persona se registra con ese email → la membresía se vincula (Req 11.2)
+    // HRO supersedes automatic linking: registration alone grants no access.
     const reg = await request.post('/api/auth/register', {
       data: {
         nombre: 'E2E Pending',
@@ -95,6 +113,17 @@ test.describe.serial('Fase 1 — Membresías y ACL', () => {
     expect(reg.ok()).toBeTruthy();
     const pendingUser = await reg.json();
 
+    const beforeAcceptance = await request.get('/api/space/memberships', {
+      headers: authHeaders(pendingUser.token),
+    });
+    expect((await beforeAcceptance.json()).spaces.some(s => s.ownerId === owner.user.id)).toBe(false);
+    const pendingMembers = await request.get('/api/space/members', { headers: authHeaders(owner.token) });
+    expect((await pendingMembers.json()).members.find(m => m.id === created.member.id).status).toBe('pending');
+    const invitationToken = new URLSearchParams(new URL(created.invitationUrl).hash.slice(1)).get('token');
+    const acceptance = await request.post('/api/space/invitations/accept', {
+      headers: authHeaders(pendingUser.token), data: { token: invitationToken },
+    });
+    expect(acceptance.status()).toBe(200);
     const res = await request.get('/api/space/memberships', {
       headers: authHeaders(pendingUser.token),
     });

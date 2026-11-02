@@ -7,7 +7,9 @@ const { pool } = require('../config/database');
 const { resolveSpace } = require('../middleware/resolveSpace');
 const { requireOwner } = require('../middleware/requirePermission');
 const { runSync } = require('../services/syncService');
+const { requireN8nSyncSecret } = require('../middleware/requireN8nSyncSecret');
 const { checkStatementEmail, lockStatementEmailBatch } = require('../services/cardStatementEmailGuard');
+const syncFailureCode = failure => typeof failure?.code === 'string' && /^[0-9A-Z]{5}$/.test(failure.code) ? failure.code : 'SYNC_STORAGE_ERROR';
 
 /**
  * Calcula el período de facturación basándose en la fecha de transacción.
@@ -73,12 +75,14 @@ router.post('/sync-emails', auth, resolveSpace, requireOwner, async (req, res) =
   const duration = Date.now() - startTime;
 
   if (result.error) {
-    const message = /ECONNREFUSED/.test(result.error)
+    const message = result.error === 'N8N_SYNC_FORBIDDEN' ? 'La sincronización bancaria no está disponible para esta cuenta'
+      : result.error === 'N8N_SYNC_NOT_CONFIGURED' ? 'La sincronización bancaria no está configurada'
+      : /ECONNREFUSED/.test(result.error)
       ? 'Servicio de sincronización no disponible. Verifica que N8N esté corriendo.'
       : /ETIMEDOUT|ECONNABORTED/.test(result.error)
         ? 'La sincronización tardó demasiado. Intenta nuevamente.'
         : 'Error comunicándose con el servicio de sincronización';
-    const status = /ECONNREFUSED/.test(result.error) ? 503 : /ETIMEDOUT|ECONNABORTED/.test(result.error) ? 504 : 500;
+    const status = result.error === 'N8N_SYNC_FORBIDDEN' ? 403 : result.error === 'N8N_SYNC_NOT_CONFIGURED' ? 503 : /ECONNREFUSED/.test(result.error) ? 503 : /ETIMEDOUT|ECONNABORTED/.test(result.error) ? 504 : 500;
     return res.status(status).json({ success: false, message, error: result.error });
   }
 
@@ -100,7 +104,7 @@ router.post('/sync-emails', auth, resolveSpace, requireOwner, async (req, res) =
  * Endpoint interno llamado por N8N
  * Guarda las transacciones parseadas en la base de datos
  */
-router.post('/sync-save', async (req, res) => {
+router.post('/sync-save', requireN8nSyncSecret, async (req, res) => {
   const { userId, transactions } = req.body;
   
   console.log(`💾 Guardando ${transactions?.length || 0} transacciones para usuario: ${userId}`);
@@ -142,7 +146,6 @@ router.post('/sync-save', async (req, res) => {
     const hasIntlTransactions = transactions.some(t => t.is_international);
     if (hasIntlTransactions) {
       exchangeRate = await getExchangeRate();
-      console.log(`💱 Tipo de cambio USD/CLP: ${exchangeRate}`);
     }
     
     for (const txn of transactions) {
@@ -207,7 +210,6 @@ router.post('/sync-save', async (req, res) => {
           if (duplicateIntl.rows.length > 0) {
             skipped++;
             importedEmailIds.push(txn.email_id);
-            console.log(`⏭️  Intl duplicada (fecha+amount_usd): ${txn.descripcion} - US$${txn.amount_usd} (${txn.fecha})`);
             continue;
           }
           
@@ -215,7 +217,6 @@ router.post('/sync-save', async (req, res) => {
           const amountCLP = Math.round(txn.amount_usd * exchangeRate);
           const brand = txn.tipo_tarjeta || 'visa';
           
-          console.log(`💳 Intl: ${txn.descripcion} - US$${txn.amount_usd} = $${amountCLP} CLP (${brand}), Período: ${billingPeriod.year}-${billingPeriod.month}`);
           
           await client.query(
             `INSERT INTO intl_unbilled 
@@ -237,7 +238,6 @@ router.post('/sync-save', async (req, res) => {
           
           importedCount++;
           importedEmailIds.push(txn.email_id);
-          console.log(`✅ Intl importada: ${txn.descripcion} - US$${txn.amount_usd}`);
           
         } else {
           // === TRANSACCIÓN NACIONAL ===
@@ -253,7 +253,6 @@ router.post('/sync-save', async (req, res) => {
           if (duplicateByEmailId.rows.length > 0) {
             skipped++;
             importedEmailIds.push(txn.email_id);
-            console.log(`⏭️  Duplicada por email_id: ${txn.descripcion} (${txn.email_id})`);
             continue;
           }
           
@@ -271,14 +270,12 @@ router.post('/sync-save', async (req, res) => {
           if (duplicateBySignature.rows.length > 0) {
             skipped++;
             if (txn.email_id) importedEmailIds.push(txn.email_id);
-            console.log(`⏭️  Duplicada por firma: ${txn.descripcion} - $${txn.monto} (${txn.fecha})`);
             continue;
           }
           
           // Crear ID de importación
           const importId = uuidv4();
           
-          console.log(`📅 Transacción ${txn.descripcion} - Fecha: ${txn.fecha}, Período facturación: ${billingPeriod.year}-${billingPeriod.month}`);
           
           // Registrar en tabla imports con período calculado
           await client.query(
@@ -330,11 +327,10 @@ router.post('/sync-save', async (req, res) => {
           
           importedCount++;
           importedEmailIds.push(txn.email_id);
-          console.log(`✅ Importada: ${txn.descripcion} - $${txn.monto}`);
         }
         
       } catch (txnError) {
-        console.error(`❌ Error guardando transacción:`, txnError);
+        console.error(`❌ Error guardando transacción:`, syncFailureCode(txnError));
         errors.push({
           transaction: txn.descripcion || 'Desconocida',
           error: txnError.message
@@ -356,7 +352,7 @@ router.post('/sync-save', async (req, res) => {
     
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Error en transacción de BD:', error);
+    console.error('❌ Error en transacción de BD:', syncFailureCode(error));
     
     res.status(500).json({
       success: false,
@@ -412,7 +408,7 @@ router.get('/sync-status', auth, resolveSpace, async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error obteniendo estado de sync:', error);
+    console.error('Error obteniendo estado de sync:', syncFailureCode(error));
     res.status(500).json({
       success: false,
       message: 'Error al obtener estado de sincronización'
@@ -432,7 +428,7 @@ async function getExchangeRate() {
     });
     return response.data.rates.CLP || 980; // Fallback si no hay CLP
   } catch (error) {
-    console.warn('Error obteniendo tipo de cambio, usando valor por defecto:', error.message);
+    console.warn('Error obteniendo tipo de cambio, usando valor por defecto:', 'SYNC_FX_UNAVAILABLE');
     return 980; // Valor aproximado como fallback
   }
 }
@@ -442,9 +438,8 @@ async function getExchangeRate() {
  * Endpoint para guardar transacciones internacionales desde N8N
  * Guarda en la tabla intl_unbilled con conversión a CLP
  */
-router.post('/sync-save-intl', async (req, res) => {
+router.post('/sync-save-intl', requireN8nSyncSecret, async (req, res) => {
   console.log('📧 Recibiendo transacciones INTERNACIONALES desde N8N');
-  console.log('Body:', JSON.stringify(req.body, null, 2));
   
   const { userId, transactions } = req.body;
   
@@ -482,7 +477,6 @@ router.post('/sync-save-intl', async (req, res) => {
     
     // Obtener tipo de cambio actual
     const exchangeRate = await getExchangeRate();
-    console.log(`💱 Tipo de cambio USD/CLP: ${exchangeRate}`);
     
     for (const txn of transactions) {
       try {
@@ -530,7 +524,6 @@ router.post('/sync-save-intl', async (req, res) => {
         if (duplicateCheck.rows.length > 0) {
           skipped++;
           importedEmailIds.push(txn.email_id);
-          console.log(`⏭️  Intl duplicada: ${txn.descripcion} - US$${txn.amount_usd}`);
           continue;
         }
         
@@ -543,7 +536,6 @@ router.post('/sync-save-intl', async (req, res) => {
         // Determinar brand (visa/mastercard) por últimos 4 dígitos
         const brand = txn.tipo_tarjeta || 'visa';
         
-        console.log(`💳 Intl: ${txn.descripcion} - US$${txn.amount_usd} = $${amountCLP} CLP (${brand})`);
         
         // Insertar en intl_unbilled
         await client.query(
@@ -568,7 +560,7 @@ router.post('/sync-save-intl', async (req, res) => {
         importedEmailIds.push(txn.email_id);
         
       } catch (txnError) {
-        console.error(`❌ Error procesando transacción intl:`, txnError.message);
+        console.error(`❌ Error procesando transacción intl:`, syncFailureCode(txnError));
         errors.push({
           transaction: txn.descripcion,
           error: txnError.message
@@ -591,7 +583,7 @@ router.post('/sync-save-intl', async (req, res) => {
     
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Error en sync intl:', error);
+    console.error('❌ Error en sync intl:', syncFailureCode(error));
     res.status(500).json({
       success: false,
       message: error.message,
@@ -616,7 +608,7 @@ router.get('/settings', auth, resolveSpace, async (req, res) => {
     );
     res.json({ autoSyncEnabled: result.rows[0]?.auto_sync_enabled || false });
   } catch (error) {
-    console.error('Error obteniendo sync settings:', error);
+    console.error('Error obteniendo sync settings:', syncFailureCode(error));
     res.status(500).json({ error: 'Error al obtener configuración de sincronización' });
   }
 });
@@ -635,7 +627,7 @@ router.put('/settings', auth, resolveSpace, requireOwner, async (req, res) => {
     );
     res.json({ autoSyncEnabled: result.rows[0].auto_sync_enabled });
   } catch (error) {
-    console.error('Error actualizando sync settings:', error);
+    console.error('Error actualizando sync settings:', syncFailureCode(error));
     res.status(500).json({ error: 'Error al actualizar configuración de sincronización' });
   }
 });
@@ -664,7 +656,7 @@ router.get('/runs', auth, resolveSpace, async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Error obteniendo sync runs:', error);
+    console.error('Error obteniendo sync runs:', syncFailureCode(error));
     res.status(500).json({ error: 'Error al obtener bitácora de sincronización' });
   }
 });

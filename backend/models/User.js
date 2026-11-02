@@ -6,7 +6,8 @@ class User {
   }
 
   async create(userData) {
-    const { nombre, email, password, auth_provider = 'local', google_id = null, profile_picture = null } = userData;
+    const { nombre, password, auth_provider = 'local', google_id = null, profile_picture = null } = userData;
+    const email = String(userData.email || '').trim().toLowerCase();
     
     let hashedPassword = null;
     
@@ -34,8 +35,8 @@ class User {
 
   async findByEmail(email) {
     try {
-      const query = 'SELECT * FROM users WHERE email = $1';
-      const result = await this.query(query, [email]);
+      const query = 'SELECT * FROM users WHERE LOWER(email) = $1';
+      const result = await this.query(query, [String(email || '').trim().toLowerCase()]);
       return result.rows[0];
     } catch (error) {
       console.error('Error completo:', error);

@@ -4,6 +4,7 @@ const { auth } = require('../middleware/auth');
 const db = require('../config/database');
 const { resolveSpace } = require('../middleware/resolveSpace');
 const { requireOwner } = require('../middleware/requirePermission');
+const { requireN8nSyncSecret } = require('../middleware/requireN8nSyncSecret');
 
 // GET /api/cards — Listar tarjetas del usuario
 router.get('/', auth, resolveSpace, async (req, res) => {
@@ -99,9 +100,9 @@ router.put('/:id', auth, resolveSpace, requireOwner, async (req, res) => {
   }
 });
 
-// GET /api/cards/mapping — Endpoint para N8N (sin auth, recibe userId como query param)
+// GET /api/cards/mapping — Canal interno N8N autenticado; no admite sesiones de miembros.
 // MUST be before /:id routes to avoid Express matching 'mapping' as :id
-router.get('/mapping', async (req, res) => {
+router.get('/mapping', requireN8nSyncSecret, async (req, res) => {
   try {
     const { userId } = req.query;
     if (!userId) {

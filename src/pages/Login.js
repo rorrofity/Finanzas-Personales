@@ -16,6 +16,7 @@ import {
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../contexts/AuthContext';
+import { getInvitationToken } from '../services/invitation';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -43,14 +44,14 @@ const Login = () => {
     e.preventDefault();
     const success = await login(formData.email, formData.password);
     if (success) {
-      navigate('/');
+      navigate(getInvitationToken() ? '/invite' : '/');
     }
   };
 
   const handleGoogleSuccess = async (credentialResponse) => {
     const success = await loginWithGoogle(credentialResponse.credential);
     if (success) {
-      navigate('/');
+      navigate(getInvitationToken() ? '/invite' : '/');
     }
   };
 

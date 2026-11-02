@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from '../config/axios';
+import { setActiveSpaceOwner } from '../services/activeSpace';
+import { clearInvitation } from '../services/invitation';
 import { clearReadCache } from '../services/readCache';
 
 const AuthContext = createContext(null);
@@ -34,19 +36,28 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data.user);
     } catch (error) {
       localStorage.removeItem('token');
-      setError('Session expired. Please login again.');
+      setActiveSpaceOwner(null);
+      await clearReadCache();
+      setError('Tu sesión terminó. Inicia sesión nuevamente.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const publishSession = async (token, authenticatedUser) => {
+    // Complete the previous identity's cache boundary before exposing a new one.
+    await clearReadCache();
+    setActiveSpaceOwner(null);
+    localStorage.setItem('token', token);
+    setUser(authenticatedUser);
+    setError(null);
   };
 
   const login = async (email, password) => {
     try {
       const response = await axios.post('/api/auth/login', { email, password });
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      setError(null);
+      await publishSession(token, user);
       return true;
     } catch (error) {
       setError(error.response?.data?.message || 'Error al iniciar sesión');
@@ -58,9 +69,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axios.post('/api/auth/google', { credential });
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      setError(null);
+      await publishSession(token, user);
       return true;
     } catch (error) {
       setError(error.response?.data?.message || 'Error al iniciar sesión con Google');
@@ -72,9 +81,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axios.post('/api/auth/register', userData);
       const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      setError(null);
+      await publishSession(token, user);
       return true;
     } catch (error) {
       setError(error.response?.data?.message || 'Error al registrar usuario');
@@ -83,6 +90,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    clearInvitation();
+    setActiveSpaceOwner(null);
     localStorage.removeItem('token');
     setUser(null);
     setError(null);

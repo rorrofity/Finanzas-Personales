@@ -9,6 +9,7 @@ import TransactionsIntl from '../TransactionsIntl';
 jest.mock('axios',()=>({get:jest.fn(),put:jest.fn(),post:jest.fn(),delete:jest.fn()}));
 jest.mock('@mui/material',()=>({...jest.requireActual('@mui/material'),useMediaQuery:jest.fn()}));
 jest.mock('../../contexts/PeriodContext',()=>({usePeriod:()=>({year:2030,month:5})}));
+jest.mock('../../contexts/SpaceContext',()=>({useSpace:()=>({activeSpace:{isOwner:true,canEdit:true,canDelete:true}})}));
 jest.mock('../../components/MonthPicker',()=>()=> <div>Período ficticio</div>);
 jest.mock('../../components/SyncButton',()=>()=> <div>Sincronización ficticia</div>);
 jest.mock('../../components/BillingPeriodConfig',()=>()=>null);

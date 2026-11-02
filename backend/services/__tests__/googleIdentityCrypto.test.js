@@ -1,0 +1,11 @@
+const crypto=require('crypto');
+const jwt=require('jsonwebtoken');
+const {OAuth2Client}=require('google-auth-library');
+const {createGoogleIdentityVerifier}=require('../googleIdentityVerifier');
+const trusted=crypto.generateKeyPairSync('rsa',{modulusLength:2048});
+const untrusted=crypto.generateKeyPairSync('rsa',{modulusLength:2048});
+const claims=()=>({sub:'fixture-google-sub',email:'Partner@Example.com',email_verified:true,aud:'fixture-client',iss:'https://accounts.google.com',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+3600});
+const sign=(payload,key=trusted.privateKey,kid='fixture-key')=>jwt.sign(payload,key,{algorithm:'RS256',keyid:kid});
+function setup(){const client=new OAuth2Client();client.getFederatedSignonCertsAsync=jest.fn().mockResolvedValue({certs:{'fixture-key':trusted.publicKey.export({format:'pem',type:'spki'})}});return{client,verify:createGoogleIdentityVerifier({env:{GOOGLE_CLIENT_ID:'fixture-client'},client})}}
+test('official Google client validates a real RSA signature using fixture-only certificates',async()=>{const {verify,client}=setup();await expect(verify(sign(claims()))).resolves.toMatchObject({sub:'fixture-google-sub',email:'partner@example.com'});expect(client.getFederatedSignonCertsAsync).toHaveBeenCalledTimes(1)});
+test.each(['signature','audience','issuer','expiration','unknown-key','unsigned'])('official verifier rejects cryptographic/claim attack without networking: %s',async kind=>{const {verify}=setup(),payload=claims();let token;if(kind==='signature')token=sign(payload,untrusted.privateKey);else if(kind==='audience')token=sign({...payload,aud:'other-client'});else if(kind==='issuer')token=sign({...payload,iss:'https://attacker.invalid'});else if(kind==='expiration')token=sign({...payload,exp:Math.floor(Date.now()/1000)-1});else if(kind==='unknown-key')token=sign(payload,trusted.privateKey,'unknown');else token=Buffer.from(JSON.stringify({alg:'none',kid:'fixture-key'})).toString('base64url')+'.'+Buffer.from(JSON.stringify(payload)).toString('base64url')+'.';await expect(verify(token)).rejects.toMatchObject({status:401,code:'AUTH_GOOGLE_INVALID'});try{await verify(token)}catch(error){expect(error.message).not.toContain(token)}});

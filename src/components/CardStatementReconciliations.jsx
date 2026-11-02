@@ -180,8 +180,8 @@ function HistoryExtra({ item, currency }) {
 export default function CardStatementReconciliations({ year, month }) {
   const theme = useTheme(), isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth(), { activeSpace } = useSpace();
-  const ownSpace = Boolean(user?.id && activeSpace?.isOwner && String(activeSpace.ownerId) === String(user.id));
-  const scope = `${user?.id || ''}:${activeSpace?.ownerId || ''}:${ownSpace}:${year}:${month}`;
+  const canReadSpace = Boolean(user?.id && activeSpace?.ownerId && (activeSpace.isOwner === false || (activeSpace.isOwner === true && String(activeSpace.ownerId) === String(user.id))));
+  const scope = `${user?.id || ''}:${activeSpace?.ownerId || ''}:${canReadSpace}:${year}:${month}`;
   const currentScope = useRef(scope); currentScope.current = scope;
   const generation = useRef(0), detailGeneration = useRef(0), detailController = useRef(null);
   const [list, setList] = useState({ ...EMPTY, scope });
@@ -192,7 +192,7 @@ export default function CardStatementReconciliations({ year, month }) {
   useEffect(() => {
     const version = ++generation.current, controller = new AbortController();
     detailController.current?.abort(); detailGeneration.current += 1; setSelection(null); setDetail(null); setList({ ...EMPTY, scope });
-    if (ownSpace) axios.get(PATH, { params: { year, month }, signal: controller.signal, headers: { 'Cache-Control': 'no-store' } })
+    if (canReadSpace) axios.get(PATH, { params: { year, month }, signal: controller.signal, headers: { 'Cache-Control': 'no-store' } })
       .then(({ data }) => { if (controller.signal.aborted || generation.current !== version || currentScope.current !== scope) return;
         if (!Array.isArray(data?.items) || data.items.length > 1000 || !data.items.every(item => validStatement(item))) throw new Error('Invalid statement response');
         setList({ scope, loading: false, items: data.items, error: null });
@@ -201,7 +201,7 @@ export default function CardStatementReconciliations({ year, month }) {
           : error?.response?.status === 401 ? 'Tu sesión terminó. Inicia sesión para consultar los estados.' : 'No se pudieron verificar los estados recibidos.' });
       });
     return () => { generation.current += 1; controller.abort(); detailController.current?.abort(); detailGeneration.current += 1; };
-  }, [scope, ownSpace, year, month]);
+  }, [scope, canReadSpace, year, month]);
   async function openDetail(item) {
     detailController.current?.abort();
     const controller = new AbortController(), version = ++detailGeneration.current;
@@ -217,7 +217,7 @@ export default function CardStatementReconciliations({ year, month }) {
     }
   }
   function closeDetail() { detailController.current?.abort(); detailGeneration.current += 1; setSelection(null); setDetail(null); }
-  if (!ownSpace) return <Alert severity="info">Solo el titular puede consultar estos estados de tarjetas.</Alert>;
+  if (!canReadSpace) return <Alert severity="info">Solo el titular puede consultar estos estados de tarjetas.</Alert>;
   return <Box sx={{ minWidth: 0 }} data-testid="card-statements-results">
     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Los cargos de cada estado se comparan con tu historial actual. Tus gastos y categorías se conservan.</Typography>
     {visible.loading && <Box role="status"><LinearProgress /><Typography variant="body2" sx={{ mt: 1 }}>Consultando estados recibidos…</Typography></Box>}

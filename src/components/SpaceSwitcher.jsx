@@ -1,5 +1,5 @@
 import React from 'react';
-import { FormControl, MenuItem, Select } from '@mui/material';
+import { FormControl, MenuItem, Select, Typography } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import { useSpace } from '../contexts/SpaceContext';
 
@@ -27,6 +27,7 @@ const SpaceSwitcher = () => {
           </MenuItem>
         ))}
       </Select>
+      {activeSpace?.isOwner === false && !activeSpace.canEdit && !activeSpace.canDelete && <Typography variant="caption" color="text.secondary">Solo lectura</Typography>}
     </FormControl>
   );
 };

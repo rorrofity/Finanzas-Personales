@@ -59,7 +59,6 @@ test('documento inválido y versión diferente no aparentan conciliación cerrad
 test('totales ausentes se muestran como no informados, nunca cero inventado',async()=>{const s=statement();s.sections[0].totals.billedTotal=null;fixtures(s);mount();expect(await screen.findByText('Total facturado: no informado')).toBeInTheDocument()});
 test.each([
  {user:null,space:{ownerId:'owner-fixture',isOwner:true}},
- {user:{id:'member'},space:{ownerId:'owner-fixture',isOwner:false}},
  {user:{id:'owner-fixture'},space:{ownerId:'another',isOwner:true}},
 ])('otros espacios no consultan datos privados (%j)',({user,space})=>{useAuth.mockReturnValue({user});useSpace.mockReturnValue({activeSpace:space});mount();expect(axios.get).not.toHaveBeenCalled();expect(screen.getByText('Solo el titular puede consultar estos estados de tarjetas.')).toBeInTheDocument()});
 test.each([401,403,500])('error HTTP %s no expone respuesta privada',async status=>{axios.get.mockRejectedValue({response:{status,data:{error:'sk_live_PRIVATE_PDF_PASSWORD'}}});mount();expect(await screen.findByRole('alert')).not.toHaveTextContent('PRIVATE');expect(screen.queryByText('$15.500')).not.toBeInTheDocument()});
@@ -125,3 +124,5 @@ test('detalle identifica cargos extra existentes sin exponer IDs ni ofrecer camb
 test('extras con importes no válidos rechazan el detalle sin mostrar su contenido',async()=>{
  const d=detail();d.sections[0].extras=[{sourceType:'transaction',sourceId:OTHER,date:null,description:'PRIVATE inválido',amount:3000,reason:'extra_in_history'}];fixtures(statement(),d);mount();fireEvent.click(await screen.findByRole('button',{name:'Ver detalle Visa'}));const dialog=await screen.findByRole('dialog');expect(await within(dialog).findByRole('alert')).toHaveTextContent('No se pudo consultar el detalle');expect(dialog).not.toHaveTextContent('PRIVATE');
 });
+
+test('HRO: miembro puede consultar estados y detalle guardados del hogar',async()=>{useAuth.mockReturnValue({user:{id:'member'}});useSpace.mockReturnValue({activeSpace:{ownerId:'owner-fixture',isOwner:false,canEdit:false,canDelete:false}});fixtures();mount();await screen.findByRole('region',{name:'Estado Visa del 22/04/2030'});fireEvent.click(screen.getByRole('button',{name:/ver detalle/i}));await screen.findByRole('dialog');expect(axios.get.mock.calls.every(call=>call[0].startsWith('/api/card-statements'))).toBe(true);});

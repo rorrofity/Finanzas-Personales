@@ -1,13 +1,14 @@
 const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
 const db = require('../config/database');
-const spaceMember = require('../models/SpaceMember');
+const { verifyGoogleIdentity } = require('../services/googleIdentityVerifier');
 
 const userModel = new User(db);
 
 const register = async (req, res) => {
   try {
-    const { nombre, email, password } = req.body;
+    const { nombre, password } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     // Validar campos requeridos
     if (!nombre || !email || !password) {
@@ -26,8 +27,7 @@ const register = async (req, res) => {
 
     // Crear nuevo usuario
     const user = await userModel.create({ nombre, email, password });
-    // Vincular invitaciones de espacio pendientes para este email (Req 11.2)
-    await spaceMember.linkPendingByEmail(user.email, user.id);
+    // Registering an email never accepts a household invitation.
     const token = generateToken(user.id);
 
     res.status(201).json({
@@ -50,7 +50,8 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
     // Validar campos requeridos
     if (!email || !password) {
@@ -138,21 +139,20 @@ const googleAuth = async (req, res) => {
       });
     }
 
-    // Decodificar el JWT de Google (sin verificar, Google ya lo verificó)
-    const base64Url = credential.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(Buffer.from(base64, 'base64').toString());
-
+    const payload = await verifyGoogleIdentity(credential);
     const { sub: googleId, email, name, picture } = payload;
 
     // Buscar usuario por Google ID
     let user = await userModel.findByGoogleId(googleId);
+    if (user && String(user.email || '').trim().toLowerCase() !== email) {
+      return res.status(401).json({ message: 'El correo de esta cuenta cambió. Revisa el acceso con el administrador.', code: 'AUTH_GOOGLE_EMAIL_CHANGED' });
+    }
 
     if (!user) {
       // Verificar si existe un usuario con el mismo email
       const existingUser = await userModel.findByEmail(email);
       
-      if (existingUser && existingUser.auth_provider === 'local') {
+      if (existingUser) {
         return res.status(400).json({
           message: 'Ya existe una cuenta con este email. Por favor, inicia sesión con email y contraseña.'
         });
@@ -166,8 +166,7 @@ const googleAuth = async (req, res) => {
         google_id: googleId,
         profile_picture: picture
       });
-      // Vincular invitaciones de espacio pendientes para este email (Req 11.2)
-      await spaceMember.linkPendingByEmail(user.email, user.id);
+      // The private invitation must be accepted separately.
     } else {
       // Usuario existente - actualizar foto de perfil si cambió
       if (user.profile_picture !== picture) {
@@ -197,10 +196,10 @@ const googleAuth = async (req, res) => {
       token
     });
   } catch (error) {
-    console.error('Error en autenticación de Google:', error);
-    res.status(500).json({
-      message: 'Error al autenticar con Google',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    const known = [401, 503].includes(error?.status) && /^AUTH_GOOGLE_/.test(error?.code || '');
+    res.status(known ? error.status : 500).json({
+      message: known ? (error.status === 503 ? 'El acceso Google no está configurado.' : 'No se pudo verificar la identidad de Google.') : 'Error al autenticar con Google',
+      code: known ? error.code : 'AUTH_GOOGLE_FAILED'
     });
   }
 };

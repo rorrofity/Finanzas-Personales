@@ -12,15 +12,15 @@ test('importing the controller and constructing it never load the database', () 
   expect(createFintocDailyController()).toEqual(expect.objectContaining({ getDailyStatus: expect.any(Function), getReview: expect.any(Function) }));
 });
 
-test('status passes the real actor to a lazy service without triggering its runner', async () => {
+test('status passes the authorized space owner to a lazy read service without triggering its runner', async () => {
   const data = { provider: 'fintoc', enabled: true, schedule: '07:00', timezone: 'America/Santiago', state: 'not_initialized' };
   const service = { getDailyStatus: jest.fn().mockResolvedValue(data), run: jest.fn() };
   const getService = jest.fn(() => service);
   const controller = createFintocDailyController({ getService });
   const res = response();
   expect(getService).not.toHaveBeenCalled();
-  await controller.getDailyStatus({ actorId: 'actual-owner', user: { id: 'effective-owner' }, query: {} }, res);
-  expect(service.getDailyStatus).toHaveBeenCalledWith('actual-owner');
+  await controller.getDailyStatus({ actorId: 'member', spaceUserId: 'effective-owner', user: { id: 'effective-owner' }, query: {} }, res);
+  expect(service.getDailyStatus).toHaveBeenCalledWith('effective-owner');
   expect(service.run).not.toHaveBeenCalled();
   expect(res.data).toEqual(data);
 });
