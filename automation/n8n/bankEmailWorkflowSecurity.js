@@ -35,6 +35,9 @@ function secureBankEmailWorkflow(workflow, credential) {
       node.parameters.genericAuthType = 'httpHeaderAuth';
     }
   }
+  next.settings = { ...next.settings,
+    saveDataSuccessExecution: 'none', saveDataErrorExecution: 'none',
+    saveExecutionProgress: false, saveManualExecutions: false };
   return next;
 }
 

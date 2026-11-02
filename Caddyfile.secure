@@ -62,6 +62,12 @@ finanzas.rocketflow.cl {
     # Logging
     log {
         output file /var/log/caddy/finanzas.log
-        format json
+        format filter {
+            wrap json
+            fields {
+                request>headers>X-Finanzas-Sync-Key delete
+                request>headers>x-finanzas-sync-key delete
+            }
+        }
     }
 }
