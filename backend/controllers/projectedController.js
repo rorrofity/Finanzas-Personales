@@ -20,14 +20,37 @@ const listProjected = async (req, res) => {
     const userId = req.user.id;
     const year = parseInt(req.query.year, 10);
     const month = parseInt(req.query.month, 10);
-    if (!year || !month) {
-      return res.status(400).json({ error: 'Se requiere year y month' });
+    if (typeof req.query.year !== 'string' || !/^\d{4}$/.test(req.query.year)
+      || typeof req.query.month !== 'string' || !/^(?:0?[1-9]|1[0-2])$/.test(req.query.month)
+      || year < 2000 || year > 2100) {
+      return res.status(400).json({ error: 'Se requiere un year y month válidos' });
     }
 
     // Load templates and materialize occurrences for requested month
     const templates = await projectedModel.getTemplatesByUser(userId);
 
-    // Materialize only for this month
+    // Viewing a shared household never grants permission to create financial rows.
+    // Keep stored overrides (including inactive rows), deriving missing defaults
+    // in memory with stable read-only IDs instead of materializing occurrences.
+    const readOnly = req.spacePerms?.isOwner === false && !req.spacePerms.canEdit;
+    if (readOnly) {
+      const stored = await projectedModel.listMonth(userId, year, month);
+      const existingTemplates = new Set(stored.map(item => String(item.template_id)));
+      const virtual = templates.filter(t => {
+        const started = t.start_year < year || (t.start_year === year && t.start_month <= month);
+        return started && (t.repeat_monthly || (t.start_year === year && t.start_month === month))
+          && !existingTemplates.has(String(t.id));
+      }).map(t => ({
+        occurrence_id: `virtual-${t.id}-${year}-${String(month).padStart(2, '0')}`,
+        template_id: t.id, year, month, fecha: buildDateFromDay(year, month, t.day_of_month),
+        nombre: t.nombre, tipo: t.tipo, monto: t.monto, category_id: t.category_id ?? null,
+        notas: t.notas ?? null, active: true, repeat_monthly: t.repeat_monthly, virtual: true,
+      }));
+      return res.json([...stored, ...virtual].sort((a, b) => new Date(a.fecha) - new Date(b.fecha)
+        || String(a.nombre).localeCompare(String(b.nombre), 'es')));
+    }
+
+    // Owners and editors keep the existing materialization behavior.
     for (const t of templates) {
       const startsBeforeOrEqual = (t.start_year < year) || (t.start_year === year && t.start_month <= month);
       if (!startsBeforeOrEqual) continue;
