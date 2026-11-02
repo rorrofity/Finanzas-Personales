@@ -15,7 +15,7 @@ Especificación previa al código. Autorización 2026-11-01, America/Santiago. N
 
 ## Interfaces para implementación paralela
 
-- `automation/backups/backup_policy.py`: funciones puras de retención/promoción y estado de avisos; sin acceso a archivos ajenos. Motor Python estándar coordina snapshot, archivo, verificación, promoción y rotación con bloqueo.
+- `automation/backups/daily_backup.py`: motor Python estándar que integra política de retención/promoción y estado de avisos; coordina snapshot, archivo, verificación, promoción y rotación con bloqueo, sin acceso a archivos ajenos.
 - `automation/backups/run-backup.cjs`: carga `.env` desde aplicación y ejecuta motor Python con PG* solo en memoria/entorno del hijo; configuración operacional desde JSON privado. `notify-backup.cjs`: recibe evento JSON mínimo por stdin, consulta dueño/suscripciones en READ ONLY, usa VAPID y entrega solo resumen de resultado por stdout.
 - `automation/backups/finanzas-backup.service` y `.timer`: ruta instalada de app, OnCalendar diario 03:30 America/Santiago, sin Persistent/catch-up, permisos privados y timeout; operación sin reinicios.
 

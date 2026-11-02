@@ -1,0 +1,85 @@
+{
+  "contract": "DBK-01\u201310",
+  "source": {
+    "sourceSha": "9aa57d439e0df164c6d2fcc0f56328cedbc8cb69",
+    "unitsValidated": true,
+    "minimumFreeBytes": 1073741824
+  },
+  "operations": {
+    "timerEnabled": true,
+    "timerActive": true,
+    "schedule": "03:30 America/Santiago",
+    "timer": [
+      "TimersCalendar={ OnCalendar=*-*-* 03:30:00 America/Santiago ; next_elapse=Mon 2026-11-02 06:30:00 UTC }",
+      "NextElapseUSecRealtime=Mon 2026-11-02 06:30:00 UTC"
+    ],
+    "firstServiceRun": "success",
+    "initialDailyCopies": 1,
+    "initialWeeklyCopies": 1,
+    "dailyRetention": 7,
+    "weeklyRetention": 4,
+    "weeklyUsesHardlink": true,
+    "archiveBytes": 451603,
+    "privatePermissionsVerified": true,
+    "workflowsUnchanged": true,
+    "diskThresholdPercent": 85,
+    "diskUsedPercent": 64.58,
+    "diskAlertPending": false,
+    "backupAlertPending": false,
+    "historicalBackupsOutsideRotation": true,
+    "productionRestoresExecuted": false
+  },
+  "financialPreservation": {
+    "verifiedAt": "2026-11-02T00:54:04.258Z",
+    "financialTablesAudited": 11,
+    "allFinancialRowsIdentical": true,
+    "classificationsUnchanged": true,
+    "preferencesUnchanged": true,
+    "existingPrivateConfigurationUnchanged": true,
+    "backendOnlineWithoutRestart": true,
+    "authenticatedApiAvailable": true,
+    "migrationsExecuted": false,
+    "bankImportsExecuted": false
+  },
+  "archiveVerification": {
+    "status": "ok",
+    "verified": true
+  },
+  "isolatedRestore": {
+    "fictitiousPostgresCategories": 2,
+    "fictitiousPostgresExpenseRows": 3,
+    "fictitiousSQLiteRows": 3,
+    "financialTablesCompared": 11,
+    "isolatedClusterRemoved": true,
+    "privateUnixSocketOnly": true,
+    "productionAccess": false,
+    "realArchiveRestoreVerified": true,
+    "realNotificationsSent": false,
+    "realPgDumpAndRestore": true,
+    "realRestoredCopyRemovedWithFixture": true,
+    "restoredFixtureExactlyMatches": true,
+    "sameDayIdempotent": true,
+    "sourceFixturesUnchanged": true,
+    "status": "ok"
+  },
+  "tests": {
+    "tdd": "RED then GREEN before implementation",
+    "backendTestsPassed": 678,
+    "backendSuitesPassed": 32,
+    "pythonTestsPassed": 21,
+    "independentAdversarialCasesPassed": 5,
+    "realPostgresFixtureBackupAndRestore": true,
+    "realProductionArchiveRestoredOnlyInIsolatedCluster": true
+  },
+  "runtime": {
+    "n8nRunning": true,
+    "n8nHealthHttpStatus": 200,
+    "n8nRestarted": false,
+    "backendRestarted": false,
+    "diskFreeBytes": 9139138560,
+    "configuredOwnerPushChannel": true,
+    "testAlertsSent": false,
+    "backupStorage": "local private server",
+    "outsideServerCopyConfigured": false
+  }
+}

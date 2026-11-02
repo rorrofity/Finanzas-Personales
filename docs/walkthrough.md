@@ -315,3 +315,14 @@ Emails de cargos de tarjetas: cada hora desde las 08:00 hasta las 00:00 inclusiv
 TDD RED→GREEN observado antes del código; 657 pruebas backend y 309 frontend aprobadas, builds local/servidor correctos. Despliegue con assets anteriores conservados, PM2 online y comprobaciones autenticadas de lectura. Otros workflows intactos; ninguna carga real usada como prueba. Once tablas financieras comparadas fila por fila mediante huellas privadas: todos los gastos, clasificaciones, notas, fechas y saldos idénticos. Sin migraciones.
 
 Limpieza limitada a respaldos SQLite comprimidos y páginas libres de N8N: ~7,3 GB netos recuperados y ~9,1 GB disponibles. Ambos originales recuperables con SHA-256 verificado; base operativa de 4,07 GB a 933.888 bytes, 61 tablas/esquema preservados y pausa de 2,134 segundos. No se borraron PDFs, otros respaldos, workflows ni credenciales. Pruebas desechables de compactación y restauración por fallo aprobadas. Configuración privada y respaldos quedan solamente en el servidor; documentación preexistente del usuario conservada.
+
+
+## PARTE 15 — Respaldo diario y alerta de espacio
+
+**Verificado el 2026-11-01 a las 21:54 America/Santiago.** [Contrato DBK previo al código](implementation/daily-backup-contract.md), [plan y pruebas](implementation/daily-backup-plan.md), [guía de recuperación](../automation/backups/README.md) y [evidencia productiva](implementation/daily-backup-deployment.json).
+
+Timer diario a las 03:30 de Chile, servicio independiente sin detener web/N8N. Captura consistente individual de PostgreSQL y SQLite, configuración/clave de cifrado y entorno Docker; archivo privado tar.gz con SHA-256, validación completa del gzip/tar, integridad SQLite y lectura del dump. Publicación atómica, bloqueo y reserva adaptativa. Máximo 7 diarios y 4 semanales por primera copia de semana ISO; históricos fuera de rotación. Repetición del mismo día no acumula copias.
+
+Avisos Web Push al dueño desde 85 % de uso, revisado diariamente, y por fallos de respaldo. Deduplicación/reintento/pending seguro, sin modificar suscripciones ni divulgar datos. Sin costos nuevos. Los respaldos residen en el mismo servidor y requieren copia externa adicional para cubrir pérdida total del host.
+
+SDD→TDD: 678 pruebas backend, 21 Python y cinco casos adversariales independientes aprobados. PostgreSQL 14 temporal sin TCP validó dump y restauración ficticia; luego el primer archivo real de 451.603 bytes se restauró en una base temporal aislada y sus once tablas financieras coincidieron exactamente. Clúster retirado, ninguna restauración productiva, importación o migración. Fuente/configuración/unidades desplegadas, primer diario/semanal verificados y próxima ejecución 2026-11-02 03:30 Chile. Todas las filas financieras, preferencias y workflows originales preservados, con servicios disponibles sin reiniciar. Documentación previa del usuario conservada separada.
