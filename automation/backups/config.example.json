@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "appRoot": "/var/www/finanzas-personales",
+  "backupRoot": "/var/backups/finanzas/automatic",
+  "n8nDatabase": "/var/lib/docker/volumes/n8n_data/_data/database.sqlite",
+  "n8nContainer": "n8n-docker-caddy-n8n-1",
+  "privateFiles": {
+    "application.env": "/var/www/finanzas-personales/.env",
+    "n8n-config.json": "/var/lib/docker/volumes/n8n_data/_data/config",
+    "docker-compose.yaml": "/home/rocketflow/n8n-docker-caddy/docker-compose.yml",
+    "docker-compose.env": "/home/rocketflow/n8n-docker-caddy/.env"
+  },
+  "dailyKeep": 7,
+  "weeklyKeep": 4,
+  "diskThresholdPercent": 85,
+  "minimumFreeBytes": 104857600,
+  "pgDumpPath": "/usr/bin/pg_dump",
+  "pgRestorePath": "/usr/bin/pg_restore",
+  "dockerPath": "/usr/bin/docker",
+  "notifyCommand": [
+    "/usr/bin/node",
+    "/var/www/finanzas-personales/automation/backups/notify-backup.cjs"
+  ]
+}

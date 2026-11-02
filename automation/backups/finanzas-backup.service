@@ -1,0 +1,20 @@
+[Unit]
+Description=Finanzas Personales verified compressed backup and disk check
+After=network-online.target docker.service postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/var/www/finanzas-personales
+ExecStart=/usr/bin/node /var/www/finanzas-personales/automation/backups/run-backup.cjs
+UMask=0077
+TimeoutStartSec=20min
+KillMode=control-group
+NoNewPrivileges=true
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+StandardOutput=journal
+StandardError=journal

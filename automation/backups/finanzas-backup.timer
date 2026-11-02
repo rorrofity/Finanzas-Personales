@@ -1,0 +1,12 @@
+[Unit]
+Description=Finanzas Personales verified daily backup at 03:30 Chile
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 America/Santiago
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=finanzas-backup.service
+
+[Install]
+WantedBy=timers.target
