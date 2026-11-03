@@ -40,12 +40,18 @@ test.each(['/api/checking/fintoc', '/api/checking/fintoc/status', '/api/checking
 test('Fintoc no registra escrituras y conserva otras lecturas de cuenta corriente', () => {
   expect(routeFor('/api/checking/fintoc/preview', 'POST')).toBeUndefined();
   expect(routeFor('/api/checking/fintoc-other').handler.strategy).toBe('NetworkFirst');
-  expect(routeFor('/api/checking/global-balance').handler.strategy).toBe('NetworkFirst');
+  expect(routeFor('/api/checking/global-balance').handler.strategy).toBe('NetworkOnly');
 });
 
 test('no registra escrituras del dashboard ni otro prefijo parecido', () => {
   expect(routeFor('/api/dashboard/expense-evolution', 'POST')).toBeUndefined();
   expect(routeFor('/api/dashboard/expense-evolution-other').handler.strategy).toBe('NetworkFirst');
+});
+
+test('Salud financiera y saldo actual evitan fallback genérico por URL', () => {
+  expect(routeFor('/api/financial-health/summary?year=2026&month=11').handler.strategy).toBe('NetworkOnly');
+  expect(routeFor('/api/checking/global-balance').handler.strategy).toBe('NetworkOnly');
+  expect(routeFor('/api/financial-health/alerts').handler.strategy).toBe('NetworkFirst');
 });
 
 test.each(['/api/card-statements', '/api/card-statements?year=2030&month=5', '/api/card-statements/11111111-1111-4111-8111-111111111111'])('%s mantiene estados de tarjetas fuera de la caché offline', path => {

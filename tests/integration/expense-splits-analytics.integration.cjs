@@ -35,18 +35,23 @@ async function main() {
     await client.query(`
       CREATE TABLE categories(id int PRIMARY KEY, name text, user_id uuid);
       CREATE TABLE imports(id uuid PRIMARY KEY, provider text, network text, period_year int, period_month int);
-      CREATE TABLE transactions(id uuid PRIMARY KEY,user_id uuid,fecha date,descripcion text,category_id int,monto numeric(14,2),tipo text,billing_year int,billing_month int,import_id uuid,created_at timestamptz DEFAULT now());
-      CREATE TABLE intl_unbilled(id uuid PRIMARY KEY,user_id uuid,fecha date,descripcion text,category_id int,amount_clp numeric(14,2),tipo text,period_year int,period_month int,brand text);
+      CREATE TABLE transactions(id uuid PRIMARY KEY,user_id uuid,fecha date,descripcion text,category_id int,monto numeric(14,2),tipo text,billing_year int,billing_month int,import_id uuid,created_at timestamptz DEFAULT now(),updated_at timestamptz DEFAULT now());
+      CREATE TABLE intl_unbilled(id uuid PRIMARY KEY,user_id uuid,fecha date,descripcion text,category_id int,amount_clp numeric(14,2),tipo text,period_year int,period_month int,brand text,updated_at timestamptz DEFAULT now());
       CREATE TABLE checking_transactions(id uuid PRIMARY KEY,user_id uuid,fecha date,descripcion text,category_id int,amount numeric(14,2),tipo text,year int,month int);
       CREATE TABLE checking_balances(user_id uuid,year int,month int,known_balance numeric,initial_balance numeric);
-      CREATE TABLE projected_templates(id uuid,user_id uuid,nombre text,tipo text,monto numeric,category_id int);
-      CREATE TABLE projected_occurrences(user_id uuid,template_id uuid,year int,month int,tipo text,monto numeric,active boolean);
-      CREATE TABLE installment_plans(id uuid,user_id uuid,brand text);
-      CREATE TABLE installment_occurrences(plan_id uuid,year int,month int,amount numeric,active boolean);
+      CREATE TABLE fintoc_bank_balances(user_id uuid,account_id text,currency text,available numeric(20,0),current numeric(20,0),bank_updated_at timestamptz,queried_at timestamptz);
+      CREATE TABLE projected_templates(id uuid,user_id uuid,nombre text,tipo text,monto numeric,category_id int,notas text,day_of_month int,start_year int,start_month int,repeat_monthly boolean,updated_at timestamptz);
+      CREATE TABLE projected_occurrences(id uuid,user_id uuid,template_id uuid,year int,month int,fecha date,nombre text,tipo text,monto numeric,category_id int,notas text,active boolean,updated_at timestamptz);
+      CREATE TABLE installment_plans(id uuid,user_id uuid,brand text,updated_at timestamptz DEFAULT now());
+      CREATE TABLE installment_occurrences(plan_id uuid,year int,month int,amount numeric,active boolean,updated_at timestamptz DEFAULT now());
       CREATE TABLE expense_splits(id uuid PRIMARY KEY,user_id uuid,source text,transaction_id uuid,intl_unbilled_id uuid,checking_transaction_id uuid,amount_clp numeric(14,2),version uuid);
       CREATE TABLE expense_split_parts(split_id uuid,position smallint,amount_clp numeric(14,2),category_id int,PRIMARY KEY(split_id,position));
     `);
     await client.query('INSERT INTO categories VALUES(1,$1,NULL),(2,$2,$4),(3,$3,NULL),(90,$5,$6)', ['Original', 'Calzado', 'Deporte', OWNER, 'Categoría ajena', STRANGER]);
+    process.env.FINTOC_OWNER_USER_ID = OWNER;
+    process.env.FINTOC_ACCOUNT_ID = 'fixture-checking-account';
+    await client.query("INSERT INTO fintoc_bank_balances VALUES($1,'fixture-checking-account','CLP',555777,555000,NOW(),NOW())", [OWNER]);
+    await client.query('INSERT INTO checking_balances VALUES($1,2026,7,999999,123)', [OWNER]);
     const imported = crypto.randomUUID();
     await client.query('INSERT INTO imports VALUES($1,$2,$3,2026,10)', [imported, 'fixture', 'visa']);
     const national = crypto.randomUUID(), unsplit = crypto.randomUUID(), intl = crypto.randomUUID(), checking = crypto.randomUUID();
@@ -64,7 +69,7 @@ async function main() {
     await split('cuenta_corriente', checking, '60000', [['25000', 2], ['35000', null]]);
     const snapshot = async () => {
       const tables = {};
-      for (const table of ['categories', 'transactions', 'intl_unbilled', 'checking_transactions', 'expense_splits', 'expense_split_parts']) tables[table] = (await client.query(`SELECT row_to_json(t)::text AS data FROM ${table} t ORDER BY row_to_json(t)::text`)).rows;
+      for (const table of ['categories', 'transactions', 'intl_unbilled', 'checking_transactions', 'checking_balances', 'fintoc_bank_balances', 'expense_splits', 'expense_split_parts']) tables[table] = (await client.query(`SELECT row_to_json(t)::text AS data FROM ${table} t ORDER BY row_to_json(t)::text`)).rows;
       return crypto.createHash('sha256').update(JSON.stringify(tables)).digest('hex');
     };
     const before = await snapshot();
@@ -123,6 +128,9 @@ async function main() {
     } finally { global.Date = OriginalDate; }
     assert.equal(legacyEvolution.data.find(m => m.year === 2026 && m.month === 10).Calzado, 165000);
     const overview = await call('getOverview', { year: '2026', month: '10' });
+    assert.equal(overview.disponibleHoy, 555777, 'Only the saved bank balance is current; legacy cartola is ignored');
+    assert.equal(overview.checking.amount, '555777');
+    assert.equal(overview.checking.source, 'fintoc');
     assert.equal(overview.gastos.value, 340000, 'Overall expenditure still uses original financial rows');
     assert.equal(overview.topCategorias.find(c => c.name === 'Calzado').total, 140000);
     const dashboard = await call('getDashboardData', {});

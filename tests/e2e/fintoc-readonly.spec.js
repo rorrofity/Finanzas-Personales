@@ -238,16 +238,18 @@ test.describe('Epic18 — sincronización diaria de cuenta corriente', () => {
 
 
 test.describe('FBA — saldo bancario exacto', () => {
-  test('disponible, contable, fecha y diferencia se muestran sin redondeo ni duplicar movimientos', async ({ page }, testInfo) => {
+  test('disponible canónico, contable y fecha se muestran sin saldo alternativo ni redondeo', async ({ page }, testInfo) => {
     const state = await fixtures(page);
     await page.goto('/checking');
     const bank = page.getByRole('region', { name: 'Saldo bancario Fintoc' });
     await expect(bank.getByTestId('bank-available-value')).toHaveText('$1.234.567');
     await expect(bank).toContainText('Saldo contable: $1.200.000');
-    await expect(bank).toContainText('Diferencia con el historial: $584.567');
+    await expect(bank).not.toContainText('Diferencia con el historial');
     await expect(bank).toContainText('Actualización bancaria:');
-    await expect(page.getByTestId('totals-row')).toContainText('Saldo calculado');
-    await expect(page.getByTestId('totals-row')).toContainText('$650.000');
+    await expect(page.getByTestId('totals-row')).not.toContainText('Saldo calculado');
+    await expect(page.getByTestId('totals-row')).not.toContainText('$650.000');
+    await expect(page.getByTestId('totals-row')).toContainText('Abonos');
+    await expect(page.getByTestId('totals-row')).toContainText('Cargos');
     await expect(bank).not.toContainText('$1.235K');
     expect(state.fintocRequests.filter(r => r.path.endsWith('/bank-balance'))).toEqual([{ path: '/api/checking/fintoc/bank-balance', params: {} }]);
     expect(state.fintocRequests.filter(r => r.path.endsWith('/preview'))).toHaveLength(0);
@@ -275,7 +277,8 @@ test.describe('FBA — saldo bancario exacto', () => {
     const bank = page.getByRole('region', { name: 'Saldo bancario Fintoc' });
     await expect(bank).toContainText('Saldo bancario no disponible');
     await expect(bank.getByTestId('bank-available-value')).toHaveCount(0);
-    await expect(page.getByTestId('totals-row')).toContainText('Saldo calculado');
+    await expect(page.getByTestId('totals-row')).not.toContainText('Saldo calculado');
+    await expect(page.getByTestId('totals-row')).toContainText('Cargos');
     state.verify();
   });
 
@@ -283,7 +286,7 @@ test.describe('FBA — saldo bancario exacto', () => {
     const state = await fixtures(page, { failBalance: true });
     await page.goto('/checking');
     const bank = page.getByRole('region', { name: 'Saldo bancario Fintoc' });
-    await expect(bank.getByRole('alert')).toContainText('No se pudo consultar el saldo bancario');
+    await expect(bank.getByRole('alert')).toContainText('No se pudo actualizar el saldo bancario guardado');
     await expect(bank).not.toContainText('sk_live_NEVER_DISPLAY');
     await expect(bank.getByTestId('bank-available-value')).toHaveCount(0);
     state.verify();

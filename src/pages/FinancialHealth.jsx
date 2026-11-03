@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Grid,
   Paper,
@@ -23,9 +23,13 @@ import {
   AccountBalanceWallet as WalletIcon
 } from '@mui/icons-material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import axios from '../config/axios';
 import { usePeriod } from '../contexts/PeriodContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useSpace } from '../contexts/SpaceContext';
+import { readFinancialHealth } from '../services/financialHealth';
+import useFinancialAutoRefresh from '../hooks/useFinancialAutoRefresh';
 import MonthPicker from '../components/MonthPicker';
+import { formatCLPExact } from '../utils/format';
 
 // Soft color palette for categories
 const CATEGORY_COLORS = [
@@ -33,28 +37,75 @@ const CATEGORY_COLORS = [
   '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
 ];
 
+const isAmount = value => value !== null && value !== undefined && Number.isFinite(Number(value));
+const timeLabel = value => value && Number.isFinite(new Date(value).getTime())
+  ? new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Fecha no disponible';
+const sourceLabel = source => source?.state === 'error' || source?.state === 'unavailable' ? 'No disponible'
+  : source?.freshness === 'stale' ? 'Atrasado' : source?.freshness === 'current' ? 'Actualizado' : 'Fecha no verificada';
+const amountColor = value => !isAmount(value) ? 'text.secondary' : value >= 0 ? 'success.main' : 'error.main';
+const PARTIAL_REASONS = {
+  CHECKING_UNAVAILABLE: 'No hay un saldo bancario disponible para este hogar.',
+  CHECKING_STALE: 'El saldo bancario está atrasado.',
+  CHECKING_DATE_UNKNOWN: 'No hay una fecha bancaria verificada.',
+  NATIONAL_UNAVAILABLE: 'No se pudieron consultar los cargos nacionales.',
+  INTERNATIONAL_UNAVAILABLE: 'No se pudieron consultar los cargos internacionales.',
+  INSTALLMENTS_UNAVAILABLE: 'No se pudieron consultar las cuotas.',
+  PROJECTED_UNAVAILABLE: 'No se pudieron consultar las proyecciones.',
+  UNKNOWN_CARD_NETWORK: 'Hay cargos cuya tarjeta no pudo identificarse.',
+  USD_CONVERSION_PENDING: 'Quedan cargos internacionales sin importe CLP confirmado.',
+  EMAIL_SYNC_UNVERIFIED: 'No se pudo verificar la última sincronización de correos.',
+  EMAIL_SYNC_STALE: 'La última sincronización de correos tiene más de 24 horas.',
+  EMAIL_SYNC_FAILED: 'La última sincronización de correos informó un error.',
+};
+
 const FinancialHealth = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [data, setData] = useState(null);
-  const [categoryData, setCategoryData] = useState([]);
+  const [result, setResult] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
+  const request = useRef(0);
+  const controller = useRef(null);
   const theme = useTheme();
-  const { year, month, startISO, endISO } = usePeriod();
+  const { year, month } = usePeriod();
+  const { user } = useAuth();
+  const { activeSpace } = useSpace();
+  const userId = user?.id, ownerId = activeSpace?.ownerId || userId;
+  const scopeKey = `${userId}:${ownerId}:${year}:${month}`;
+  const scopeRef = useRef(scopeKey); scopeRef.current = scopeKey;
+  const resultRef = useRef(result); resultRef.current = result;
+  const data = result?.scopeKey === scopeKey ? result.data : null;
 
   const fetchData = useCallback(async () => {
+    if (!userId || !ownerId) return;
+    controller.current?.abort();
+    const abort = new AbortController(); controller.current = abort;
+    const version = ++request.current;
+    const current = () => request.current === version && scopeRef.current === scopeKey && !abort.signal.aborted;
+    const existing = resultRef.current?.scopeKey === scopeKey;
     try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch financial health summary
-      const healthRes = await axios.get('/api/financial-health/summary', {
-        params: { year, month }
-      });
-      setData(healthRes.data);
-      
-      // Explain the SAME commitment total returned by this summary. Historical
-      // expense categories use a different scope and belong in the dashboard.
-      const health = healthRes.data || {};
+      setLoading(!existing); setRefreshing(existing); setError(null); setRefreshError('');
+      const next = await readFinancialHealth({ userId, ownerId, year, month }, { signal: abort.signal, isCurrent: current });
+      if (current()) setResult({ ...next, scopeKey });
+    } catch (failure) {
+      if (!current()) return;
+      if ([401, 403].includes(failure.response?.status)) {
+        setResult(null); setError(failure.response.status === 401 ? 'Tu sesión terminó. Inicia sesión para consultar tu salud financiera.' : 'Ya no tienes acceso a este hogar.');
+      } else if (existing) setRefreshError('No pudimos actualizar. Se conservan los últimos datos consultados y su fecha.');
+      else setError(failure.code === 'OFFLINE_MISS' ? failure.message : failure.response?.data?.error || 'Error al cargar datos');
+    } finally {
+      if (current()) { setLoading(false); setRefreshing(false); }
+    }
+  }, [userId, ownerId, year, month, scopeKey]);
+
+  useEffect(() => {
+    fetchData();
+    return () => { request.current += 1; controller.current?.abort(); };
+  }, [fetchData]);
+  useFinancialAutoRefresh(fetchData, { enabled: Boolean(userId && ownerId) });
+
+  const categoryData = useMemo(() => {
+      const health = data || {};
       const commitments = [
         { name: 'Tarjeta Visa', value: Number(health.creditCards?.visa?.total) || 0 },
         { name: 'Tarjeta Mastercard', value: Number(health.creditCards?.mastercard?.total) || 0 },
@@ -76,25 +127,12 @@ const FinancialHealth = () => {
         ...item,
         color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
       }));
-      setCategoryData(categories);
-      
-    } catch (err) {
-      console.error('Error fetching financial health:', err);
-      setError(err.response?.data?.error || 'Error al cargar datos');
-    } finally {
-      setLoading(false);
-    }
-  }, [year, month, startISO, endISO]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+      return categories;
+  }, [data]);
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP'
-    }).format(amount || 0);
+    if (!isAmount(amount)) return 'No disponible';
+    return formatCLPExact(amount);
   };
 
   const getHealthColor = (status) => {
@@ -131,7 +169,7 @@ const FinancialHealth = () => {
     }
   };
 
-  if (loading) {
+  if (loading || (!data && !error)) {
     return (
       <Box sx={{ py: 4, textAlign: 'center' }}>
         <CircularProgress size={60} />
@@ -145,28 +183,36 @@ const FinancialHealth = () => {
   if (error) {
     return (
       <Box sx={{ py: 4, px: 2 }}>
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error" action={<IconButton aria-label="Actualizar salud financiera" onClick={fetchData}><RefreshIcon /></IconButton>}>{error}</Alert>
       </Box>
     );
   }
 
   const { checking, creditCards, projected, summary, alerts } = data || {};
   const pendingConversions = Number.isSafeInteger(summary?.conversionPendingCount) && summary.conversionPendingCount > 0 ? summary.conversionPendingCount : 0;
-  const amountsPartial = summary?.amountsPartial === true || pendingConversions > 0;
+  const bankUnavailable = !isAmount(checking?.currentBalance);
+  const bankStale = checking?.freshness === 'stale';
+  const cached = result?.scopeKey === scopeKey && result.origin === 'cache';
+  const sourceErrors = Object.values(data?.sources || {}).some(source => source?.state === 'error' || source?.state === 'unavailable');
+  const amountsPartial = summary?.amountsPartial === true || pendingConversions > 0 || bankUnavailable || bankStale
+    || checking?.freshness === 'unknown' || cached || Boolean(refreshError) || sourceErrors;
   const evaluationColor = amountsPartial ? theme.palette.warning.main : getHealthColor(summary?.healthStatus);
   
   // Calculate totals for flow section
-  const totalIncome = (projected?.income || 0);
-  const totalCommitments = (summary?.totalCommitments || 0);
-  const projectedResult = (summary?.projectedBalance || 0);
-  const netBalance = totalIncome - totalCommitments; // Neteo del mes (sin considerar saldo inicial)
-  const commitmentPercent = totalIncome > 0 ? (totalCommitments / totalIncome) * 100 : null;
+  const totalIncome = projected?.income ?? null;
+  const totalCommitments = summary?.totalCommitments ?? null;
+  const projectedResult = summary?.projectedBalance ?? null;
+  const netBalance = isAmount(totalIncome) && isAmount(totalCommitments) ? totalIncome - totalCommitments : null;
+  const commitmentPercent = totalIncome > 0 && isAmount(totalCommitments) ? (totalCommitments / totalIncome) * 100 : null;
   const commitmentLabel = commitmentPercent === null
     ? 'Sin ingresos de referencia'
     : `${new Intl.NumberFormat('es-CL', { maximumFractionDigits: 1 }).format(commitmentPercent)}% comprometido${amountsPartial ? ' · parcial' : ''}`;
   
   // Month name for display
   const monthName = new Date(year, month - 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+  const upcoming = (projected?.details?.expenses || []).filter(item => typeof item.fecha === 'string'
+    && /^\d{4}-\d{2}-\d{2}$/.test(item.fecha) && item.fecha.startsWith(`${year}-${String(month).padStart(2, '0')}`)
+    && (!data.currentDate || item.fecha >= data.currentDate)).sort((a, b) => a.fecha.localeCompare(b.fecha)).slice(0, 5);
 
   return (
     <Box sx={{ py: { xs: 1, md: 1 } }}>
@@ -185,14 +231,37 @@ const FinancialHealth = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <MonthPicker />
           <Tooltip title="Actualizar">
-            <IconButton onClick={fetchData} size="small" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+            <IconButton aria-label="Actualizar salud financiera" onClick={fetchData} disabled={refreshing} size="small" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
               <RefreshIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
 
-      {amountsPartial && <Alert severity="warning" data-testid="financial-partial-warning" sx={{ mb: 2 }}>{pendingConversions > 0 ? `${pendingConversions} ${pendingConversions === 1 ? 'movimiento' : 'movimientos'} USD sin conversión.` : 'Hay movimientos USD sin conversión.'} Los compromisos, la evaluación y la proyección en CLP son parciales; no representan un saldo definitivo.</Alert>}
+      <Typography variant="body1" fontWeight={600} sx={{ mb: 1 }}>Compromisos a pagar en {monthName}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>El saldo es la última referencia bancaria guardada; el período seleccionado corresponde a los compromisos a pagar.</Typography>
+      {refreshing && <LinearProgress aria-label="Actualizando salud financiera" sx={{ mb: 1.5 }} />}
+      {cached && <Alert severity="info" sx={{ mb: 1.5 }}>Datos guardados del {timeLabel(result.cachedAt)}. No se pudo consultar una versión nueva; esta copia no confirma el saldo actual.</Alert>}
+      {refreshError && <Alert severity="warning" sx={{ mb: 1.5 }}>{refreshError}</Alert>}
+      {bankUnavailable && <Alert severity="warning" sx={{ mb: 1.5 }}>Saldo bancario no disponible</Alert>}
+      {bankStale && <Alert severity="warning" sx={{ mb: 1.5 }}>El saldo bancario tiene más de 24 horas. Se muestra el último dato conocido y la evaluación es parcial.</Alert>}
+      {amountsPartial && <Alert severity="warning" data-testid="financial-partial-warning" sx={{ mb: 2 }}>
+        {pendingConversions > 0 ? `${pendingConversions} ${pendingConversions === 1 ? 'movimiento' : 'movimientos'} USD sin conversión.` : 'La vigencia o disponibilidad de las fuentes no está completamente verificada.'} Los compromisos, la evaluación y la proyección en CLP son parciales; no representan un saldo definitivo.
+        {[...new Set(Array.isArray(summary?.partialReasons) ? summary.partialReasons : [])].filter(code => Object.prototype.hasOwnProperty.call(PARTIAL_REASONS, code)).map(code => <Typography key={code} variant="body2" component="p" sx={{ mt: 0.5 }}>{PARTIAL_REASONS[code]}</Typography>)}
+      </Alert>}
+
+      <Paper component="section" aria-label="Vigencia de los datos" variant="outlined" sx={{ p: 1.5, mb: 2, overflowWrap: 'anywhere' }}>
+        <Typography variant="body2">Resumen consultado: {timeLabel(data?.generatedAt || result?.cachedAt)}</Typography>
+        <Typography variant="body2">Actualización bancaria: {timeLabel(checking?.bankUpdatedAt || checking?.lastUpdated)}</Typography>
+        <Typography variant="caption" color="text.secondary" component="p">Consulta guardada del banco: {timeLabel(checking?.queriedAt)}</Typography>
+        {[
+          ['national', 'Tarjetas nacionales'], ['international', 'Tarjetas internacionales'],
+          ['installments', 'Cuotas'], ['projected', 'Proyecciones'],
+        ].map(([key, name]) => <Typography key={key} variant="caption" component="p" sx={{ mt: 0.5 }}>
+          {name}: {sourceLabel(data?.sources?.[key])} · {timeLabel(data?.sources?.[key]?.asOf)}
+        </Typography>)}
+        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>El refresco automático consulta la web; no inicia otra sincronización con el banco.</Typography>
+      </Paper>
 
       {/* Alerts Section */}
       {alerts && alerts.length > 0 && (
@@ -216,101 +285,38 @@ const FinancialHealth = () => {
         <Box>
           <Paper elevation={0} sx={{ p: 2, border: `1px solid ${theme.palette.divider}` }}>
             <Typography variant="overline" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-              Resumen del Mes
+              Disponible y compromisos
             </Typography>
             
-            <Grid container spacing={2} alignItems="center">
-              {/* Health Score */}
+            <Grid container spacing={2} alignItems="stretch">
               <Grid item xs={12} sm={4}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                    {/* Background circle */}
-                    <CircularProgress
-                      variant="determinate"
-                      value={100}
-                      size={80}
-                      thickness={5}
-                      sx={{ color: theme.palette.grey[200] }}
-                    />
-                    {/* Foreground progress */}
-                    <CircularProgress
-                      variant="determinate"
-                      value={summary?.healthScore || 0}
-                      size={80}
-                      thickness={5}
-                      sx={{ 
-                        color: evaluationColor,
-                        position: 'absolute',
-                        left: 0,
-                        '& .MuiCircularProgress-circle': { strokeLinecap: 'round' }
-                      }}
-                    />
-                    <Box sx={{
-                      position: 'absolute',
-                      top: 0, left: 0, bottom: 0, right: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexDirection: 'column'
-                    }}>
-                      <Typography variant="h5" fontWeight={700} lineHeight={1}>
-                        {summary?.healthScore || 0}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      mt: 0.5, 
-                      px: 1, 
-                      py: 0.25, 
-                      borderRadius: 1,
-                      display: 'inline-block',
-                      bgcolor: alpha(evaluationColor, 0.15),
-                      color: evaluationColor,
-                      fontWeight: 600
-                    }}
-                  >
-                    {amountsPartial ? 'Evaluación parcial' : getHealthLabel(summary?.healthStatus)}
-                  </Typography>
+                <Box component="section" aria-label="Saldo disponible bancario" sx={{ textAlign: 'center', py: 1 }}>
+                  <WalletIcon sx={{ fontSize: 28, color: theme.palette.primary.main, mb: 0.5 }} />
+                  <Typography variant="caption" color="text.secondary" display="block">Saldo disponible bancario</Typography>
+                  <Typography variant="h6" fontWeight={700} color={bankUnavailable ? 'text.secondary' : 'primary.main'} sx={{ fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>{formatCurrency(checking?.currentBalance)}</Typography>
+                  <Typography variant="caption" color="text.secondary">{bankStale ? 'Último dato conocido' : 'Referencia bancaria guardada'}</Typography>
                 </Box>
               </Grid>
-              
-              {/* Available Today */}
               <Grid item xs={12} sm={4}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <WalletIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.primary.main, mb: 0.5 }} />
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Disponible hoy
-                  </Typography>
-                  <Typography variant="h6" fontWeight={700} color="primary.main" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
-                    {formatCurrency(checking?.currentBalance)}
-                  </Typography>
+                <Box component="section" aria-label="Compromisos del período" sx={{ textAlign: 'center', py: 1 }}>
+                  <Typography variant="caption" color="text.secondary" display="block">Compromisos del período</Typography>
+                  <Typography variant="h6" fontWeight={700} color={isAmount(totalCommitments) ? 'error.main' : 'text.secondary'} sx={{ fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>{formatCurrency(totalCommitments)}</Typography>
+                  <Typography variant="caption" color="text.secondary">Tarjetas y gastos proyectados</Typography>
                 </Box>
               </Grid>
-              
-              {/* Projected Balance */}
               <Grid item xs={12} sm={4}>
-                <Box sx={{ textAlign: 'center' }}>
-                  {projectedResult >= 0 ? (
-                    <TrendingUpIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.success.main, mb: 0.5 }} />
-                  ) : (
-                    <TrendingDownIcon sx={{ fontSize: { xs: 24, sm: 32 }, color: theme.palette.error.main, mb: 0.5 }} />
-                  )}
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {amountsPartial ? 'Proyección parcial fin de mes' : 'Proyección fin de mes'}
-                  </Typography>
-                  <Typography 
-                    variant="h6" 
-                    fontWeight={700} 
-                    color={projectedResult >= 0 ? 'success.main' : 'error.main'}
-                    sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
-                  >
-                    {projectedResult >= 0 ? '+' : ''}{formatCurrency(projectedResult)}
-                  </Typography>
+                <Box component="section" aria-label="Resultado previsto" sx={{ textAlign: 'center', py: 1 }}>
+                  {isAmount(projectedResult) && (projectedResult >= 0 ? <TrendingUpIcon sx={{ fontSize: 28, color: 'success.main', mb: 0.5 }} /> : <TrendingDownIcon sx={{ fontSize: 28, color: 'error.main', mb: 0.5 }} />)}
+                  <Typography variant="caption" color="text.secondary" display="block">{amountsPartial ? 'Proyección parcial fin de mes' : 'Proyección fin de mes'}</Typography>
+                  <Typography variant="h6" fontWeight={700} color={amountColor(projectedResult)} sx={{ fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>{isAmount(projectedResult) && projectedResult >= 0 ? '+' : ''}{formatCurrency(projectedResult)}</Typography>
                 </Box>
               </Grid>
             </Grid>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mt: 2, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+              <CircularProgress variant="determinate" size={28} value={!amountsPartial && isAmount(summary?.healthScore) ? summary.healthScore : 0} sx={{ color: evaluationColor }} aria-label="Indicador de evaluación financiera" />
+              <Typography variant="body2" sx={{ color: evaluationColor, fontWeight: 600 }}>{bankUnavailable ? 'Evaluación no disponible' : amountsPartial ? 'Evaluación parcial' : getHealthLabel(summary?.healthStatus)}</Typography>
+              {!amountsPartial && isAmount(summary?.healthScore) && <Typography variant="caption" color="text.secondary">{summary.healthScore}/100</Typography>}
+            </Box>
           </Paper>
         </Box>
 
@@ -324,9 +330,9 @@ const FinancialHealth = () => {
             {(() => {
               // Preparar compromisos: tarjetas + gastos fijos, ordenados por monto
               const allCommitments = [
-                { name: 'Tarjetas de Crédito', amount: creditCards?.combined || 0 },
+                { name: 'Tarjetas de Crédito', amount: creditCards?.combined ?? null },
                 ...(projected?.details?.expenses || [])
-              ].sort((a, b) => b.amount - a.amount);
+              ].filter(item => isAmount(item.amount)).sort((a, b) => b.amount - a.amount);
               const maxItems = 4;
               const displayedCommitments = allCommitments.slice(0, maxItems);
               const remainingCount = allCommitments.length - maxItems;
@@ -348,7 +354,7 @@ const FinancialHealth = () => {
                           ))
                         ) : (
                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
-                            Sin ingresos configurados
+                            {projected?.income === null ? 'Ingresos no disponibles' : 'Sin ingresos configurados'}
                           </Typography>
                         )}
                       </Box>
@@ -382,7 +388,7 @@ const FinancialHealth = () => {
                       </Box>
                       <Box sx={{ borderTop: `1px solid ${theme.palette.divider}`, mt: 2, pt: 1 }}>
                         <Typography variant="h6" fontWeight={700} color="error.main" textAlign="right">
-                          -{formatCurrency(totalCommitments)}
+                          {isAmount(totalCommitments) ? '-' : ''}{formatCurrency(totalCommitments)}
                         </Typography>
                       </Box>
                     </Box>
@@ -393,7 +399,7 @@ const FinancialHealth = () => {
                     <Box sx={{ 
                       p: 2, 
                       borderRadius: 2, 
-                      bgcolor: projectedResult >= 0 
+                      bgcolor: !isAmount(projectedResult) ? 'background.default' : projectedResult >= 0
                         ? alpha(theme.palette.success.main, 0.08) 
                         : alpha(theme.palette.error.main, 0.08),
                       height: '100%',
@@ -410,10 +416,10 @@ const FinancialHealth = () => {
                       <Typography 
                         variant="h6" 
                         fontWeight={600} 
-                        color={netBalance >= 0 ? 'success.main' : 'error.main'}
+                        color={amountColor(netBalance)}
                         sx={{ mb: 1.5 }}
                       >
-                        {netBalance >= 0 ? '+' : ''}{formatCurrency(netBalance)}
+                        {isAmount(netBalance) && netBalance >= 0 ? '+' : ''}{formatCurrency(netBalance)}
                       </Typography>
                       
                       {/* Resultado proyectado (con saldo inicial) */}
@@ -423,12 +429,12 @@ const FinancialHealth = () => {
                       <Typography 
                         variant="h5" 
                         fontWeight={700} 
-                        color={projectedResult >= 0 ? 'success.main' : 'error.main'}
+                        color={amountColor(projectedResult)}
                       >
-                        {projectedResult >= 0 ? '+' : ''}{formatCurrency(projectedResult)}
+                        {isAmount(projectedResult) && projectedResult >= 0 ? '+' : ''}{formatCurrency(projectedResult)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                        (incluye saldo inicial)
+                        (incluye el saldo bancario guardado)
                       </Typography>
                     </Box>
                   </Grid>
@@ -466,6 +472,16 @@ const FinancialHealth = () => {
           </Paper>
         </Box>
 
+        <Paper component="section" aria-label="Próximos compromisos" variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+          <Typography variant="subtitle1" fontWeight={600}>Próximos compromisos</Typography>
+          <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 0.5 }}>Fechas de proyecciones del período. Los vencimientos de tarjetas se consultan en sus cartolas.</Typography>
+          {upcoming.length ? upcoming.map((item, index) => <Box key={`${item.fecha}:${index}`} sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'baseline', mt: 1.5 }}>
+            <Typography variant="body2" color="text.secondary">{item.fecha.split('-').reverse().join('/')}</Typography>
+            <Typography variant="body2" sx={{ flex: '1 1 140px', minWidth: 0, overflowWrap: 'anywhere' }}>{item.name}</Typography>
+            <Typography variant="body2" fontWeight={600}>{formatCurrency(item.amount)}</Typography>
+          </Box>) : <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>{data?.sources?.projected?.state === 'error' ? 'No se pudieron consultar las fechas de proyecciones.' : 'No hay fechas futuras de proyecciones registradas en este período.'}</Typography>}
+        </Paper>
+
         {/* ===== EN QUÉ GASTAMOS + TARJETAS ===== */}
         <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -501,12 +517,12 @@ const FinancialHealth = () => {
                 </Grid>
                 <Grid item xs={12} md={7}>
                   {categoryData.map((cat, idx) => {
-                    const percent = totalCommitments > 0 ? Math.round((cat.value / totalCommitments) * 100) : 0;
+                    const percent = isAmount(totalCommitments) && totalCommitments > 0 ? Math.round((cat.value / totalCommitments) * 100) : null;
                     return (
                       <Box key={idx} sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
                         <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: cat.color, mr: 1 }} />
                         <Typography variant="body2" sx={{ flex: 1 }} noWrap>{cat.name}</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>{percent}%</Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>{percent === null ? '—' : `${percent}%`}</Typography>
                         <Typography variant="body2" fontWeight={600}>{formatCurrency(cat.value)}</Typography>
                       </Box>
                     );
@@ -568,7 +584,7 @@ const FinancialHealth = () => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">Pagos</Typography>
                     <Typography variant="body2" color={(creditCards?.visa?.payments || 0) > 0 ? 'success.main' : 'text.secondary'}>
-                      {(creditCards?.visa?.payments || 0) > 0 ? `-${formatCurrency(creditCards?.visa?.payments)}` : '$0'}
+                      {creditCards?.visa?.payments > 0 ? `-${formatCurrency(creditCards.visa.payments)}` : formatCurrency(creditCards?.visa?.payments)}
                     </Typography>
                   </Box>
                 </Box>
@@ -613,7 +629,7 @@ const FinancialHealth = () => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">Pagos</Typography>
                     <Typography variant="body2" color={(creditCards?.mastercard?.payments || 0) > 0 ? 'success.main' : 'text.secondary'}>
-                      {(creditCards?.mastercard?.payments || 0) > 0 ? `-${formatCurrency(creditCards?.mastercard?.payments)}` : '$0'}
+                      {creditCards?.mastercard?.payments > 0 ? `-${formatCurrency(creditCards.mastercard.payments)}` : formatCurrency(creditCards?.mastercard?.payments)}
                     </Typography>
                   </Box>
                 </Box>

@@ -14,7 +14,11 @@ import { useOfflineContext } from '../contexts/OfflineContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useSpace } from '../contexts/SpaceContext';
 import { readExpenseLiquidity, readExpenseReport } from '../services/expenseEvolution';
-import { formatCLP } from '../utils/format';
+import { formatCLPExact as formatCLP } from '../utils/format';
+import useFinancialAutoRefresh from '../hooks/useFinancialAutoRefresh';
+
+const knownAmount = value => (typeof value === 'number' || (typeof value === 'string' && /^-?\d+(?:\.\d{1,2})?$/.test(value))) && Number.isFinite(Number(value));
+const bankDate = value => value && Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(value)) : 'Sin fecha disponible';
 
 const SOURCES = {
   tc_nacional: { label: 'Tarjetas nacionales', values: ['tc_nacional'] },
@@ -38,8 +42,11 @@ export default function Dashboard() {
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [overviewResult, setOverviewResult] = useState(null);
   const [overviewError, setOverviewError] = useState(false);
+  const [liquidityRefresh, setLiquidityRefresh] = useState(0);
   const ownerId = activeSpace?.ownerId || user?.id;
   const userId = user?.id;
+  const overviewScope = `${userId || ''}:${ownerId || ''}:${year}:${month}`;
+  useFinancialAutoRefresh(() => { setLiquidityRefresh(value => value + 1); setRetry(value => value + 1); }, { enabled: Boolean(userId && ownerId) });
   const scope = useMemo(() => ({ userId, ownerId, endYear: year, endMonth: month, months, sources: SOURCES[source].values }), [userId, ownerId, year, month, months, source]);
 
   useEffect(() => {
@@ -59,17 +66,20 @@ export default function Dashboard() {
   useEffect(() => {
     let current = true;
     const controller = new AbortController();
-    setOverviewResult(null);
+    setOverviewResult(previous => previous?.scopeKey === overviewScope ? previous : null);
     setOverviewError(false);
     readExpenseLiquidity({ userId, ownerId, year, month }, { signal: controller.signal })
-      .then((response) => { if (current) setOverviewResult(response); })
+      .then((response) => { if (current) setOverviewResult({ ...response, scopeKey: overviewScope }); })
       .catch(() => { if (current && !controller.signal.aborted) setOverviewError(true); });
     return () => { current = false; controller.abort(); };
-  }, [userId, ownerId, year, month, reconnectCount]);
+  }, [userId, ownerId, year, month, reconnectCount, liquidityRefresh, overviewScope]);
 
   const nextPeriod = new Date(year, month, 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
   const report = result?.data;
-  const overview = overviewResult?.data;
+  const overview = overviewResult?.scopeKey === overviewScope ? overviewResult.data : null;
+  const bank = overview?.checking;
+  const bankAvailable = bank?.source === 'fintoc' && bank?.state === 'available' && knownAmount(bank.amount);
+  const bankVerified = bankAvailable && bank.freshness === 'current' && overviewResult?.origin !== 'cache' && !overviewError && !isOffline;
   const pendingConversions = Number.isSafeInteger(overview?.compromisos?.conversionPendingCount) && overview.compromisos.conversionPendingCount > 0 ? overview.compromisos.conversionPendingCount : 0;
   const amountsPartial = overview?.compromisos?.amountsPartial === true || pendingConversions > 0;
   return (
@@ -114,10 +124,12 @@ export default function Dashboard() {
           {overview && <>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>Liquidez consultada: {new Date(overviewResult.cachedAt).toLocaleString('es-CL')}</Typography>
             {overviewResult.origin === 'cache' && <Alert severity="info" sx={{ mb: 1.5 }}>Consulta guardada de liquidez; no se pudo actualizar. {isOffline ? 'Sin conexión.' : 'Los importes corresponden a la fecha de consulta indicada.'}</Alert>}
-            {amountsPartial && <Alert severity="warning" data-testid="liquidity-partial-warning" sx={{ mb: 1.5 }}>{pendingConversions > 0 ? `${pendingConversions} ${pendingConversions === 1 ? 'movimiento' : 'movimientos'} USD sin conversión.` : 'Hay movimientos USD sin conversión.'} Los compromisos en CLP son parciales hasta conocer el cambio correspondiente.</Alert>}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap', mb: 1.5 }}><Typography variant="body2">Disponible hoy</Typography><Typography variant="body1" fontWeight={600}>{formatCLP(overview.disponibleHoy)}</Typography></Box>
+            {amountsPartial && <Alert severity="warning" data-testid="liquidity-partial-warning" sx={{ mb: 1.5 }}>{pendingConversions > 0 ? `${pendingConversions} ${pendingConversions === 1 ? 'movimiento' : 'movimientos'} USD sin conversión.` : 'Hay información pendiente de verificar.'} Los compromisos en CLP son parciales.</Alert>}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap', mb: 1 }}><Typography variant="body2">{bankVerified ? 'Disponible hoy' : bankAvailable ? 'Último saldo bancario conocido' : 'Saldo bancario no disponible'}</Typography><Typography variant="body1" fontWeight={600}>{bankAvailable ? formatCLP(bank.amount) : 'Sin verificar'}</Typography></Box>
+            {bankAvailable && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>Actualización bancaria: {bankDate(bank.bankUpdatedAt)} · Consulta del saldo: {bankDate(bank.queriedAt)}</Typography>}
+            {bankAvailable && !bankVerified && <Alert severity="warning" sx={{ mb: 1.5 }}>El saldo mostrado es el último dato bancario guardado; su vigencia actual no está confirmada.</Alert>}
             <Accordion disableGutters elevation={0} sx={{ border: '1px solid', borderColor: 'divider', '&:before': { display: 'none' }, boxShadow: 'none' }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}><Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, width: '100%', pr: 1 }}><Typography variant="body2" fontWeight={600}>Compromisos próximos{amountsPartial ? ' · importe parcial' : ''}</Typography><Typography variant="body2" fontWeight={600}>{formatCLP(overview.compromisos?.total || 0)}</Typography></Box></AccordionSummary>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}><Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, width: '100%', pr: 1 }}><Typography variant="body2" fontWeight={600}>Compromisos próximos{amountsPartial ? ' · importe parcial' : ''}</Typography><Typography variant="body2" fontWeight={600}>{knownAmount(overview.compromisos?.total) ? formatCLP(overview.compromisos.total) : 'No disponible'}</Typography></Box></AccordionSummary>
               <AccordionDetails><Stack spacing={1}><Typography variant="caption" color="text.secondary">Proyección para {nextPeriod}</Typography><CommitmentRow label="TC no facturado" value={overview.compromisos?.tcNoFacturado} /><CommitmentRow label="Cuotas del período" value={overview.compromisos?.cuotas} /><CommitmentRow label={amountsPartial ? 'Internacional · importe parcial' : 'Internacional'} value={overview.compromisos?.intl} /><CommitmentRow label="Gastos proyectados" value={overview.compromisos?.proyectados} /></Stack></AccordionDetails>
             </Accordion>
           </>}
@@ -130,5 +142,5 @@ export default function Dashboard() {
 }
 
 function CommitmentRow({ label, value }) {
-  return <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}><Typography variant="body2" color="text.secondary">{label}</Typography><Typography variant="body2">{formatCLP(value || 0)}</Typography></Box>;
+  return <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}><Typography variant="body2" color="text.secondary">{label}</Typography><Typography variant="body2">{knownAmount(value) ? formatCLP(value) : 'No disponible'}</Typography></Box>;
 }

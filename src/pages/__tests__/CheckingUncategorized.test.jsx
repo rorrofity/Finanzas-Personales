@@ -14,7 +14,7 @@ jest.mock('../../contexts/SpaceContext', () => ({ useSpace: () => ({ activeSpace
 jest.mock('../../contexts/PeriodContext', () => ({ usePeriod: jest.fn() }));
 jest.mock('../../components/MonthPicker', () => () => null);
 jest.mock('../../components/FintocCheckingPreview', () => () => null);
-jest.mock('../../components/FintocBankBalance', () => ({ calculatedBalance }) => <div data-testid="bank-reference">{calculatedBalance}</div>);
+jest.mock('../../components/FintocBankBalance', () => () => <div data-testid="bank-reference">100000</div>);
 
 const rows = [
   { id: 'null', fecha: '2030-05-10', descripcion: 'Cargo nulo ficticio', tipo: 'cargo', amount: '100', category_id: null, categoria: 'Texto heredado' },
@@ -27,7 +27,7 @@ const toggle = () => screen.getByRole('button', { name: /^Sin categoría/ });
 const element = () => <ThemeProvider theme={createAppTheme('light')}><Checking /></ThemeProvider>;
 function mount({ items = rows, mobile = false } = {}) {
   useMediaQuery.mockReturnValue(mobile);
-  axios.get.mockImplementation(path => Promise.resolve({ data: path === '/api/checking/global-balance' ? { saldo_actual: 100000 } : path === '/api/categories' ? [{ id: 1, name: 'Comida ficticia' }] : { items, total: items.length } }));
+  axios.get.mockImplementation(path => Promise.resolve({ data: path === '/api/categories' ? [{ id: 1, name: 'Comida ficticia' }] : { items, total: items.length } }));
   return render(element());
 }
 function select(name, option) {
@@ -68,15 +68,17 @@ test('sin coincidencias mantiene el filtro reversible y muestra estado vacío es
 });
 test('categorizar explícitamente retira la fila del filtro y actualiza contador sin tocar otros movimientos', async () => {
   mount(); await screen.findByText(rows[0].descripcion); fireEvent.click(toggle()); const row = screen.getByText(rows[0].descripcion).closest('tr');
+  expect(axios.get.mock.calls.map(([path]) => path).sort()).toEqual(['/api/categories', '/api/checking']);
+  const readsBeforeEdit = axios.get.mock.calls.length;
   fireEvent.mouseDown(within(row).getByRole('combobox')); fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Comida ficticia' }));
   await waitFor(() => expect(screen.queryByText(rows[0].descripcion)).not.toBeInTheDocument()); expect(toggle()).toHaveAccessibleName('Sin categoría (2)');
-  expect(axios.put).toHaveBeenCalledTimes(1); expect(axios.put).toHaveBeenCalledWith('/api/checking/null', { category_id: 1 }); expect(axios.get).toHaveBeenCalledTimes(3); expect(screen.getByText(rows[2].descripcion)).toBeInTheDocument();
+  expect(axios.put).toHaveBeenCalledTimes(1); expect(axios.put).toHaveBeenCalledWith('/api/checking/null', { category_id: 1 }); expect(axios.get).toHaveBeenCalledTimes(readsBeforeEdit); expect(screen.getByText(rows[2].descripcion)).toBeInTheDocument();
 });
 
 test('mantiene el filtro al cambiar de mes y calcula el contador con los nuevos movimientos', async () => {
   const view = mount(); await screen.findByText(rows[0].descripcion); fireEvent.click(toggle()); select('Tipo', 'Cargo');
   const nextRows = [{ ...rows[0], id: 'next-pending', descripcion: 'Pendiente del nuevo mes' }, { ...rows[3], id: 'next-assigned', descripcion: 'Asignado del nuevo mes' }];
-  axios.get.mockImplementation(path => Promise.resolve({ data: path === '/api/checking/global-balance' ? { saldo_actual: 100000 } : path === '/api/categories' ? [{ id: 1, name: 'Comida ficticia' }] : { items: nextRows, total: 2 } }));
+  axios.get.mockImplementation(path => Promise.resolve({ data: path === '/api/categories' ? [{ id: 1, name: 'Comida ficticia' }] : { items: nextRows, total: 2 } }));
   usePeriod.mockReturnValue({ year: 2030, month: 6 }); view.rerender(element());
   await screen.findByText('Pendiente del nuevo mes'); expect(screen.queryByText('Asignado del nuevo mes')).not.toBeInTheDocument(); expect(screen.queryByText(rows[0].descripcion)).not.toBeInTheDocument();
   expect(toggle()).toHaveAccessibleName('Sin categoría (1)'); expect(toggle()).toHaveAttribute('aria-pressed', 'true'); expect(screen.getByText('Mostrando 1 de 2 movimientos')).toBeInTheDocument();

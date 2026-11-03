@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import axios from '../../config/axios';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,13 +18,13 @@ const mount = (props = {}, mode = 'light') => render(element(props, mode));
 const deferred = () => { let resolve; let reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 beforeEach(() => { jest.clearAllMocks(); useAuth.mockReturnValue({ user: { id: 'owner-fixture' } }); useSpace.mockReturnValue({ activeSpace: { ownerId: 'owner-fixture', isOwner: true } }); });
 
-test.each(['light', 'dark'])('saldo disponible exacto, contable y diferencia sin línea de crédito en tema %s', async mode => {
+test.each(['light', 'dark'])('único saldo disponible exacto y contable del mismo snapshot sin línea de crédito en tema %s', async mode => {
   axios.get.mockResolvedValue({ data: bank({ limit: '9000000', accountId: 'acc_PRIVATE' }) });
   mount({}, mode);
   const panel = await screen.findByRole('region', { name: 'Saldo bancario Fintoc' });
   expect(await within(panel).findByText('$1.234.567')).toBeInTheDocument();
   expect(within(panel).getByText(/Saldo contable:.*\$1.200.000/)).toBeInTheDocument();
-  expect(within(panel).getByText(/Diferencia con el historial:.*\$234.567/)).toBeInTheDocument();
+  expect(within(panel).queryByText(/Diferencia con el historial/)).not.toBeInTheDocument();
   expect(within(panel).getByText(/Actualización bancaria:.*31-10-2026/)).toBeInTheDocument();
   expect(within(panel).getByText(/Consulta del saldo:.*01-11-2026/)).toBeInTheDocument();
   expect(within(panel).getByText(/no incluye línea de crédito/i)).toBeInTheDocument();
@@ -40,15 +40,15 @@ test('solo consulta la base local con no-store, sin parámetros ni storage', asy
 });
 test('cero bancario real no se confunde con saldo ausente', async () => {
   axios.get.mockResolvedValue({ data: bank({ available: '0', current: '0' }) }); mount({ calculatedBalance: 0 });
-  expect(await screen.findByTestId('bank-available-value')).toHaveTextContent('$0'); expect(screen.getByText(/El saldo bancario y el cálculo del historial coinciden/)).toBeInTheDocument();
+  expect(await screen.findByTestId('bank-available-value')).toHaveTextContent('$0'); expect(screen.queryByText(/cálculo del historial/)).not.toBeInTheDocument();
 });
-test('conserva importes negativos y diferencia negativa', async () => {
+test('conserva el importe negativo oficial sin otro saldo alternativo', async () => {
   axios.get.mockResolvedValue({ data: bank({ available: '-1234567', current: '-1200000' }) }); mount({ calculatedBalance: 1000000 });
-  expect(await screen.findByText('-$1.234.567')).toBeInTheDocument(); expect(screen.getByText(/Diferencia con el historial:.*-\$2.234.567/)).toBeInTheDocument();
+  expect(await screen.findByText('-$1.234.567')).toBeInTheDocument(); expect(screen.getByText(/Saldo contable:.*-\$1.200.000/)).toBeInTheDocument(); expect(screen.queryByText(/Diferencia con el historial/)).not.toBeInTheDocument();
 });
-test('montos y diferencia por encima de precisión Number permanecen exactos', async () => {
+test('disponible y contable por encima de precisión Number permanecen exactos', async () => {
   axios.get.mockResolvedValue({ data: bank({ available: '9007199254740993', current: '9007199254740992' }) }); mount({ calculatedBalance: '9007199254740992' });
-  expect(await screen.findByText('$9.007.199.254.740.993')).toBeInTheDocument(); expect(screen.getByText(/Diferencia con el historial:.*\$1$/)).toBeInTheDocument();
+  expect(await screen.findByText('$9.007.199.254.740.993')).toBeInTheDocument(); expect(screen.getByText(/Saldo contable:.*\$9.007.199.254.740.992/)).toBeInTheDocument(); expect(screen.queryByText(/Diferencia con el historial/)).not.toBeInTheDocument();
 });
 test('saldo antiguo conserva cifra y advierte que no confirma el saldo actual del portal', async () => {
   axios.get.mockResolvedValue({ data: bank({ freshness: 'stale' }) }); mount();
@@ -61,7 +61,7 @@ test('saldo sin fecha bancaria muestra vigencia desconocida', async () => {
 test('snapshot ausente no inventa saldo cero', async () => {
   axios.get.mockResolvedValue({ data: bank({ state: 'unavailable', available: null, current: null, bankUpdatedAt: null, queriedAt: null, freshness: 'unknown' }) }); mount();
   expect(await screen.findByText('Saldo bancario no disponible')).toBeInTheDocument(); expect(screen.queryByTestId('bank-available-value')).not.toBeInTheDocument();
-  expect(screen.getByText(/El saldo calculado proviene del historial/)).toBeInTheDocument();
+  expect(screen.queryByText(/saldo calculado|proviene del historial/i)).not.toBeInTheDocument(); expect(screen.getByText(/saldo guardado/)).toBeInTheDocument();
 });
 test.each([
   { user: null, space: { ownerId: 'owner-fixture', isOwner: true } },
@@ -89,9 +89,9 @@ test('cambiar sesión borra inmediatamente saldo anterior y descarta respuesta t
   expect(signal.aborted).toBe(true); expect(await screen.findByText('$7.777')).toBeInTheDocument();
   await act(async () => old.resolve({ data: bank() })); expect(screen.queryByText('$1.234.567')).not.toBeInTheDocument();
 });
-test('cambiar período aborta respuesta antigua; actualizar cálculo no repite consulta bancaria', async () => {
+test('cambiar período aborta respuesta antigua; props legacy no crean otra referencia de saldo', async () => {
   axios.get.mockResolvedValue({ data: bank() }); const view = mount(); await screen.findByText('$1.234.567');
-  view.rerender(element({ calculatedBalance: 1200000 })); expect(screen.getByText(/Diferencia con el historial:.*\$34.567/)).toBeInTheDocument(); expect(axios.get).toHaveBeenCalledTimes(1);
+  view.rerender(element({ calculatedBalance: 1200000 })); expect(screen.queryByText(/Diferencia con el historial/)).not.toBeInTheDocument(); expect(screen.getByText('$1.234.567')).toBeInTheDocument(); expect(axios.get).toHaveBeenCalledTimes(1);
   view.rerender(element({ year: 2027 })); await waitFor(() => expect(axios.get).toHaveBeenCalledTimes(2));
 });
 test('desmontar aborta el request pendiente', () => { const pending = deferred(); axios.get.mockReturnValue(pending.promise); const view = mount(); const signal = axios.get.mock.calls[0][1].signal; view.unmount(); expect(signal.aborted).toBe(true); });
@@ -100,3 +100,10 @@ test('un cálculo inválido o ausente no produce una diferencia falsa', async ()
 });
 
 test('HRO: miembro consulta saldo guardado del hogar sin acciones de proveedor',async()=>{useAuth.mockReturnValue({user:{id:'member-fixture'}});useSpace.mockReturnValue({activeSpace:{ownerId:'owner-fixture',isOwner:false,canEdit:false,canDelete:false}});axios.get.mockResolvedValue({data:bank()});mount();expect(await screen.findByText('$1.234.567')).toBeInTheDocument();expect(axios.get.mock.calls.map(call=>call[0])).toEqual([PATH]);expect(screen.queryByRole('button')).not.toBeInTheDocument();});
+
+test('regresar al teléfono vuelve a leer solo el snapshot guardado y actualiza la referencia única', async () => {
+  axios.get.mockResolvedValueOnce({ data: bank() }).mockResolvedValueOnce({ data: bank({ available: '2222222' }) });
+  mount(); await screen.findByText('$1.234.567'); fireEvent(window, new Event('focus'));
+  expect(await screen.findByText('$2.222.222')).toBeInTheDocument();
+  expect(axios.get.mock.calls.map(call => call[0])).toEqual([PATH, PATH]);
+});

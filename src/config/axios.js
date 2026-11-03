@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { notifyFinancialDataChanged } from '../services/financialDataEvents';
 import {
   getActiveSpaceOwner,
   SPACE_FORBIDDEN_EVENT,
@@ -31,7 +32,16 @@ axios.interceptors.request.use(
 
 // Revocación en vivo: membresía inexistente/inactiva → volver al espacio propio
 axios.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = String(response.config?.method || 'get').toLowerCase();
+    let path = '';
+    try { path = new URL(response.config?.url || '', window.location.origin).pathname; } catch (_) { /* Not a financial URL. */ }
+    if (['post', 'put', 'patch', 'delete'].includes(method)
+      && /^\/api\/(?:transactions|intl-unbilled|checking|projected|installments|expense-splits)(?:\/|$)|^\/api\/sync\/sync-emails$/.test(path)) {
+      notifyFinancialDataChanged();
+    }
+    return response;
+  },
   (error) => {
     if (
       error.response?.status === 403 &&

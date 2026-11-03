@@ -1,17 +1,11 @@
 const { withCheckingWriteTransaction } = require('./withCheckingWriteTransaction');
+const { getCanonicalCheckingBalance, isValidBankBalanceSnapshot: validSnapshot } = require('./canonicalCheckingBalanceService');
 
 class FintocBankBalanceError extends Error {
   constructor(status, code, message) { super(message); this.name = 'FintocBankBalanceError'; this.status = status; this.code = code; }
 }
 const failure = (status, suffix, message) => new FintocBankBalanceError(status, `FINTOC_BALANCE_${suffix}`, message);
 const iso = value => value && Number.isFinite(new Date(value).getTime()) ? new Date(value).toISOString() : null;
-const signedInteger = value => typeof value === 'string' && /^(0|-?[1-9]\d*)$/.test(value)
-  && Number.isSafeInteger(Number(value)) && String(Number(value)) === value;
-function validSnapshot(snapshot) {
-  return snapshot?.currency === 'CLP' && signedInteger(snapshot.available) && signedInteger(snapshot.current)
-    && typeof snapshot.queriedAt === 'string' && iso(snapshot.queriedAt)
-    && (snapshot.bankUpdatedAt === null || (typeof snapshot.bankUpdatedAt === 'string' && iso(snapshot.bankUpdatedAt)));
-}
 
 /** Additive bank metadata only; neither an older request nor older bank data can regress it. */
 async function storeBankBalance(client, config, snapshot) {
@@ -42,21 +36,12 @@ function createFintocBankBalanceService({ db, provider, env = process.env, now =
   }
   async function getBankBalance(actorId) {
     const config = owner(actorId);
-    try {
-      const row = (await pool.query(`SELECT currency,available::text,current::text,bank_updated_at,queried_at
-        FROM fintoc_bank_balances WHERE user_id=$1 AND account_id=$2`, [config.userId, config.accountId])).rows[0];
-      if (!row) return { provider: 'fintoc', currency: 'CLP', available: null, current: null,
-        bankUpdatedAt: null, queriedAt: null, freshness: 'unknown', state: 'unavailable' };
-      const bankUpdatedAt = iso(row.bank_updated_at), queriedAt = iso(row.queried_at);
-      const snapshot = { currency: row.currency, available: String(row.available), current: String(row.current), bankUpdatedAt, queriedAt };
-      if (!validSnapshot(snapshot)) throw failure(502, 'INVALID_RESPONSE', 'El saldo bancario guardado no pudo validarse.');
-      const age = bankUpdatedAt ? new Date(now()).getTime() - Date.parse(bankUpdatedAt) : null;
-      const freshness = age === null || age < -300000 ? 'unknown' : age > 86400000 ? 'stale' : 'current';
-      return { provider: 'fintoc', ...snapshot, freshness, state: 'available' };
-    } catch (error) {
-      if (error instanceof FintocBankBalanceError) throw error;
-      throw failure(500, 'STORAGE_ERROR', 'No se pudo consultar el saldo bancario.');
+    const balance = await getCanonicalCheckingBalance(config.userId, { query: pool.query.bind(pool), env, now });
+    if (balance.state === 'error') {
+      const invalid = balance.reason === 'FINTOC_BALANCE_INVALID_RESPONSE';
+      throw failure(invalid ? 502 : 500, invalid ? 'INVALID_RESPONSE' : 'STORAGE_ERROR', 'No se pudo consultar el saldo bancario.');
     }
+    return balance;
   }
   async function refreshBalance(actorId) {
     const config = owner(actorId);

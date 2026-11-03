@@ -41,11 +41,12 @@ function getDB() {
  */
 export async function cacheRead(key, data) {
   try {
+    const entryKey = nsKey(key);
     const db = await getDB();
     await db.put(
       STORE_NAME,
       { data, cachedAt: Date.now() },
-      nsKey(key)
+      entryKey
     );
   } catch (err) {
     // La caché es best-effort: si falla, no rompemos la app.
@@ -61,8 +62,9 @@ export async function cacheRead(key, data) {
  */
 export async function getCachedRead(key) {
   try {
+    const entryKey = nsKey(key);
     const db = await getDB();
-    const entry = await db.get(STORE_NAME, nsKey(key));
+    const entry = await db.get(STORE_NAME, entryKey);
     if (!entry) return null;
     return entry.data ?? null;
   } catch (err) {
@@ -79,8 +81,9 @@ export async function getCachedRead(key) {
  */
 export async function getCachedEntry(key) {
   try {
+    const entryKey = nsKey(key);
     const db = await getDB();
-    const entry = await db.get(STORE_NAME, nsKey(key));
+    const entry = await db.get(STORE_NAME, entryKey);
     return entry || null;
   } catch (err) {
     return null;

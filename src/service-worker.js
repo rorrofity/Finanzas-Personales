@@ -49,6 +49,8 @@ registerRoute(
     url.pathname === '/api/dashboard/expense-evolution'
     || url.pathname === '/api/dashboard/expense-evolution/transactions'
     || url.pathname === '/api/dashboard/overview'
+    || url.pathname === '/api/financial-health/summary'
+    || url.pathname === '/api/checking/global-balance'
     || url.pathname === '/api/checking/fintoc'
     || url.pathname.startsWith('/api/checking/fintoc/')
     || url.pathname === '/api/card-statements'
@@ -57,6 +59,20 @@ registerRoute(
   new NetworkOnly(),
   'GET'
 );
+
+// Remove legacy URL-only copies when this worker takes control. Health reads
+// now use the explicit identity+household+period cache in the application.
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    if (typeof caches === 'undefined' || !(await caches.has('api-read-cache'))) return;
+    const cache = await caches.open('api-read-cache');
+    const requests = await cache.keys();
+    await Promise.all(requests.filter(request => {
+      const path = new URL(request.url).pathname;
+      return path === '/api/financial-health/summary' || path === '/api/checking/global-balance';
+    }).map(request => cache.delete(request)));
+  })());
+});
 
 // API de LECTURA (GET): NetworkFirst — intenta red, cae a caché si no hay red.
 registerRoute(
@@ -120,7 +136,12 @@ self.addEventListener('push', (event) => {
     tag: 'sync-summary',
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(Promise.all([
+    self.registration.showNotification(title, options),
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      clients.forEach(client => { try { client.postMessage({ type: 'FINANCIAL_DATA_CHANGED' }); } catch (_) { /* A window may have closed. */ } });
+    }).catch(() => {}),
+  ]));
 });
 
 self.addEventListener('notificationclick', (event) => {

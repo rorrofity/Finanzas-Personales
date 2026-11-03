@@ -6,6 +6,8 @@ import theme from '../../theme';
 import axios from '../../config/axios';
 
 jest.mock('../../config/axios', () => ({ get: jest.fn() }));
+jest.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { id: 'fixture-reader' } }) }));
+jest.mock('../../services/readCache', () => ({ cacheRead: jest.fn(), getCachedEntry: jest.fn().mockResolvedValue(null) }));
 jest.mock('../../components/MonthPicker', () => () => <div>Período octubre 2026</div>);
 jest.mock('../../contexts/PeriodContext', () => ({
   usePeriod: () => ({ year: 2026, month: 10 }),
@@ -52,7 +54,7 @@ test('la composición deriva del mismo resumen y no consulta otra distribución 
   expect(screen.getByText('20%')).toBeVisible();
   expect(screen.getByText('25%')).toBeVisible();
   expect(axios.get).toHaveBeenCalledTimes(1);
-  expect(axios.get).toHaveBeenCalledWith('/api/financial-health/summary', { params: { year: 2026, month: 10 } });
+  expect(axios.get).toHaveBeenCalledWith('/api/financial-health/summary', expect.objectContaining({ params: { year: 2026, month: 10 }, timeout: 15000, signal: expect.any(AbortSignal) }));
 });
 
 test('sin ingresos no presenta cero por ciento como una comparación válida', async () => {

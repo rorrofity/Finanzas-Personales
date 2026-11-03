@@ -72,7 +72,9 @@ test.describe('Totales compactos (Req 12.10)', () => {
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) })
     );
     await page.goto('/checking');
-    await expect(page.getByText(/Saldo calculado/i).first()).toBeVisible();
+    await expect(page.getByTestId('totals-row').getByText('Total Abonos', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('totals-row').getByText('Total Cargos', { exact: true })).toBeVisible();
+    await expect(page.getByText('Saldo calculado', { exact: true })).toHaveCount(0);
     expect(await totalsInOneRow(page, 'totals-row')).toBe(true);
     await expect
       .poll(async () => page.evaluate(() => document.documentElement.scrollWidth))

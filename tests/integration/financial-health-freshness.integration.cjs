@@ -1,0 +1,73 @@
+'use strict';
+/** HFS: isolated PostgreSQL/HTTP fixture. No .env, production, provider or financial writes during reads. */
+const assert=require('assert/strict'),fs=require('fs'),path=require('path'),crypto=require('crypto'),Module=require('module');
+const {execFileSync}=require('child_process'),{Pool}=require('pg'),express=require('express'),axios=require('axios');
+const APP=path.resolve(__dirname,'../..'),PG='/opt/homebrew/bin',base='/private/tmp';
+let directory,pool,server,started=false,originalLoad=Module._load;
+const id=()=>crypto.randomUUID(),owner=id(),member=id(),other=id(),account='acc_hfs_fixture',fixed=new Date('2026-11-02T15:00:00Z');
+const safeEnv=Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('PG')&&!key.startsWith('DB_')));
+const run=(name,args)=>execFileSync(path.join(PG,name),args,{cwd:directory,env:safeEnv,stdio:['ignore','pipe','pipe'],timeout:90000});
+const financial=['categories','transactions','intl_unbilled','checking_transactions','checking_balances','installment_plans','installment_occurrences','projected_templates','projected_occurrences','imports','credit_cards','expense_splits','expense_split_parts','fintoc_bank_balances'];
+(async()=>{
+ directory=fs.mkdtempSync(path.join(base,'finanzas-hfs-health-'));fs.chmodSync(directory,0o700);const data=path.join(directory,'data'),socket=path.join(directory,'socket');fs.mkdirSync(socket,{mode:0o700});const port=56500+process.pid%400,database='hfs_'+crypto.randomBytes(5).toString('hex');
+ run('initdb',['-D',data,'--auth-local=trust','--auth-host=reject','-U','postgres','--encoding=UTF8','--no-locale']);
+ started=true;run('pg_ctl',['-D',data,'-l',path.join(directory,'postgres.log'),'-o',`-c listen_addresses='' -c unix_socket_directories='${socket}' -c port=${port}`,'-w','start']);run('createdb',['-h',socket,'-p',String(port),'-U','postgres',database]);
+ const config={host:socket,port,database,user:'postgres',password:'',max:8};pool=new Pool(config);
+ assert.equal((await pool.query('SHOW listen_addresses')).rows[0].listen_addresses,'');
+ await pool.query(`CREATE TABLE users(id uuid PRIMARY KEY,nombre text,email text);
+ CREATE TABLE categories(id int PRIMARY KEY,user_id uuid,name text);
+ CREATE TABLE imports(id uuid PRIMARY KEY,network text,provider text,period_year int,period_month int);
+ CREATE TABLE transactions(id uuid PRIMARY KEY,user_id uuid,import_id uuid,fecha date,descripcion text,monto numeric(14,2),tipo text,category_id int,billing_year int,billing_month int,metadata jsonb,created_at timestamptz DEFAULT now(),updated_at timestamptz DEFAULT now());
+ CREATE TABLE intl_unbilled(id uuid PRIMARY KEY,user_id uuid,brand text,fecha date,descripcion text,amount_usd numeric,exchange_rate numeric,amount_clp numeric,period_year int,period_month int,tipo text,category_id int,updated_at timestamptz DEFAULT now());
+ CREATE TABLE checking_transactions(id uuid PRIMARY KEY,user_id uuid,fecha date,descripcion text,amount numeric,tipo text,category_id int,year int,month int);
+ CREATE TABLE checking_balances(user_id uuid,year int,month int,initial_balance numeric,known_balance numeric,balance_date date,updated_at timestamptz DEFAULT now());
+ CREATE TABLE installment_plans(id uuid PRIMARY KEY,user_id uuid,brand text,updated_at timestamptz DEFAULT now());
+ CREATE TABLE installment_occurrences(id uuid PRIMARY KEY,plan_id uuid,year int,month int,amount numeric,active boolean,updated_at timestamptz DEFAULT now());
+ CREATE TABLE projected_templates(id uuid PRIMARY KEY,user_id uuid,nombre text,tipo text,monto numeric(14,2),category_id int,notas text,day_of_month int,start_year int,start_month int,repeat_monthly boolean,updated_at timestamptz DEFAULT now());
+ CREATE TABLE projected_occurrences(id uuid PRIMARY KEY,user_id uuid,template_id uuid,year int,month int,fecha date,nombre text,tipo text,monto numeric(14,2),category_id int,notas text,active boolean,updated_at timestamptz DEFAULT now());
+ CREATE TABLE credit_cards(id uuid PRIMARY KEY,user_id uuid,network text);
+ CREATE TABLE expense_splits(id uuid PRIMARY KEY,user_id uuid,source text,transaction_id uuid,intl_unbilled_id uuid,checking_transaction_id uuid,amount_clp numeric(14,2),version uuid);
+ CREATE TABLE expense_split_parts(split_id uuid,position int,amount_clp numeric(14,2),category_id int);`);
+ for(const name of ['026_create_space_members.sql','030_create_sync_runs.sql','032_create_fintoc_bank_balances.sql'])await pool.query(fs.readFileSync(path.join(APP,'backend/migrations',name),'utf8'));
+ await pool.query("INSERT INTO users VALUES($1,'Owner fixture','owner@fixture.invalid'),($2,'Reader fixture','reader@fixture.invalid'),($3,'Other fixture','other@fixture.invalid')",[owner,member,other]);
+ await pool.query("INSERT INTO space_members(owner_user_id,member_user_id,invited_email,status,can_edit,can_delete) VALUES($1,$2,'reader@fixture.invalid','linked',false,false)",[owner,member]);
+ await pool.query("INSERT INTO categories VALUES(1,$1,'Original fixture'),(2,$1,'Split fixture')",[owner]);
+ const imported=id(),transaction=id(),installment=id();await pool.query("INSERT INTO imports VALUES($1,'visa','fixture',2026,11)",[imported]);
+ await pool.query("INSERT INTO transactions(id,user_id,import_id,fecha,descripcion,monto,tipo,category_id,billing_year,billing_month,metadata) VALUES($1,$2,$3,'2026-10-15','Original fixture',180000,'gasto',1,2026,11,'{}')",[transaction,owner,imported]);
+ await pool.query("INSERT INTO checking_balances VALUES($1,2026,7,900000,900000,'2026-07-15',now())",[owner]);
+ await pool.query("INSERT INTO checking_transactions VALUES($1,$2,'2026-11-01','Already reflected in bank',50000,'cargo',1,2026,11)",[id(),owner]);
+ await pool.query("INSERT INTO fintoc_bank_balances VALUES($1,$2,'CLP',500000,480000,'2026-11-02T14:00Z','2026-11-02T14:01Z')",[owner,account]);
+ await pool.query("INSERT INTO installment_plans(id,user_id,brand) VALUES($1,$2,'visa')",[installment,owner]);await pool.query('INSERT INTO installment_occurrences(id,plan_id,year,month,amount,active) VALUES($1,$2,2026,11,5000,true)',[id(),installment]);
+ const split=id();await pool.query("INSERT INTO expense_splits VALUES($1,$2,'tc_nacional',$3,NULL,NULL,180000,$4)",[split,owner,transaction,id()]);await pool.query('INSERT INTO expense_split_parts VALUES($1,0,100000,2),($1,1,80000,NULL)',[split]);
+ const templates=[];let expectedExpenses=0,expectedIncome=0;
+ for(let index=0;index<12;index++){const template=id(),income=index===2,amount=index===0?'0.10':index===1?'0.20':income?'2000':String(index*10);templates.push(template);if(income)expectedIncome+=Number(amount);else expectedExpenses=Math.round((expectedExpenses+Number(amount))*100)/100;await pool.query('INSERT INTO projected_templates(id,user_id,nombre,tipo,monto,category_id,day_of_month,start_year,start_month,repeat_monthly) VALUES($1,$2,$3,$4,$5,1,31,2026,7,true)',[template,owner,'Projection fixture '+index,income?'ingreso':'gasto',amount]);}
+ // These stored overrides affect only the future fixture period; November still has 12 missing rows.
+ await pool.query("INSERT INTO projected_occurrences(id,user_id,template_id,year,month,fecha,nombre,tipo,monto,category_id,active) VALUES($1,$2,$3,2028,2,'2028-02-27','Stored override','gasto',15,2,true),($4,$2,$5,2028,2,'2028-02-28','Disabled occurrence','gasto',.20,1,false)",[id(),owner,templates[0],id(),templates[1]]);
+ await pool.query("INSERT INTO projected_templates(id,user_id,nombre,tipo,monto,category_id,day_of_month,start_year,start_month,repeat_monthly) VALUES($1,$2,'Future template','gasto',999,1,10,2028,3,true),($3,$2,'One-off template','gasto',999,1,10,2026,10,false)",[id(),owner,id()]);
+ await pool.query("INSERT INTO sync_runs(user_id,trigger,imported,skipped,created_at) VALUES($1,'scheduled',0,0,'2026-11-02T14:00Z')",[owner]);
+ const snapshot=async()=>{const rows={};for(const table of financial)rows[table]=(await pool.query(`SELECT row_to_json(t)::text data FROM ${table} t ORDER BY row_to_json(t)::text`)).rows;return crypto.createHash('sha256').update(JSON.stringify(rows)).digest('hex');};
+ const before=await snapshot();await pool.end();pool=new Pool({...config,options:'-c default_transaction_read_only=on'});
+ const reads=[];const guard=(client,sql,values)=>{assert.match(sql.trim(),/^(SELECT|WITH|BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)\b/i);assert(!/\b(?:INSERT|UPDATE|DELETE|ALTER)\b/i.test(sql));reads.push(sql);return client.query(sql,values);};
+ const db={query:(sql,values)=>guard(pool,sql,values),pool:{connect:async()=>{const client=await pool.connect();return{query:(sql,values)=>guard(client,sql,values),release:()=>client.release()};}}};
+ const dbPath=path.join(APP,'backend/config/database.js');Module._load=function(request,parent,isMain){let resolved;try{resolved=Module._resolveFilename(request,parent);}catch(_){}if(resolved===dbPath)return db;return originalLoad.call(this,request,parent,isMain);};
+ Object.assign(process.env,{NODE_ENV:'test',FINTOC_OWNER_USER_ID:owner,FINTOC_ACCOUNT_ID:account,JWT_SECRET:'fictitious-hfs-isolated-secret',AUTH_SESSION_VERSION:'fixture-only'});
+ const {auth,generateToken}=require(path.join(APP,'backend/middleware/auth')),{resolveSpace}=require(path.join(APP,'backend/middleware/resolveSpace'));
+ const {createFinancialHealthController}=require(path.join(APP,'backend/controllers/financialHealthController'));
+ const health=createFinancialHealthController({db,now:()=>fixed});
+ const app=express();app.use(auth,resolveSpace);app.get('/health',health.getSummary);app.get('/checking',require(path.join(APP,'backend/controllers/checkingController')).globalBalance);app.get('/overview',require(path.join(APP,'backend/controllers/dashboardController')).getOverview);
+ server=await new Promise(resolve=>{const listening=app.listen(0,'127.0.0.1',()=>resolve(listening));});const baseUrl='http://127.0.0.1:'+server.address().port;
+ const call=(route,actor=owner,sharedOwner)=>axios.get(baseUrl+route,{headers:{Authorization:'Bearer '+generateToken(actor),...(sharedOwner?{'X-Space-Owner':sharedOwner}:{})},validateStatus:()=>true,timeout:10000});
+ const healthRes=await call('/health?year=2026&month=11');assert.equal(healthRes.status,200);const summary=healthRes.data;
+ assert.equal(summary.checking.currentBalance,500000);assert.equal(summary.checking.lastUpdated,'2026-11-02T14:00:00.000Z');assert.equal(summary.projected.expenses,expectedExpenses);assert.equal(summary.projected.income,expectedIncome);assert.equal(summary.projected.details.expenses.length+summary.projected.details.income.length,12);assert(summary.projected.details.expenses.every(row=>row.virtual));assert(summary.projected.details.expenses.every(row=>row.fecha==='2026-11-30'));assert.equal(summary.creditCards.visa.total,185000,'Split parts do not duplicate the original purchase');assert.equal(summary.summary.amountsPartial,false);
+ const checking=await call('/checking');assert.equal(checking.status,200);assert.equal(checking.data.saldo_actual,summary.checking.currentBalance);
+ const overview=await call('/overview?year=2026&month=10');assert.equal(overview.status,200);assert.equal(overview.data.disponibleHoy,summary.checking.currentBalance);
+ const shared=await call('/health?year=2026&month=11',member,owner);assert.equal(shared.status,200);assert.deepEqual(shared.data.checking,summary.checking);assert.equal((await call('/health?year=2026&month=11',other,owner)).status,403);
+ const unavailable=await call('/health?year=2026&month=11',other);assert.equal(unavailable.status,200);assert.equal(unavailable.data.checking.currentBalance,null);assert.equal(unavailable.data.summary.healthScore,null);
+ const future=await call('/health?year=2028&month=2');assert.equal(future.status,200);assert(future.data.projected.details.expenses.some(row=>row.name==='Stored override'&&row.amount===15&&!row.virtual));assert(!future.data.projected.details.expenses.some(row=>row.name==='Disabled occurrence'||row.name==='Future template'||row.name==='One-off template'));assert(future.data.projected.details.expenses.some(row=>row.fecha==='2028-02-29'));
+ assert.equal((await call('/health?year=2026&month=0')).status,400);
+ assert.equal((await pool.query('SELECT COUNT(*)::int count FROM projected_occurrences WHERE year=2026 AND month=11')).rows[0].count,0);
+ assert.equal(await snapshot(),before);assert(reads.some(sql=>sql==='BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'));
+ console.log(JSON.stringify({status:'ok',isolatedUnixSocket:true,tcpDisabled:true,financialTablesPreserved:financial.length,canonicalBankBalanceAcrossThreeViews:true,legacyBalanceIgnored:true,twelveVirtualProjectionsIncludedWithoutMaterialization:true,storedOverridesAndInactivePreserved:true,dateClampAndEligibility:true,splitParentsCountedOnce:true,householdReadAndForeignRejection:true,missingBalanceNull:true,readonlyRepeatableSnapshot:true,allReadsNoDml:true,productionAccess:false}));
+})().catch(error=>{fs.writeFileSync(path.join(base,'hfs-health-integration-error-private.log'),String(error.stack),{mode:0o600});console.error(JSON.stringify({status:'failed',code:'HFS_ISOLATED_INTEGRATION_FAILED'}));process.exitCode=1;}).finally(async()=>{
+ try{if(server)await new Promise(resolve=>server.close(resolve));if(pool)await pool.end();if(started){run('pg_ctl',['-D',path.join(directory,'data'),'-m','fast','-w','stop']);started=false;}if(directory&&!started)fs.rmSync(directory,{recursive:true,force:true});}finally{Module._load=originalLoad;}
+});

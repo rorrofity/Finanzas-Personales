@@ -9,6 +9,12 @@ const shift = (year, month, count) => {
   return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
 };
 const clp = value => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(value);
+function canonicalFixtureBalance(amount = 1031242) {
+  const value = amount === null ? null : String(amount);
+  return { source: 'fintoc', provider: 'fintoc', currency: 'CLP', amount: value, available: value, current: value,
+    state: value === null ? 'unavailable' : 'available', freshness: value === null ? 'unknown' : 'current', reason: null,
+    bankUpdatedAt: value === null ? null : '2026-11-02T09:51:26.000Z', queriedAt: value === null ? null : '2026-11-02T10:00:01.000Z' };
+}
 
 function amountFor(categoryId, year, month, options = {}) {
   const index = CATEGORIES.findIndex(c => c.id === categoryId);
@@ -85,10 +91,11 @@ async function installDashboardFixtures(page, options = {}) {
     const responses = {
       '/api/auth/profile': { user: { id: 'fixture-user', nombre: 'Usuario de prueba', email: 'demo@example.invalid' } },
       '/api/space/memberships': { spaces: [] }, '/api/space/members': { members: [] }, '/api/suspicious/count': { count: 0 },
-      '/api/dashboard/overview': { period: { year: 2026, month: 10 }, balance: { value: 650000 }, gastos: { value: 1950000 }, ingresos: { value: 2600000 }, disponibleHoy: 1031242, compromisos: { total: 2100000, tcNoFacturado: 1200000, cuotas: 600000, intl: 0, proyectados: 300000 }, topCategorias: [] },
+      '/api/dashboard/overview': { period: { year: 2026, month: 10 }, balance: { value: 650000 }, gastos: { value: 1950000 }, ingresos: { value: 2600000 }, disponibleHoy: 1031242, checking: canonicalFixtureBalance(), compromisos: { total: 2100000, tcNoFacturado: 1200000, cuotas: 600000, intl: 0, proyectados: 300000 }, topCategorias: [] },
       '/api/dashboard/monthly-history': [], '/api/dashboard/category-evolution': { data: [], categories: [] },
       '/api/financial-health/summary': {
-        checking: { currentBalance: 1031242 },
+        generatedAt: '2026-11-02T20:01:00.000Z', checking: { ...canonicalFixtureBalance(), currentBalance: 1031242, lastUpdated: canonicalFixtureBalance().bankUpdatedAt },
+        sources: { checking: { ...canonicalFixtureBalance(), asOf: canonicalFixtureBalance().bankUpdatedAt }, ...Object.fromEntries(['national', 'international', 'installments', 'projected'].map(name => [name, { state: 'available', freshness: 'current', asOf: '2026-11-02T20:00:00.000Z', errorCode: null }])) },
         creditCards: { combined: 1850000, visa: { total: 1200000, unbilled: 900000, installments: 300000, international: 0, payments: 0 }, mastercard: { total: 650000, unbilled: 350000, installments: 300000, international: 0, payments: 0 } },
         projected: { income: 2000000, expenses: 1500000, details: { income: [{ name: 'Ingreso ficticio', amount: 2000000 }], expenses: Array.from({ length: 8 }, (_, i) => ({ name: `Compromiso ficticio ${i + 1}`, amount: 187500 })) } },
         summary: { healthScore: 25, healthStatus: 'critical', totalCommitments: 3350000, projectedBalance: -318758 }, alerts: [],
@@ -112,4 +119,4 @@ async function installDashboardFixtures(page, options = {}) {
   return state;
 }
 
-module.exports = { CATEGORIES, makeEvolution, makeDetail, installDashboardFixtures, clp };
+module.exports = { CATEGORIES, makeEvolution, makeDetail, installDashboardFixtures, clp, canonicalFixtureBalance };

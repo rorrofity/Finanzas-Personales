@@ -1,7 +1,9 @@
 const db = require('../config/database');
 const { expenseAllocationJoin } = require('../utils/expenseAllocationSql');
+const { effectiveProjectionsSql } = require('../services/effectiveProjectionsService');
 
 const { computeCommitments } = require('../utils/commitments');
+const { getCanonicalCheckingBalance } = require('../services/canonicalCheckingBalanceService');
 
 /**
  * Totales de un mes calendario (mismas definiciones que getMonthlyHistory):
@@ -115,24 +117,9 @@ const getOverview = async (req, res) => {
       };
     }
 
-    // K6: saldo conocido de cuenta corriente (misma lógica que salud financiera)
-    let disponibleHoy = 0;
-    const curCheckingRes = await db.query(`
-      SELECT COALESCE(known_balance, initial_balance, 0) as saldo
-      FROM checking_balances
-      WHERE user_id = $1 AND year = $2 AND month = $3
-    `, [userId, now.getFullYear(), now.getMonth() + 1]);
-    if (curCheckingRes.rows.length > 0) {
-      disponibleHoy = Number(curCheckingRes.rows[0].saldo) || 0;
-    } else {
-      const fallbackRes = await db.query(`
-        SELECT COALESCE(known_balance, initial_balance, 0) as saldo
-        FROM checking_balances
-        WHERE user_id = $1 AND known_balance IS NOT NULL
-        ORDER BY year DESC, month DESC LIMIT 1
-      `, [userId]);
-      disponibleHoy = Number(fallbackRes.rows[0]?.saldo) || 0;
-    }
+    // K6: the same saved bank snapshot used throughout the application.
+    const checking = await getCanonicalCheckingBalance(userId, { query: db.query });
+    const disponibleHoy = checking.amount === null ? null : Number(checking.amount);
 
     // K5: compromisos del período siguiente al seleccionado
     const compromisos = await computeCommitments(userId, nextYear, nextMonth);
@@ -156,6 +143,7 @@ const getOverview = async (req, res) => {
       tasaAhorro: cur.ingresos > 0 ? (cur.ingresos - cur.gastos) / cur.ingresos : null,
       burnRate,
       disponibleHoy,
+      checking,
       compromisos,
       topCategorias,
     });
@@ -436,17 +424,13 @@ const getCategoryBreakdown = async (req, res) => {
                     
                     -- Gastos fijos proyectados
                     SELECT 
-                        pt.category_id,
-                        COALESCE(po.monto, pt.monto) as amount,
+                        projection.category_id,
+                        projection.monto::numeric as amount,
                         'proyectado' as source,
-                        pt.id::text as parent_id
-                    FROM projected_templates pt
-                    LEFT JOIN projected_occurrences po 
-                        ON po.template_id = pt.id 
-                        AND po.year = $2 
-                        AND po.month = $3
-                    WHERE pt.user_id = $1
-                      AND pt.tipo = 'gasto'
+                        projection.template_id::text as parent_id
+                    FROM (${effectiveProjectionsSql()}) projection
+                    WHERE projection.active = true
+                      AND projection.tipo = 'gasto'
                 )
                 SELECT 
                     COALESCE(c.name, 'Sin categoría') as categoria,

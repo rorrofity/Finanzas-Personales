@@ -14,7 +14,9 @@ jest.mock('../../contexts/SpaceContext', () => ({ useSpace: jest.fn() }));
 jest.mock('../../contexts/PeriodContext', () => ({ usePeriod: jest.fn() }));
 jest.mock('../../components/MonthPicker', () => () => null);
 jest.mock('../../components/FintocCheckingPreview', () => () => null);
-jest.mock('../../components/FintocBankBalance', () => ({ calculatedBalance }) => <div data-testid="bank-comparison-input">{calculatedBalance === null ? 'unavailable' : String(calculatedBalance)}</div>);
+// Bank precision/identity races are covered by the bank component's own suite.
+// This page covers the single source presentation and late ledger requests.
+jest.mock('../../components/FintocBankBalance', () => () => <div data-testid="official-bank-panel">Saldo bancario no disponible</div>);
 const deferred = () => { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; };
 const element = () => <ThemeProvider theme={createAppTheme('light')}><Checking /></ThemeProvider>;
 beforeEach(() => {
@@ -22,34 +24,38 @@ beforeEach(() => {
   jest.clearAllMocks(); useAuth.mockReturnValue({ user: { id: 'owner-a' } });
   useSpace.mockReturnValue({ activeSpace: { ownerId: 'owner-a', isOwner: true } }); usePeriod.mockReturnValue({ year: 2026, month: 11 });
 });
-function fixtures(balanceResponses) {
-  let balanceCall = 0;
+const movement = name => ({ id: name, descripcion: name, fecha: '2026-11-01', amount: '1234567', tipo: 'abono' });
+function fixtures(rowResponses) {
+  let count = 0;
   axios.get.mockImplementation(path => {
-    if (path === '/api/checking/global-balance') return balanceResponses[balanceCall++];
-    return Promise.resolve({ data: path === '/api/categories' ? [] : { items: [], total: 0 } });
+    if (path === '/api/checking') return rowResponses[count++];
+    if (path === '/api/categories') return Promise.resolve({ data: [] });
+    throw new Error('Unexpected alternate balance request');
   });
 }
-test('el cálculo se muestra completo y se identifica como cálculo del historial', async () => {
-  fixtures([Promise.resolve({ data: { saldo_actual: 1234567 } })]); render(element());
-  const totals = screen.getByTestId('totals-row'); expect(await within(totals).findByText('$1.234.567')).toBeInTheDocument();
-  expect(within(totals).getByText('Saldo calculado')).toBeInTheDocument(); expect(totals).not.toHaveTextContent('$1.235K');
+test('la referencia bancaria es única y los totales del mes son únicamente flujos', async () => {
+  fixtures([Promise.resolve({ data: { items: [movement('Movimiento actual')], total: 1 } })]); render(element());
+  await screen.findByText('Movimiento actual'); const totals = screen.getByTestId('totals-row');
+  expect(totals).not.toHaveTextContent(/Saldo calculado/); expect(within(totals).getByText('Total Abonos')).toBeInTheDocument();
+  expect(screen.getAllByTestId('official-bank-panel')).toHaveLength(1);
+  expect(axios.get.mock.calls.map(([url]) => url)).not.toContain('/api/checking/global-balance');
 });
-test('un cálculo ausente no se convierte en cero para compararlo con el banco', async () => {
-  fixtures([Promise.resolve({ data: {} })]); render(element()); await waitFor(() => expect(axios.get).toHaveBeenCalledTimes(3));
-  expect(screen.getByTestId('bank-comparison-input')).toHaveTextContent('unavailable'); expect(await screen.findByText('Saldo no disponible')).toBeInTheDocument();
+test('un saldo oficial ausente no se sustituye por un cálculo del historial', async () => {
+  fixtures([Promise.resolve({ data: { items: [], total: 0 } })]); render(element()); await waitFor(() => expect(axios.get).toHaveBeenCalledTimes(2));
+  expect(screen.getByTestId('official-bank-panel')).toHaveTextContent('Saldo bancario no disponible'); expect(screen.queryByText(/Saldo calculado/)).not.toBeInTheDocument();
 });
-test('cambiar espacio retira de inmediato el cálculo anterior y descarta respuestas tardías', async () => {
-  const previous = deferred(); fixtures([previous.promise, Promise.resolve({ data: { saldo_actual: 2222222 } })]);
+test('cambiar espacio retira de inmediato el historial anterior y descarta respuestas tardías', async () => {
+  const previous = deferred(); fixtures([previous.promise, Promise.resolve({ data: { items: [movement('Hogar B')], total: 1 } })]);
   const view = render(element()); const oldSignal = axios.get.mock.calls[0][1].signal;
   useSpace.mockReturnValue({ activeSpace: { ownerId: 'shared-b', isOwner: false } }); view.rerender(element());
-  expect(oldSignal.aborted).toBe(true); expect(screen.getByTestId('bank-comparison-input')).toHaveTextContent('unavailable');
-  await screen.findByText('$2.222.222'); await act(async () => previous.resolve({ data: { saldo_actual: 1111111 } }));
-  expect(screen.getByTestId('bank-comparison-input')).toHaveTextContent('2222222'); expect(screen.queryByText('$1.111.111')).not.toBeInTheDocument();
+  expect(oldSignal.aborted).toBe(true);
+  await screen.findByText('Hogar B'); await act(async () => previous.resolve({ data: { items: [movement('Hogar A')], total: 1 } }));
+  expect(screen.queryByText('Hogar A')).not.toBeInTheDocument(); expect(screen.getByText('Hogar B')).toBeInTheDocument();
 });
-test('un saldo ya cargado no se usa en la comparación tras cambiar sesión', async () => {
-  const next = deferred(); fixtures([Promise.resolve({ data: { saldo_actual: 1234567 } }), next.promise]);
-  const view = render(element()); await screen.findByText('$1.234.567');
+test('un historial ya cargado no se conserva al cambiar sesión', async () => {
+  const next = deferred(); fixtures([Promise.resolve({ data: { items: [movement('Sesión A')], total: 1 } }), next.promise]);
+  const view = render(element()); await screen.findByText('Sesión A');
   useAuth.mockReturnValue({ user: { id: 'owner-b' } }); useSpace.mockReturnValue({ activeSpace: { ownerId: 'owner-b', isOwner: true } }); view.rerender(element());
-  expect(screen.getByTestId('bank-comparison-input')).toHaveTextContent('unavailable'); expect(screen.queryByText('$1.234.567')).not.toBeInTheDocument();
-  await act(async () => next.resolve({ data: { saldo_actual: 7654321 } })); expect(screen.getByTestId('bank-comparison-input')).toHaveTextContent('7654321');
+  expect(screen.queryByText('Sesión A')).not.toBeInTheDocument();
+  await act(async () => next.resolve({ data: { items: [movement('Sesión B')], total: 1 } })); expect(screen.getByText('Sesión B')).toBeInTheDocument();
 });

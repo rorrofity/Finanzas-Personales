@@ -1,4 +1,5 @@
 const { withCheckingWriteTransaction } = require('../services/withCheckingWriteTransaction');
+const { getCanonicalCheckingBalance } = require('../services/canonicalCheckingBalanceService');
 
 class Checking {
   constructor(db) { this.query = db.query; this.db = db.pool || db; }
@@ -102,75 +103,14 @@ class Checking {
     const abonos = Number(r.rows[0].abonos || 0);
     const cargos = Number(r.rows[0].cargos || 0);
     const neto = abonos - cargos;
-    const saldo_actual = Number(initial) + neto;
-    return { initial_balance: Number(initial), abonos, cargos, neto, saldo_actual };
+    const saldo_periodo = Number(initial) + neto;
+    return { source: 'historical_ledger', initial_balance: Number(initial), abonos, cargos, neto, saldo_periodo };
   }
 
-  /**
-   * Obtiene el saldo actual de la cuenta corriente
-   * Prioriza: saldo conocido de cartola > cálculo manual
-   */
+  /** Current bank balance only. Historical ledger evidence stays untouched. */
   async globalBalance(userId) {
-    // Primero buscar saldo conocido de cartola (más confiable)
-    const knownRes = await this.query(
-      `SELECT known_balance, balance_date FROM checking_balances 
-       WHERE user_id = $1 AND known_balance IS NOT NULL 
-       ORDER BY balance_date DESC LIMIT 1`,
-      [userId]
-    );
-    
-    if (knownRes.rows.length > 0) {
-      const knownBalance = Number(knownRes.rows[0].known_balance);
-      const balanceDate = knownRes.rows[0].balance_date;
-      
-      // Sumar movimientos POSTERIORES a la fecha del saldo conocido
-      const movRes = await this.query(
-        `SELECT 
-          COALESCE(SUM(CASE WHEN tipo='abono' THEN amount ELSE 0 END),0) AS total_abonos,
-          COALESCE(SUM(CASE WHEN tipo='cargo' THEN amount ELSE 0 END),0) AS total_cargos
-        FROM checking_transactions 
-        WHERE user_id = $1 AND fecha > $2`,
-        [userId, balanceDate]
-      );
-      
-      const abonosPosteriores = Number(movRes.rows[0].total_abonos || 0);
-      const cargosPosteriores = Number(movRes.rows[0].total_cargos || 0);
-      
-      return {
-        known_balance: knownBalance,
-        balance_date: balanceDate,
-        abonos_posteriores: abonosPosteriores,
-        cargos_posteriores: cargosPosteriores,
-        saldo_actual: knownBalance + abonosPosteriores - cargosPosteriores,
-        source: 'cartola'
-      };
-    }
-    
-    // Fallback: calcular desde saldo inicial + movimientos
-    const initialRes = await this.query(
-      `SELECT initial_balance FROM checking_balances WHERE user_id = $1 ORDER BY year ASC, month ASC LIMIT 1`,
-      [userId]
-    );
-    const initialBalance = Number(initialRes.rows[0]?.initial_balance || 0);
-    
-    const movRes = await this.query(
-      `SELECT 
-        COALESCE(SUM(CASE WHEN tipo='abono' THEN amount ELSE 0 END),0) AS total_abonos,
-        COALESCE(SUM(CASE WHEN tipo='cargo' THEN amount ELSE 0 END),0) AS total_cargos
-      FROM checking_transactions WHERE user_id = $1`,
-      [userId]
-    );
-    
-    const totalAbonos = Number(movRes.rows[0].total_abonos || 0);
-    const totalCargos = Number(movRes.rows[0].total_cargos || 0);
-    
-    return {
-      initial_balance: initialBalance,
-      total_abonos: totalAbonos,
-      total_cargos: totalCargos,
-      saldo_actual: initialBalance + totalAbonos - totalCargos,
-      source: 'calculated'
-    };
+    const balance = await getCanonicalCheckingBalance(userId, { query: this.query });
+    return { ...balance, saldo_actual: balance.amount === null ? null : Number(balance.amount) };
   }
 
   async create(userId, data) {

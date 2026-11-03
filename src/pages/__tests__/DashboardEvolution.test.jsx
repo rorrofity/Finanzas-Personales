@@ -25,6 +25,7 @@ const report = (total) => ({
 });
 const result = (total) => ({data:report(total),origin:'network',stale:false,cachedAt:Date.now()});
 const renderPage = () => render(<MemoryRouter><Dashboard /></MemoryRouter>);
+const bankDto = amount => ({ source:'fintoc',amount,available:amount,current:amount,state:'available',freshness:'current',bankUpdatedAt:'2026-10-31T12:00:00Z',queriedAt:'2026-10-31T12:01:00Z' });
 
 describe('Dashboard: selección coordinada del alcance (DCE-14/17)',()=>{
   beforeEach(()=>{
@@ -32,7 +33,7 @@ describe('Dashboard: selección coordinada del alcance (DCE-14/17)',()=>{
     fetchWithCache.mockImplementation((key, fn) => fn());
     axios.get.mockResolvedValue({data:{disponibleHoy:100,compromisos:{total:200}}});
     readExpenseReport.mockResolvedValue(result(500));
-    readExpenseLiquidity.mockResolvedValue({ data: { disponibleHoy:100, compromisos:{total:200} }, origin: 'network', stale:false, cachedAt:Date.UTC(2026,9,31,12) });
+    readExpenseLiquidity.mockResolvedValue({ data: { disponibleHoy:100, checking:bankDto('100'), compromisos:{total:200} }, origin: 'network', stale:false, cachedAt:Date.UTC(2026,9,31,12) });
   });
 
   test('muestra evolución como contenido principal con fuente y ventana explícitas',async()=>{
@@ -72,7 +73,7 @@ describe('Dashboard: selección coordinada del alcance (DCE-14/17)',()=>{
   });
 
   test('liquidez cacheada muestra fecha de referencia y no afirma actualización en vivo', async () => {
-    readExpenseLiquidity.mockResolvedValueOnce({ data: { disponibleHoy:321, compromisos:{total:200} }, origin:'cache', stale:true, cachedAt:Date.UTC(2026,9,30,15) });
+    readExpenseLiquidity.mockResolvedValueOnce({ data: { disponibleHoy:321, checking:bankDto('321'), compromisos:{total:200} }, origin:'cache', stale:true, cachedAt:Date.UTC(2026,9,30,15) });
     renderPage();
     expect(await screen.findByText(/Liquidez consultada:/)).toBeInTheDocument();
     expect(screen.getByText(/Consulta guardada de liquidez; no se pudo actualizar/)).toBeInTheDocument();
@@ -92,7 +93,28 @@ describe('Dashboard: selección coordinada del alcance (DCE-14/17)',()=>{
   });
 
   test('compromisos con USD sin convertir muestran importe parcial sin alterar los gastos históricos', async()=>{
-    readExpenseLiquidity.mockResolvedValueOnce({data:{disponibleHoy:321,compromisos:{total:200,conversionPendingCount:2,amountsPartial:true}},origin:'network',stale:false,cachedAt:Date.UTC(2026,9,31,12)});
+    readExpenseLiquidity.mockResolvedValueOnce({data:{disponibleHoy:321,checking:bankDto('321'),compromisos:{total:200,conversionPendingCount:2,amountsPartial:true}},origin:'network',stale:false,cachedAt:Date.UTC(2026,9,31,12)});
     renderPage();expect(await screen.findByText(/2 movimientos USD sin conversión/)).toBeInTheDocument();expect(screen.getByRole('button',{name:/Compromisos próximos/})).toHaveTextContent('importe parcial');expect(screen.getByTestId('expense-current-total')).toHaveTextContent('$500');expect(screen.getByText('$321')).toBeInTheDocument();
+  });
+
+  test('saldo bancario ausente no convierte null en cero ni recurre a un disponible legacy', async () => {
+    readExpenseLiquidity.mockResolvedValueOnce({ data: { disponibleHoy:99999, checking:{source:'fintoc',state:'unavailable',amount:null,available:null,freshness:'unknown'}, compromisos:{total:200} },origin:'network',cachedAt:Date.now() });
+    renderPage();
+    expect(await screen.findByText('Saldo bancario no disponible')).toBeInTheDocument();
+    expect(screen.queryByText('$99.999')).not.toBeInTheDocument();
+  });
+
+  test('saldo bancario antiguo conserva fecha y no se anuncia como disponible hoy', async () => {
+    readExpenseLiquidity.mockResolvedValueOnce({ data: { disponibleHoy:12345, checking:{source:'fintoc',state:'available',amount:'12345',freshness:'stale',bankUpdatedAt:'2026-10-01T12:00:00Z'}, compromisos:{total:200} },origin:'network',cachedAt:Date.now() });
+    renderPage();
+    expect(await screen.findByText('Último saldo bancario conocido')).toBeInTheDocument();
+    expect(screen.getByText('$12.345')).toBeInTheDocument();
+    expect(screen.getByText(/Actualización bancaria:/)).toBeInTheDocument();
+    expect(screen.queryByText('Disponible hoy')).not.toBeInTheDocument();
+  });
+
+  test('una cifra bancaria vacía no se transforma en cero disponible', async () => {
+    readExpenseLiquidity.mockResolvedValueOnce({ data:{ disponibleHoy:99999,checking:{source:'fintoc',state:'available',amount:'',freshness:'current'},compromisos:{total:200} },origin:'network',cachedAt:Date.now() });
+    renderPage(); expect(await screen.findByText('Saldo bancario no disponible')).toBeInTheDocument();
   });
 });

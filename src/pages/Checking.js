@@ -61,8 +61,6 @@ export default function Checking() {
   const currentScope = useRef(scope);
   currentScope.current = scope;
   const request = useRef({ version: 0, controller: null });
-  const [balanceState, setBalanceState] = useState({ scope, value: null });
-  const globalBalance = balanceState.scope === scope ? balanceState.value : null;
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -91,16 +89,12 @@ export default function Checking() {
     const current = () => !controller.signal.aborted && request.current.version === version && currentScope.current === scope;
     try {
       setLoading(true);
-      setBalanceState({ scope, value: null });
       setRows([]);
-      const [gRes, lRes, cRes] = await Promise.all([
-        axios.get('/api/checking/global-balance', { signal: controller.signal }),
+      const [lRes, cRes] = await Promise.all([
         axios.get('/api/checking', { params: { year, month }, signal: controller.signal }),
         axios.get('/api/categories', { signal: controller.signal }),
       ]);
       if (!current()) return;
-      const calculated = gRes.data?.saldo_actual;
-      setBalanceState({ scope, value: calculated !== undefined && calculated !== null && Number.isFinite(Number(calculated)) ? Number(calculated) : null });
       const items = lRes.data?.items || [];
       setRows(items);
       setTotal(items.length);
@@ -271,19 +265,16 @@ export default function Checking() {
         <MonthPicker />
       </Box>
 
-      <FintocBankBalance year={year} month={month} calculatedBalance={globalBalance} />
+      <FintocBankBalance year={year} month={month} />
 
       <FintocCheckingPreview year={year} month={month} showDailyStatus />
 
       {/* Totales compactos (Epic 12, Req 12.10) */}
       <Grid container spacing={1} sx={{ mb: 2 }} data-testid="totals-row">
-        <Grid item xs={4}>
-          <StatCard label={isMobile ? <>Saldo <br />calculado</> : 'Saldo calculado'} value={globalBalance} accent="primary.main" emptyText={loading ? 'Consultando historial…' : 'Saldo no disponible'} />
-        </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={6}>
           <StatCard label={isMobile ? <>Total <br />Abonos</> : 'Total Abonos'} value={totals.abonos} short accent="success.main" />
         </Grid>
-        <Grid item xs={4}>
+        <Grid item xs={6}>
           <StatCard label={isMobile ? <>Total <br />Cargos</> : 'Total Cargos'} value={totals.cargos} short accent="error.main" />
         </Grid>
       </Grid>
