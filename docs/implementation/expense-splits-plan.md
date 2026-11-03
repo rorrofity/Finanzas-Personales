@@ -11,7 +11,7 @@ Contrato: [ESP-01–13](expense-splits-contract.md), establecido antes de códig
 
 ## Evidencia y resultado
 
-Implementación local completa. Documentos previos modificados por el usuario se mantienen fuera de los commits de esta tarea. Verificación productiva se añadirá tras publicar.
+Implementación probada y desplegada. Documentos previos modificados por el usuario se mantienen fuera de los commits de esta tarea. La verificación productiva se detalla al final.
 
 ### TDD y regresión local
 
@@ -32,3 +32,13 @@ Recuperación si falla la publicación: recuperar el directorio del build anteri
 ### Uso
 
 En una compra elegible, pulsar Dividir gasto. Elegir categoría y monto de cada parte, arrastrar los separadores o escribir importes, añadir partes o repartir por igual y confirmar. Las categorías existentes se reutilizan; no hay selector de persona. Editar división conserva control de versión; Deshacer división pide confirmación y vuelve a usar la categoría original sin reescribirla. Sin categoría encuentra cualquier parte pendiente y el desglose indica su importe. Solo lectura muestra el desglose sin permitir cambios.
+
+### Resultado productivo
+
+Verificado el 2026-11-02 a las 21:13 America/Santiago (2026-11-03T00:13:10Z). Backend e interfaz construidos y publicados desde `6d24d7e435bba37e93daf517a50a1560d3b0741a`. [Evidencia sin datos bancarios](expense-splits-deployment.json).
+
+Migración 037 y privilegios CRUD/EXECUTE comprobados. Las nuevas tablas de reparto están vacías; cero repartos, usuarios o movimientos de prueba creados en producción. Las once tablas financieras resultaron exactamente idénticas antes/después, incluidas categorías, importes, fechas, notas y referencias; identidades/membresías y archivos de configuración idénticos. No se consultaron movimientos al proveedor ni se ejecutaron importaciones reales.
+
+Las once rutas autenticadas de membresías, categorías, listas, overview, análisis por categorías, evolución de las tres fuentes, saldo/estado Fintoc guardados y cartolas respondieron 200. Lectura de un reparto inexistente devuelve 404, ingesta de reparto sin sesión 401, payload inválido 400 y actor sin acceso 403. Assets nuevos y anteriores disponibles; N8N saludable y respaldo automático activo. La primera lectura autenticada durante el arranque del proceso no pasó la sonda; la comprobación completa posterior aprobó sin cambiar datos o configuración.
+
+El respaldo PostgreSQL comprimido, checksum, huellas y build previo quedan privados bajo `/var/backups/finanzas/expense-splits-20261102`. Git y el checkout productivo incluyen la documentación final; no requiere otra compilación por ser cambios documentales.

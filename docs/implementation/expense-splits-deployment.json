@@ -1,0 +1,79 @@
+{
+  "contract": "ESP-01–13",
+  "deployment": {
+    "verifiedAt": "2026-11-03T00:13:10.544Z",
+    "sourceSha": "6d24d7e435bba37e93daf517a50a1560d3b0741a",
+    "financialTablesAudited": 11,
+    "allFinancialRowsIdentical": true,
+    "existingClassificationsUnchanged": true,
+    "existingUserIdentitiesAndMembershipsUnchanged": true,
+    "privateConfigurationUnchanged": true,
+    "migration": "037 only",
+    "newTablesEmpty": true,
+    "tablePrivilegesVerified": true,
+    "originalRowGuardsInstalled": true,
+    "authenticatedReads": {
+      "/api/space/memberships": 200,
+      "/api/categories": 200,
+      "/api/transactions?periodYear=2026&periodMonth=11": 200,
+      "/api/intl-unbilled?year=2026&month=11": 200,
+      "/api/checking?year=2026&month=11": 200,
+      "/api/dashboard/overview?year=2026&month=11": 200,
+      "/api/dashboard/categories?year=2026&month=11": 200,
+      "/api/dashboard/expense-evolution?endYear=2026&endMonth=11&months=6&sources=tc_nacional,tc_internacional,cuenta_corriente": 200,
+      "/api/checking/fintoc/bank-balance": 200,
+      "/api/checking/fintoc/daily-status": 200,
+      "/api/card-statements?year=2026&month=11": 200
+    },
+    "invalidWritesRejected": true,
+    "strangersRejected": true,
+    "newAndPreviousAssetsAvailable": true,
+    "noRealSplitCreatedForTesting": true,
+    "noRealImportsOrProviderMovementQueries": true,
+    "backupTimerActive": true,
+    "n8nHealthy": true
+  },
+  "validation": {
+    "testFirst": "RED then GREEN observed before implementation",
+    "backendTests": 917,
+    "backendSuites": 50,
+    "frontendTests": 374,
+    "frontendSuites": 45,
+    "browserPassed": 198,
+    "browserViewportSkips": 13,
+    "pwaPassed": 7,
+    "newBrowserCases": 27,
+    "isolatedPostgresHttpIntegration": true,
+    "isolatedAnalyticsSqlSelects": 31,
+    "threeSourceReimportsPreserveParentsAndSplits": true,
+    "cardStatementWithUncategorizedPartMatchesOriginal": true,
+    "cardStatementDuplicateInserts": 0,
+    "concurrencyAndRecreateVersionProtected": true,
+    "buildSucceededLocallyAndOnServer": true
+  },
+  "behavior": {
+    "sources": [
+      "tc_nacional",
+      "tc_internacional",
+      "cuenta_corriente"
+    ],
+    "partsMin": 2,
+    "partsMax": 50,
+    "fields": [
+      "category_id",
+      "amount_clp"
+    ],
+    "reversibleWithoutChangingOriginal": true,
+    "exactClpStoredAmount": true,
+    "existingCategoriesReused": true,
+    "noAutomaticSplitsOrReclassification": true,
+    "partialUncategorizedSupported": true,
+    "readOnlyMembersCanViewBreakdown": true,
+    "originalBankIdentityUsedForReconciliation": true,
+    "categoryAnalyticsUsePartsInsteadOfParent": true
+  },
+  "repository": {
+    "featureCommit": "6d24d7e435bba37e93daf517a50a1560d3b0741a",
+    "finalDocumentationOnly": true
+  }
+}
