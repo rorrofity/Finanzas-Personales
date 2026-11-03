@@ -818,3 +818,14 @@ La cobertura corresponde a cuenta corriente CLP. No trae compras de tarjeta de c
 ### Enmienda ESP — división reversible de gastos por categoría
 
 Solicitud aceptada el 2026-11-02. [Contrato ESP previo al código](implementation/expense-splits-contract.md), [plan/TDD y uso](implementation/expense-splits-plan.md). Una compra nacional, internacional con CLP o cargo de cuenta corriente elegible conserva su fila bancaria íntegra y puede tener de dos a cincuenta partes asociadas, cada una con categoría y monto CLP. Barra ajustable con importes en vivo, montos exactos editables, confirmación, control de versiones y deshacer explícito. Sin categoría y los análisis por categoría usan las partes cuando existe división; totales, saldos, cuotas e importaciones/conciliaciones siguen usando el padre completo. La categoría original queda preservada y reaparece al retirar la división. No hay asignación por persona ni reclasificación automática. Despliegue con migración aditiva 037, respaldo y comparación de once tablas financieras. La evidencia final de publicación se conserva en `implementation/expense-splits-deployment.json`.
+
+
+## HFS — Salud financiera, saldo único y frescura (2026-11-02)
+
+Contrato implementado: [HFS-01–13](implementation/financial-health-freshness-contract.md). El único saldo actual de cuenta corriente es el disponible bancario persistido por Fintoc; Cuenta corriente, Salud y Dashboard comparten su lectura y fecha real. La cartola y los flujos históricos se conservan sin constituir otro saldo actual ni sumarse otra vez al snapshot. Un saldo ausente es desconocido, no cero.
+
+Salud y los análisis de compromisos incluyen plantillas elegibles todavía sin ocurrencia mediante SELECT, respetando overrides e inactivas. Consultar no crea movimientos ni proyecciones guardadas. Se preservan gastos, clasificaciones y divisiones. La lectura de Salud es consistente y de solo lectura; una fuente ausente, atrasada o incompleta produce avisos y evaluación parcial.
+
+La vista se refresca al regresar, recuperar conexión, cambiar información y cada cinco minutos visible/online. Caché por identidad/hogar/período con fecha explícita y protección frente a respuestas tardías; no iniciar nuevas consultas bancarias al refrescar. Se conservan Fintoc diario a las 07:00 y correos cada hora 08:00–00:00. Próximos compromisos usa fechas conocidas sin inventar vencimientos ni inferir pagos.
+
+Verificación y despliegue: [plan y resultados](implementation/financial-health-freshness-plan.md), [evidencia sanitizada](implementation/financial-health-freshness-deployment.json).

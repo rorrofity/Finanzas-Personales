@@ -1,0 +1,81 @@
+{
+  "contract": "HFS-01–13",
+  "deployment": {
+    "verifiedAt": "2026-11-03T02:19:58.332Z",
+    "sourceSha": "73a11c3574e39e359fbcdbb6848f26fa5150f2dd",
+    "financialTablesAudited": 14,
+    "allFinancialRowsIdentical": true,
+    "existingClassificationsAndSplitsUnchanged": true,
+    "savedBankSnapshotUnchanged": true,
+    "identitiesAndMembershipsUnchanged": true,
+    "configurationAndSchedulesUnchanged": true,
+    "schemaMigrations": 0,
+    "canonicalBalanceConsistentAcrossConsumers": true,
+    "trueBankTimestampExposed": true,
+    "virtualProjectionsIncluded": 24,
+    "healthReadsCreatedNoOccurrences": true,
+    "authenticatedReadStatuses": {
+      "/api/space/memberships": 200,
+      "/api/checking/global-balance": 200,
+      "/api/checking/fintoc/bank-balance": 200,
+      "/api/checking/fintoc/daily-status": 200,
+      "/api/financial-health/summary?year=2026&month=11": 200,
+      "/api/financial-health/summary?year=2026&month=12": 200,
+      "/api/dashboard/overview?year=2026&month=11": 200,
+      "/api/dashboard/categories?year=2026&month=11": 200,
+      "/api/dashboard/expense-evolution?endYear=2026&endMonth=11&months=6": 200,
+      "/api/card-statements?year=2026&month=11": 200
+    },
+    "savedBankEndpointsGetOnly": true,
+    "unauthenticatedAndForeignActorsRejected": true,
+    "newAndPreviousAssetsAvailable": true,
+    "noRealImportsOrProviderMovementQueries": true,
+    "noProductionTestDataCreated": true,
+    "exportedAmounts": 0,
+    "backendOnline": true,
+    "n8nHealthy": true,
+    "backupTimerActive": true
+  },
+  "validation": {
+    "testFirst": "SDD and functional RED before implementation, then GREEN",
+    "backendTests": 968,
+    "backendSuites": 58,
+    "frontendTests": 428,
+    "frontendSuites": 52,
+    "browserPassed": 219,
+    "browserViewportSkips": 13,
+    "browserNewHealthCases": 21,
+    "browserInitialPassed": 215,
+    "browserTextExpectationsCorrectedAndRechecked": 4,
+    "pwaPassed": 7,
+    "isolatedPostgresHttpIntegration": true,
+    "isolatedFinancialTablesPreserved": 14,
+    "twelveMissingProjectionsReadWithoutMaterialization": true,
+    "splitAnalyticsRegressionSqlReads": 30,
+    "evolutionRegressionSqlReads": 8,
+    "buildSucceededLocallyAndOnServer": true
+  },
+  "behavior": {
+    "singleCurrentCheckingBalance": "saved fintoc_bank_balances.available",
+    "historicalLedgerPreserved": true,
+    "noHistoricalBalanceFallback": true,
+    "noMovementsAddedOverBankSnapshot": true,
+    "bankScheduleUnchanged": "07:00 America/Santiago daily",
+    "emailScheduleUnchanged": "hourly 08:00–00:00 America/Santiago",
+    "viewRefresh": "focus, visibility, online, data changes and every 5 minutes while visible and online",
+    "viewRefreshStartsProviderSync": false,
+    "effectiveProjections": "stored overrides and inactive occurrences plus eligible missing templates, SELECT only",
+    "healthCacheScope": [
+      "authenticated user",
+      "household owner",
+      "year",
+      "month"
+    ],
+    "partialOrUnavailableDataExplicit": true,
+    "dailyCashForecastAndAutomaticPaymentMatchingAdded": false
+  },
+  "repository": {
+    "featureCommit": "73a11c3574e39e359fbcdbb6848f26fa5150f2dd",
+    "finalDocumentationOnly": true
+  }
+}

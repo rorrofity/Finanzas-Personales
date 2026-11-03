@@ -351,3 +351,12 @@ Conciliación/importación sigue usando el cargo bancario completo y sus identif
 RED observado antes de implementar; 917 pruebas backend, 374 frontend, 198 navegador y siete PWA aprobadas, con 13 omisiones previstas por viewport. Integraciones temporales HTTP/PostgreSQL comprueban preservación byte a byte, tres fuentes, conflictos/ABA, permisos y sumas exactas. Reimportar los tres tipos de compra omite la repetición sin cambiar padre o reparto; cartola con una parte sin categoría produce matched=1/link=1/insert=0.
 
 Producción verificada el 2026-11-02 a las 21:13 America/Santiago: migración 037 aditiva, tablas nuevas vacías, grants y guardas comprobados, once tablas financieras y clasificaciones exactamente idénticas al respaldo previo, configuración/usuarios/membresías conservados. Backend e interfaz publicados desde `6d24d7e`; lecturas válidas 200 y escrituras inválidas/ajenas rechazadas, sin operaciones bancarias reales de prueba. Respaldo comprimido privado verificado, assets anteriores conservados, N8N y timer de respaldo activos. Repo y servidor actualizados con evidencia pública sin información bancaria.
+
+
+## 2026-11-02 — Salud financiera actualizada (HFS)
+
+Implementado y desplegado `73a11c3`: saldo disponible Fintoc guardado como única referencia actual en Cuenta corriente/Salud/Dashboard; proyecciones completas derivadas sin materializar ocurrencias; refresco automático de la vista y fechas/estados por fuente. Catorce tablas financieras idénticas antes/después, incluidos gastos, categorías, divisiones y saldo bancario. Sin migraciones ni cambios de sincronizaciones, credenciales o permisos.
+
+SDD→TDD RED/GREEN: 968 pruebas backend, 428 frontend, 219 casos navegador (13 omisiones por viewport), 7 PWA, tres regresiones PostgreSQL aisladas y build local/servidor correctos. Verificado el 2026-11-02 a las 23:19 America/Santiago: mismo saldo/fecha en las tres vistas, 24 proyecciones virtuales entre dos períodos sin DML, lecturas autorizadas 200 y rechazo de actores ajenos. Respaldo comprimido verificado, backend/N8N saludables y respaldo programado activo.
+
+[Contrato](implementation/financial-health-freshness-contract.md) · [plan y operación](implementation/financial-health-freshness-plan.md) · [evidencia sin importes](implementation/financial-health-freshness-deployment.json).
