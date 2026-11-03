@@ -42,6 +42,8 @@ async function main() {
       CREATE TABLE transactions (id uuid PRIMARY KEY, user_id uuid NOT NULL, fecha date NOT NULL, descripcion text, category_id integer, monto numeric(14,2), tipo text, billing_year integer, billing_month integer);
       CREATE TABLE intl_unbilled (id uuid PRIMARY KEY, user_id uuid NOT NULL, fecha date NOT NULL, descripcion text, category_id integer, amount_clp numeric(14,2), tipo text, period_year integer, period_month integer);
       CREATE TABLE checking_transactions (id uuid PRIMARY KEY, user_id uuid NOT NULL, fecha date NOT NULL, descripcion text, category_id integer, amount numeric(14,2), tipo text, year integer, month integer);
+      CREATE TABLE expense_splits (id uuid PRIMARY KEY, user_id uuid NOT NULL, source text, transaction_id uuid, intl_unbilled_id uuid, checking_transaction_id uuid, amount_clp numeric(14,2), version uuid);
+      CREATE TABLE expense_split_parts (split_id uuid, position smallint, amount_clp numeric(14,2), category_id integer);
       CREATE TABLE space_members (owner_user_id uuid, member_user_id uuid, status text, is_active boolean, can_edit boolean, can_delete boolean);
     `);
     for (let id = 1; id <= 17; id++) await client.query('INSERT INTO categories VALUES ($1,$2,$3)', [id, id === 1 ? 'Cuentas' : id === 3 ? 'year' : `Categoría ${id}`, id === 2 ? OWNER : null]);
@@ -58,7 +60,7 @@ async function main() {
     await client.query('INSERT INTO space_members VALUES ($1,$2,$3,true,false,false)', [OWNER, MEMBER, 'linked']);
     const snapshot = async () => {
       const all = {};
-      for (const name of ['categories', 'transactions', 'intl_unbilled', 'checking_transactions', 'space_members']) {
+      for (const name of ['categories', 'transactions', 'intl_unbilled', 'checking_transactions', 'space_members', 'expense_splits', 'expense_split_parts']) {
         all[name] = (await client.query(`SELECT row_to_json(t) AS row FROM ${name} t ORDER BY row_to_json(t)::text`)).rows;
       }
       return crypto.createHash('sha256').update(JSON.stringify(all)).digest('hex');

@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { expenseAllocationJoin } = require('../utils/expenseAllocationSql');
 
 const SOURCES = ['tc_nacional', 'tc_internacional', 'cuenta_corriente'];
 const UNCATEGORIZED = 'uncategorized';
@@ -51,23 +52,26 @@ function parseTransactionQuery(query = {}) {
 const EXPENSE_RECORDS_CTE = `
 WITH expense_records AS (
   SELECT 'tc_nacional'::text AS source, t.id::text AS id,
-    t.fecha, t.descripcion, t.category_id, ABS(t.monto)::numeric AS amount,
-    t.billing_year AS year, t.billing_month AS month
+    t.fecha, t.descripcion, allocation.category_id, allocation.amount,
+    t.billing_year AS year, t.billing_month AS month, allocation.original_amount, allocation.is_split
   FROM transactions t
+  ${expenseAllocationJoin('tc_nacional', 't', 'ABS(t.monto)')}
   WHERE t.user_id = $1 AND t.tipo = 'gasto'
     AND 'tc_nacional' = ANY($2::text[])
   UNION ALL
   SELECT 'tc_internacional'::text AS source, iu.id::text AS id,
-    iu.fecha, iu.descripcion, iu.category_id, iu.amount_clp::numeric AS amount,
-    iu.period_year AS year, iu.period_month AS month
+    iu.fecha, iu.descripcion, allocation.category_id, allocation.amount,
+    iu.period_year AS year, iu.period_month AS month, allocation.original_amount, allocation.is_split
   FROM intl_unbilled iu
+  ${expenseAllocationJoin('tc_internacional', 'iu', 'iu.amount_clp')}
   WHERE iu.user_id = $1 AND iu.tipo = 'gasto'
     AND 'tc_internacional' = ANY($2::text[])
   UNION ALL
   SELECT 'cuenta_corriente'::text AS source, ct.id::text AS id,
-    ct.fecha, ct.descripcion, ct.category_id, ct.amount::numeric AS amount,
-    ct.year, ct.month
+    ct.fecha, ct.descripcion, allocation.category_id, allocation.amount,
+    ct.year, ct.month, allocation.original_amount, allocation.is_split
   FROM checking_transactions ct
+  ${expenseAllocationJoin('cuenta_corriente', 'ct', 'ct.amount')}
   WHERE ct.user_id = $1 AND ct.tipo = 'cargo'
     AND 'cuenta_corriente' = ANY($2::text[])
     AND LOWER(ct.descripcion) NOT LIKE '%pago%tarjeta%'
@@ -75,7 +79,7 @@ WITH expense_records AS (
     AND LOWER(ct.descripcion) NOT LIKE '%cargo por pago tc%'
     AND LOWER(ct.descripcion) NOT LIKE '%pago tarjeta de credito%'
 ), scoped_records AS (
-  SELECT r.source, r.id, r.fecha, r.descripcion, r.amount, r.year, r.month,
+  SELECT r.source, r.id, r.fecha, r.descripcion, r.amount, r.year, r.month, r.original_amount, r.is_split,
     CASE WHEN c.id IS NOT NULL THEN r.category_id ELSE NULL END AS category_id,
     CASE WHEN r.year BETWEEN 2000 AND 2100 AND r.month BETWEEN 1 AND 12
       THEN r.year * 12 + r.month - 1 ELSE NULL END AS period_index
@@ -87,18 +91,24 @@ WITH expense_records AS (
 // Aggregates, categories and exclusions share one SELECT/MVCC snapshot.
 const EVOLUTION_SQL = `${EXPENSE_RECORDS_CTE}
 , monthly_categories AS (
-  SELECT year, month, category_id, source, SUM(amount)::text AS total, COUNT(*) AS count
+  SELECT year, month, category_id, source, SUM(amount)::text AS total, COUNT(DISTINCT id) AS count
   FROM scoped_records
   WHERE period_index BETWEEN $3::int AND $4::int AND amount IS NOT NULL
   GROUP BY year, month, category_id, source
+), original_counts AS (
+  SELECT year, month, source, COUNT(DISTINCT id) AS count
+  FROM scoped_records
+  WHERE period_index BETWEEN $3::int AND $4::int AND amount IS NOT NULL
+  GROUP BY year, month, source
 )
 SELECT
   COALESCE((SELECT json_agg(json_build_object('id', c.id, 'name', c.name) ORDER BY c.id)
     FROM categories c WHERE c.user_id = $1 OR c.user_id IS NULL), '[]'::json) AS categories,
   COALESCE((SELECT json_agg(m) FROM monthly_categories m), '[]'::json) AS aggregates,
+  COALESCE((SELECT json_agg(m) FROM original_counts m), '[]'::json) AS monthly_counts,
   json_build_object(
-    'missingPeriodCount', (SELECT COUNT(*) FROM scoped_records WHERE period_index IS NULL),
-    'missingCLPCount', (SELECT COUNT(*) FROM scoped_records
+    'missingPeriodCount', (SELECT COUNT(DISTINCT (source, id)) FROM scoped_records WHERE period_index IS NULL),
+    'missingCLPCount', (SELECT COUNT(DISTINCT (source, id)) FROM scoped_records
       WHERE source = 'tc_internacional' AND amount IS NULL
         AND period_index BETWEEN $3::int + 1 AND $4::int)
   ) AS exclusions
@@ -111,11 +121,15 @@ const TRANSACTIONS_SQL = `${EXPENSE_RECORDS_CTE}
   UNION ALL
   SELECT 'uncategorized'::text AS id, 'Sin categoría'::text AS name WHERE $4::text = 'uncategorized'
 ), matching_records AS (
-  SELECT source, id, fecha, descripcion, amount FROM scoped_records
+  SELECT source, id, fecha, descripcion, SUM(amount) AS amount,
+    MAX(original_amount) AS original_amount, BOOL_OR(is_split) AS is_split
+  FROM scoped_records
   WHERE period_index = $3::int AND amount IS NOT NULL
     AND COALESCE(category_id::text, 'uncategorized') = $4::text
+  GROUP BY source, id, fecha, descripcion
 ), page_records AS (
-  SELECT id, source, to_char(fecha, 'YYYY-MM-DD') AS fecha, descripcion, amount::text AS amount
+  SELECT id, source, to_char(fecha, 'YYYY-MM-DD') AS fecha, descripcion, amount::text AS amount,
+    original_amount::text AS original_amount, is_split
   FROM matching_records ORDER BY fecha, source, id LIMIT $5::int OFFSET $6::int
 )
 SELECT
@@ -184,6 +198,22 @@ async function getEvolution(userId, query, now = new Date()) {
     period.sources[row.source].cents = addCents(period.sources[row.source].cents, total);
     period.sources[row.source].count += count;
   }
+  // A purchase can belong to several categories. Global counts come from the
+  // original source+id identities rather than summing category memberships.
+  if (Array.isArray(payload.monthly_counts)) {
+    for (const period of monthly.values()) {
+      period.count = 0;
+      for (const source of scope.sources) period.sources[source].count = 0;
+    }
+    for (const row of payload.monthly_counts) {
+      const index = periodNumber(Number(row.year), Number(row.month));
+      if (!monthly.has(index) || !scope.sources.includes(row.source)) continue;
+      const count = Number(row.count);
+      if (!Number.isSafeInteger(count) || count < 0) throw new Error('Cantidad de movimientos inválida');
+      monthly.get(index).count += count;
+      monthly.get(index).sources[row.source].count += count;
+    }
+  }
   const currentIndex = currentSantiagoMonth(now);
   const months = Array.from({ length: scope.months }, (_, offset) => {
     const index = start + offset, period = monthly.get(index), previous = monthly.get(index - 1), month = monthAt(index);
@@ -230,7 +260,11 @@ async function getTransactions(userId, query, now = new Date()) {
   return {
     scope, generatedAt: now.toISOString(), category: { id: String(payload.category.id), name: payload.category.name },
     total: money(cents(payload.total)), count, limit, offset, hasMore: offset + (payload.transactions || []).length < count,
-    transactions: (payload.transactions || []).map((transaction) => ({ id: transaction.id, source: transaction.source, fecha: transaction.fecha, descripcion: transaction.descripcion, amount: money(cents(transaction.amount)) })),
+    transactions: (payload.transactions || []).map((transaction) => ({
+      id: transaction.id, source: transaction.source, fecha: transaction.fecha, descripcion: transaction.descripcion,
+      amount: money(cents(transaction.amount)),
+      ...(transaction.is_split ? { originalAmount: money(cents(transaction.original_amount)), isSplit: true } : {}),
+    })),
   };
 }
 

@@ -1,4 +1,5 @@
 const { detectSuspiciousDuplicates, flagAsSuspicious } = require('../utils/suspiciousDetector');
+const { expenseAllocationJoin } = require('../utils/expenseAllocationSql');
 
 class Transaction {
   constructor(db) {
@@ -270,10 +271,11 @@ class Transaction {
         SELECT 
           t.tipo,
           c.name as category_name,
-          SUM(t.monto) as total_monto,
-          COUNT(*) as numero_transacciones
+          SUM(allocation.amount) as total_monto,
+          COUNT(DISTINCT t.id) as numero_transacciones
         FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
+        ${expenseAllocationJoin('tc_nacional', 't', 't.monto')}
+        LEFT JOIN categories c ON allocation.category_id = c.id AND (c.user_id = $1 OR c.user_id IS NULL)
         WHERE 
           t.user_id = $1 AND 
           t.fecha BETWEEN $2 AND $3
@@ -294,10 +296,11 @@ class Transaction {
       const query = `
         SELECT 
           c.name as category_name,
-          SUM(t.monto) as total_monto,
-          COUNT(*) as numero_transacciones
+          SUM(allocation.amount) as total_monto,
+          COUNT(DISTINCT t.id) as numero_transacciones
         FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
+        ${expenseAllocationJoin('tc_nacional', 't', 't.monto')}
+        LEFT JOIN categories c ON allocation.category_id = c.id AND (c.user_id = $1 OR c.user_id IS NULL)
         WHERE 
           t.user_id = $1 AND 
           EXTRACT(YEAR FROM t.fecha) = $2 AND

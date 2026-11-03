@@ -19,6 +19,7 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { formatDateLocal } from '../utils/dateUtils';
+import { formatCLPExact } from '../utils/format';
 
 const SOURCE_LABELS = {
   tc_nacional: { label: 'TC', color: 'error' },
@@ -36,13 +37,7 @@ const CategoryDetailDrawer = ({ open, onClose, category, year, month, color }) =
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const formatCurrency = formatCLPExact;
 
   useEffect(() => {
     if (open && category && year && month) {
@@ -172,6 +167,7 @@ const CategoryDetailDrawer = ({ open, onClose, category, year, month, color }) =
                       </TableCell>
                       <TableCell align="right" sx={{ fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         {formatCurrency(tx.monto)}
+                        {tx.isSplit && <Typography variant="caption" sx={{ display: 'block', whiteSpace: 'normal' }} color="text.secondary">Parte atribuida · Total original: {formatCurrency(tx.originalAmount)}</Typography>}
                       </TableCell>
                       <TableCell align="center">
                         <Chip

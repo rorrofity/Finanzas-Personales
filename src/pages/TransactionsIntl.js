@@ -51,6 +51,8 @@ import { usePeriod } from '../contexts/PeriodContext';
 import StatCard from '../components/ui/StatCard';
 import UncategorizedFilter, { isUncategorized } from '../components/UncategorizedFilter';
 import axios from 'axios';
+import ExpenseSplitControl from '../components/ExpenseSplitControl';
+import { hasExpenseSplit } from '../utils/expenseSplits';
 
 const hasConversion = row => row.amount_clp !== null && row.amount_clp !== undefined
   && row.exchange_rate !== null && row.exchange_rate !== undefined
@@ -176,7 +178,7 @@ const TransactionsIntl = () => {
   };
 
   const handleOpenEdit = (row) => {
-    if (!canEdit) return;
+    if (!canEdit || hasExpenseSplit(row)) return;
     setEditing(row);
     setFormData({
       fecha: row.fecha?.split('T')[0] || row.fecha,
@@ -223,7 +225,7 @@ const TransactionsIntl = () => {
   };
 
   const changeCategoryInline = async (rowId, newCat) => {
-    if (!canEdit) return;
+    if (!canEdit || hasExpenseSplit(rows.find(row => row.id === rowId))) return;
     try {
       await axios.put(`/api/intl-unbilled/${rowId}`, { category_id: newCat || null });
       setRows(prev => prev.map(r => r.id === rowId ? { ...r, category_id: newCat || null } : r));
@@ -232,7 +234,7 @@ const TransactionsIntl = () => {
   };
 
   const changeTypeInline = async (rowId, newType) => {
-    if (!canEdit) return;
+    if (!canEdit || hasExpenseSplit(rows.find(row => row.id === rowId))) return;
     try {
       await axios.put(`/api/intl-unbilled/${rowId}`, { tipo: newType });
       setRows(prev => prev.map(r => r.id === rowId ? { ...r, tipo: newType } : r));
@@ -446,7 +448,7 @@ const TransactionsIntl = () => {
                 .slice(visiblePage * rowsPerPage, visiblePage * rowsPerPage + rowsPerPage)
                 .map((r) => (
                   <Card key={r.id} variant="outlined" sx={{ 
-                    borderLeft: r.category_id ? '4px solid #4caf50' : '4px solid #ff9800',
+                    borderLeft: isUncategorized(r) ? '4px solid #ff9800' : '4px solid #4caf50',
                   }}>
                     <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                       <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
@@ -475,6 +477,7 @@ const TransactionsIntl = () => {
                       </Box>
                       
                       <Stack direction="row" spacing={1} alignItems="center">
+                        <ExpenseSplitControl source="tc_internacional" row={r} categories={categoriesList} canEdit={canEdit} onChange={split => setRows(previous => previous.map(item => item.id === r.id ? { ...item, split } : item))}>
                         <Select
                           disabled={!canEdit}
                           size="small"
@@ -488,8 +491,9 @@ const TransactionsIntl = () => {
                             <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>
                           ))}
                         </Select>
+                        </ExpenseSplitControl>
                         <Select
-                          disabled={!canEdit}
+                          disabled={!canEdit || hasExpenseSplit(r)}
                           size="small"
                           value={r.tipo}
                           onChange={(e) => changeTypeInline(r.id, e.target.value)}
@@ -499,7 +503,7 @@ const TransactionsIntl = () => {
                           <MenuItem value="pago">Pago</MenuItem>
                           <MenuItem value="desestimar">Desest.</MenuItem>
                         </Select>
-                        <IconButton size="small" aria-label="Editar transacción internacional" disabled={!canEdit} onClick={() => handleOpenEdit(r)}>
+                        <IconButton size="small" aria-label="Editar transacción internacional" disabled={!canEdit || hasExpenseSplit(r)} onClick={() => handleOpenEdit(r)}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                         <IconButton size="small" disabled={!canDelete} onClick={() => handleDelete(r.id)}>
@@ -547,23 +551,25 @@ const TransactionsIntl = () => {
                       <TableCell align="right">{Number(r.amount_usd).toFixed(2)}</TableCell>
                       <TableCell align="right">{hasConversion(r) ? formatCurrency(r.amount_clp) : 'Conversión pendiente'}</TableCell>
                       <TableCell>
-                        <Select disabled={!canEdit} size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
+                        <Select disabled={!canEdit || hasExpenseSplit(r)} size="small" value={r.tipo} onChange={(e)=>changeTypeInline(r.id, e.target.value)} sx={{ minWidth: 110 }}>
                           <MenuItem value="gasto">Gasto</MenuItem>
                           <MenuItem value="pago">Pago</MenuItem>
                           <MenuItem value="desestimar">Desestimar</MenuItem>
                         </Select>
                       </TableCell>
                       <TableCell>
+                        <ExpenseSplitControl source="tc_internacional" row={r} categories={categoriesList} canEdit={canEdit} onChange={split => setRows(previous => previous.map(item => item.id === r.id ? { ...item, split } : item))}>
                         <Select disabled={!canEdit} size="small" value={r.category_id || ''} displayEmpty onChange={(e)=>changeCategoryInline(r.id, e.target.value)} sx={{ minWidth: 140 }}>
                           <MenuItem value=""><em>Sin categoría</em></MenuItem>
                           {categoriesList.map(c => (
                             <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
                           ))}
                         </Select>
+                        </ExpenseSplitControl>
                       </TableCell>
                       <TableCell>{String(r.brand).toUpperCase()}</TableCell>
                       <TableCell>
-                        <Tooltip title="Editar"><IconButton size="small" disabled={!canEdit} onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
+                        <Tooltip title="Editar"><IconButton size="small" aria-label="Editar" disabled={!canEdit || hasExpenseSplit(r)} onClick={()=>handleOpenEdit(r)}><EditIcon/></IconButton></Tooltip>
                         <Tooltip title="Eliminar"><IconButton size="small" disabled={!canDelete} onClick={()=>handleDelete(r.id)}><DeleteIcon/></IconButton></Tooltip>
                       </TableCell>
                     </TableRow>

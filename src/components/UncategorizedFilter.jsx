@@ -1,7 +1,8 @@
 import React from 'react';
 import { Chip, ToggleButton } from '@mui/material';
+import { matchesExpenseCategory } from '../utils/expenseSplits';
 
-export const isUncategorized = row => row?.category_id === null || row?.category_id === undefined || row?.category_id === '';
+export const isUncategorized = row => matchesExpenseCategory(row, 'uncategorized');
 
 export default function UncategorizedFilter({ active, count, onChange }) {
   return <ToggleButton value="uncategorized" selected={active} onChange={() => onChange(!active)}

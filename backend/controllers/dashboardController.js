@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { expenseAllocationJoin } = require('../utils/expenseAllocationSql');
 
 const { computeCommitments } = require('../utils/commitments');
 
@@ -57,19 +58,21 @@ async function categoryTotals(userId, year, month) {
 
   const result = await db.query(`
     WITH combined AS (
-      SELECT t.category_id, ABS(t.monto) AS amount
+      SELECT allocation.category_id, allocation.amount
       FROM transactions t
+      ${expenseAllocationJoin('tc_nacional', 't', 'ABS(t.monto)')}
       WHERE t.user_id = $1 AND t.tipo = 'gasto'
         AND t.fecha >= $2::date AND t.fecha <= $3::date
       UNION ALL
-      SELECT iu.category_id, iu.amount_clp AS amount
+      SELECT allocation.category_id, allocation.amount
       FROM intl_unbilled iu
+      ${expenseAllocationJoin('tc_internacional', 'iu', 'iu.amount_clp')}
       WHERE iu.user_id = $1 AND iu.tipo = 'gasto'
         AND iu.fecha >= $2::date AND iu.fecha <= $3::date
     )
     SELECT COALESCE(c.name, 'Sin categoría') AS name, SUM(combined.amount) AS total
     FROM combined
-    LEFT JOIN categories c ON combined.category_id = c.id
+    LEFT JOIN categories c ON combined.category_id = c.id AND (c.user_id = $1 OR c.user_id IS NULL)
     GROUP BY c.id, c.name
     ORDER BY total DESC
   `, [userId, startDate, endDate]);
@@ -276,16 +279,17 @@ const getDashboardData = async (req, res) => {
     const categoriesQuery = `
         SELECT 
             COALESCE(c.name, 'Sin categorizar') as name,
-            COUNT(*) as count,
-            SUM(t.monto) as total,
+            COUNT(DISTINCT t.id) as count,
+            SUM(allocation.amount) as total,
             json_agg(json_build_object(
                 'id', t.id,
                 'descripcion', t.descripcion,
-                'monto', t.monto,
+                'monto', allocation.amount,
                 'fecha', t.fecha
             )) as transactions
         FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
+        ${expenseAllocationJoin('tc_nacional', 't', 't.monto')}
+        LEFT JOIN categories c ON allocation.category_id = c.id AND (c.user_id = $1 OR c.user_id IS NULL)
         WHERE t.user_id = $1 
         AND t.tipo = 'gasto'
         GROUP BY c.name
@@ -331,7 +335,8 @@ const getDashboardData = async (req, res) => {
             t.monto,
             t.fecha AT TIME ZONE 'America/Santiago' as fecha,
             t.tipo,
-            COALESCE(c.name, 'Sin categorizar') as categoria
+            CASE WHEN EXISTS (SELECT 1 FROM expense_splits es WHERE es.user_id = t.user_id AND es.source = 'tc_nacional' AND es.transaction_id = t.id)
+              THEN 'Dividido' ELSE COALESCE(c.name, 'Sin categorizar') END as categoria
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.user_id = $1
@@ -400,10 +405,12 @@ const getCategoryBreakdown = async (req, res) => {
                 WITH combined AS (
                     -- TC no facturado nacional (por periodo de facturación)
                     SELECT 
-                        t.category_id,
-                        ABS(t.monto) as amount,
-                        'tc_nacional' as source
+                        allocation.category_id,
+                        allocation.amount,
+                        'tc_nacional' as source,
+                        t.id::text as parent_id
                     FROM transactions t
+                    ${expenseAllocationJoin('tc_nacional', 't', 'ABS(t.monto)')}
                     LEFT JOIN imports i ON t.import_id = i.id
                     WHERE t.user_id = $1
                       AND t.tipo = 'gasto'
@@ -414,10 +421,12 @@ const getCategoryBreakdown = async (req, res) => {
                     
                     -- TC no facturado internacional (por periodo)
                     SELECT 
-                        iu.category_id,
-                        iu.amount_clp as amount,
-                        'tc_internacional' as source
+                        allocation.category_id,
+                        allocation.amount,
+                        'tc_internacional' as source,
+                        iu.id::text as parent_id
                     FROM intl_unbilled iu
+                    ${expenseAllocationJoin('tc_internacional', 'iu', 'iu.amount_clp')}
                     WHERE iu.user_id = $1
                       AND iu.period_year = $2
                       AND iu.period_month = $3
@@ -429,7 +438,8 @@ const getCategoryBreakdown = async (req, res) => {
                     SELECT 
                         pt.category_id,
                         COALESCE(po.monto, pt.monto) as amount,
-                        'proyectado' as source
+                        'proyectado' as source,
+                        pt.id::text as parent_id
                     FROM projected_templates pt
                     LEFT JOIN projected_occurrences po 
                         ON po.template_id = pt.id 
@@ -441,9 +451,9 @@ const getCategoryBreakdown = async (req, res) => {
                 SELECT 
                     COALESCE(c.name, 'Sin categoría') as categoria,
                     SUM(combined.amount) as total,
-                    COUNT(*) as count
+                    COUNT(DISTINCT (combined.source, combined.parent_id)) as count
                 FROM combined
-                LEFT JOIN categories c ON combined.category_id = c.id
+                LEFT JOIN categories c ON combined.category_id = c.id AND (c.user_id = $1 OR c.user_id IS NULL)
                 GROUP BY c.id, c.name
                 ORDER BY total DESC
             `;
@@ -458,10 +468,12 @@ const getCategoryBreakdown = async (req, res) => {
                 WITH combined AS (
                     -- TC Nacional (por fecha real de transacción)
                     SELECT 
-                        t.category_id,
-                        ABS(t.monto) as amount,
-                        'tc_nacional' as source
+                        allocation.category_id,
+                        allocation.amount,
+                        'tc_nacional' as source,
+                        t.id::text as parent_id
                     FROM transactions t
+                    ${expenseAllocationJoin('tc_nacional', 't', 'ABS(t.monto)')}
                     WHERE t.user_id = $1
                       AND t.tipo = 'gasto'
                       AND t.fecha >= $2::date
@@ -471,10 +483,12 @@ const getCategoryBreakdown = async (req, res) => {
                     
                     -- TC internacional (por fecha real)
                     SELECT 
-                        iu.category_id,
-                        iu.amount_clp as amount,
-                        'tc_internacional' as source
+                        allocation.category_id,
+                        allocation.amount,
+                        'tc_internacional' as source,
+                        iu.id::text as parent_id
                     FROM intl_unbilled iu
+                    ${expenseAllocationJoin('tc_internacional', 'iu', 'iu.amount_clp')}
                     WHERE iu.user_id = $1
                       AND iu.fecha >= $2::date
                       AND iu.fecha <= $3::date
@@ -484,10 +498,12 @@ const getCategoryBreakdown = async (req, res) => {
                     
                     -- Cuenta corriente (cargos del mes, excluyendo pago TC)
                     SELECT 
-                        ct.category_id,
-                        ct.amount,
-                        'cuenta_corriente' as source
+                        allocation.category_id,
+                        allocation.amount,
+                        'cuenta_corriente' as source,
+                        ct.id::text as parent_id
                     FROM checking_transactions ct
+                    ${expenseAllocationJoin('cuenta_corriente', 'ct', 'ct.amount')}
                     WHERE ct.user_id = $1
                       AND ct.year = $4
                       AND ct.month = $5
@@ -500,9 +516,9 @@ const getCategoryBreakdown = async (req, res) => {
                 SELECT 
                     COALESCE(c.name, 'Sin categoría') as categoria,
                     SUM(combined.amount) as total,
-                    COUNT(*) as count
+                    COUNT(DISTINCT (combined.source, combined.parent_id)) as count
                 FROM combined
-                LEFT JOIN categories c ON combined.category_id = c.id
+                LEFT JOIN categories c ON combined.category_id = c.id AND (c.user_id = $1 OR c.user_id IS NULL)
                 GROUP BY c.id, c.name
                 ORDER BY total DESC
             `;
@@ -676,9 +692,10 @@ const getCategoryEvolution = async (req, res) => {
                 WITH combined AS (
                     -- TC Nacional (por fecha real)
                     SELECT 
-                        t.category_id,
-                        ABS(t.monto) as amount
+                        allocation.category_id,
+                        allocation.amount
                     FROM transactions t
+                    ${expenseAllocationJoin('tc_nacional', 't', 'ABS(t.monto)')}
                     WHERE t.user_id = $1
                       AND t.tipo = 'gasto'
                       AND t.fecha >= $2::date
@@ -688,9 +705,10 @@ const getCategoryEvolution = async (req, res) => {
                     
                     -- TC Internacional (por fecha real)
                     SELECT 
-                        iu.category_id,
-                        iu.amount_clp as amount
+                        allocation.category_id,
+                        allocation.amount
                     FROM intl_unbilled iu
+                    ${expenseAllocationJoin('tc_internacional', 'iu', 'iu.amount_clp')}
                     WHERE iu.user_id = $1
                       AND iu.fecha >= $2::date
                       AND iu.fecha <= $3::date
@@ -700,9 +718,10 @@ const getCategoryEvolution = async (req, res) => {
                     
                     -- Cuenta corriente (cargos, excluyendo pago TC)
                     SELECT 
-                        ct.category_id,
-                        ct.amount
+                        allocation.category_id,
+                        allocation.amount
                     FROM checking_transactions ct
+                    ${expenseAllocationJoin('cuenta_corriente', 'ct', 'ct.amount')}
                     WHERE ct.user_id = $1
                       AND ct.year = $4
                       AND ct.month = $5
@@ -716,7 +735,7 @@ const getCategoryEvolution = async (req, res) => {
                     COALESCE(c.name, 'Sin categoría') as categoria,
                     SUM(combined.amount) as total
                 FROM combined
-                LEFT JOIN categories c ON combined.category_id = c.id
+                LEFT JOIN categories c ON combined.category_id = c.id AND (c.user_id = $1 OR c.user_id IS NULL)
                 GROUP BY c.id, c.name
                 ORDER BY total DESC
             `;
@@ -785,12 +804,16 @@ const getCategoryTransactions = async (req, res) => {
             WITH combined AS (
                 -- TC Nacional
                 SELECT 
+                    t.id::text as id,
                     t.fecha::date as fecha,
                     t.descripcion,
-                    ABS(t.monto) as monto,
+                    allocation.amount as monto,
                     'tc_nacional' as source,
-                    t.category_id
+                    allocation.category_id,
+                    allocation.original_amount,
+                    allocation.is_split
                 FROM transactions t
+                ${expenseAllocationJoin('tc_nacional', 't', 'ABS(t.monto)')}
                 WHERE t.user_id = $1
                   AND t.tipo = 'gasto'
                   AND t.fecha >= $2::date
@@ -800,12 +823,16 @@ const getCategoryTransactions = async (req, res) => {
 
                 -- TC Internacional
                 SELECT 
+                    iu.id::text as id,
                     iu.fecha::date as fecha,
                     iu.descripcion,
-                    iu.amount_clp as monto,
+                    allocation.amount as monto,
                     'tc_internacional' as source,
-                    iu.category_id
+                    allocation.category_id,
+                    allocation.original_amount,
+                    allocation.is_split
                 FROM intl_unbilled iu
+                ${expenseAllocationJoin('tc_internacional', 'iu', 'iu.amount_clp')}
                 WHERE iu.user_id = $1
                   AND iu.fecha >= $2::date
                   AND iu.fecha <= $3::date
@@ -815,12 +842,16 @@ const getCategoryTransactions = async (req, res) => {
 
                 -- Cuenta corriente (cargos, excluyendo pago TC)
                 SELECT 
+                    ct.id::text as id,
                     make_date(ct.year, ct.month, 1) as fecha,
                     ct.descripcion,
-                    ct.amount as monto,
+                    allocation.amount as monto,
                     'cuenta_corriente' as source,
-                    ct.category_id
+                    allocation.category_id,
+                    allocation.original_amount,
+                    allocation.is_split
                 FROM checking_transactions ct
+                ${expenseAllocationJoin('cuenta_corriente', 'ct', 'ct.amount')}
                 WHERE ct.user_id = $1
                   AND ct.year = $4
                   AND ct.month = $5
@@ -831,14 +862,19 @@ const getCategoryTransactions = async (req, res) => {
                   AND LOWER(ct.descripcion) NOT LIKE '%pago tarjeta de credito%'
             )
             SELECT 
+                combined.id,
                 combined.fecha,
                 combined.descripcion,
-                combined.monto,
-                combined.source
+                SUM(combined.monto) AS monto,
+                SUM(SUM(combined.monto)) OVER () AS category_total,
+                combined.source,
+                MAX(combined.original_amount) AS original_amount,
+                BOOL_OR(combined.is_split) AS is_split
             FROM combined
-            LEFT JOIN categories c ON combined.category_id = c.id
-            WHERE ${isSinCategoria ? 'combined.category_id IS NULL' : 'c.name = $6'}
-            ORDER BY combined.fecha DESC, combined.monto DESC
+            LEFT JOIN categories c ON combined.category_id = c.id AND (c.user_id = $1 OR c.user_id IS NULL)
+            WHERE ${isSinCategoria ? 'c.id IS NULL' : 'c.name = $6'}
+            GROUP BY combined.id, combined.fecha, combined.descripcion, combined.source
+            ORDER BY combined.fecha DESC, monto DESC
         `;
 
         const params = isSinCategoria
@@ -848,13 +884,15 @@ const getCategoryTransactions = async (req, res) => {
         const result = await db.query(query, params);
 
         const transactions = result.rows.map(r => ({
+            id: r.id,
             fecha: r.fecha,
             descripcion: r.descripcion,
             monto: Number(r.monto),
-            source: r.source
+            source: r.source,
+            ...(r.is_split ? { originalAmount: Number(r.original_amount), isSplit: true } : {})
         }));
 
-        const total = transactions.reduce((sum, t) => sum + t.monto, 0);
+        const total = Number(result.rows[0]?.category_total || 0);
 
         res.json({
             category,

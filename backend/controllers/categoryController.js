@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { respondToSplitConstraint } = require('../utils/expenseSplitError');
 
 // Obtener todas las categorías del usuario
 const getCategories = async (req, res) => {
@@ -106,6 +107,7 @@ const deleteCategory = async (req, res) => {
 
         res.json({ message: 'Categoría eliminada correctamente' });
     } catch (error) {
+        if (respondToSplitConstraint(error, res)) return;
         console.error('Error al eliminar categoría:', error);
         res.status(500).json({ error: 'Error al eliminar categoría' });
     }

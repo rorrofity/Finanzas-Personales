@@ -28,3 +28,11 @@ test('detalle conserva centavos del total y del movimiento', async () => {
   render(<ExpenseDetailDrawer selection={selection} scope={scope} onClose={jest.fn()} />);
   expect(await screen.findAllByText('$176,2')).toHaveLength(2);
 });
+
+test('detalle de reparto distingue monto atribuido y total de la compra original', async () => {
+  readExpenseTransactions.mockResolvedValueOnce({ ...response, data: { ...response.data, total:100000.01, count:1, hasMore:false, transactions:[{id:'split-parent',source:'tc_nacional',fecha:'2026-07-12',descripcion:'Compra repartida ficticia',amount:100000.01,originalAmount:180000.02,isSplit:true}] } });
+  render(<ExpenseDetailDrawer selection={selection} scope={scope} onClose={jest.fn()} />);
+  expect(await screen.findByText('Compra repartida ficticia')).toBeInTheDocument();
+  expect(screen.getByText(/Total original: \$180\.000,02/)).toBeInTheDocument();
+  expect(screen.getAllByText('$100.000,01')).toHaveLength(2);
+});

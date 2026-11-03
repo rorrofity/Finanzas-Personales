@@ -1,5 +1,7 @@
 const Transaction = require('../models/Transaction');
 const db = require('../config/database');
+const { attachSplits } = require('../services/expenseSplitService');
+const { respondToSplitConstraint } = require('../utils/expenseSplitError');
 const csv = require('csv-parse');
 const { Readable } = require('stream');
 const iconv = require('iconv-lite');
@@ -851,7 +853,7 @@ const getAllTransactions = async (req, res) => {
       periodYear ? parseInt(periodYear, 10) : null,
       periodMonth ? parseInt(periodMonth, 10) : null
     );
-    res.json(transactions);
+    res.json(await attachSplits(userId, 'tc_nacional', transactions));
   } catch (error) {
     console.error('Error en getAllTransactions:', error);
     res.status(500).json({ error: error.message });
@@ -952,6 +954,7 @@ const updateTransaction = async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (error) {
+    if (respondToSplitConstraint(error, res)) return;
     console.error('Error updating transaction:', error);
     res.status(500).json({ error: 'Error al actualizar la transacción' });
   }
@@ -980,6 +983,7 @@ const updateTransactionCategory = async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (error) {
+    if (respondToSplitConstraint(error, res)) return;
     console.error('Error updating transaction category:', error);
     res.status(500).json({ error: 'Error al actualizar la categoría de la transacción' });
   }

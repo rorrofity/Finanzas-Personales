@@ -45,6 +45,8 @@ import StatCard from '../components/ui/StatCard';
 import FintocCheckingPreview from '../components/FintocCheckingPreview';
 import FintocBankBalance from '../components/FintocBankBalance';
 import UncategorizedFilter, { isUncategorized } from '../components/UncategorizedFilter';
+import ExpenseSplitControl from '../components/ExpenseSplitControl';
+import { hasExpenseSplit, matchesExpenseCategory } from '../utils/expenseSplits';
 
 const currency = (v) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(Number(v || 0));
 
@@ -120,7 +122,7 @@ export default function Checking() {
   const onlyUncategorized = filter.category_id === 'uncategorized';
   const filteredRows = useMemo(() => typeFilteredRows.filter(r => {
     if (filter.category_id === 'uncategorized') return isUncategorized(r);
-    return !filter.category_id || String(r.category_id) === String(filter.category_id);
+    return matchesExpenseCategory(r, filter.category_id);
   }), [typeFilteredRows, filter.category_id]);
 
   useEffect(() => { setPage(0); }, [year, month, scope]);
@@ -143,7 +145,7 @@ export default function Checking() {
     setOpenMove(true);
   };
   const openEditMove = (row) => {
-    if (!canEdit) return;
+    if (!canEdit || hasExpenseSplit(row)) return;
     setMoveForm({ id: row.id, fecha: row.fecha?.split('T')[0] || row.fecha, descripcion: row.descripcion, tipo: row.tipo, amount: String(row.amount), category_id: row.category_id || '', notas: row.notas || '' });
     setOpenMove(true);
   };
@@ -182,7 +184,7 @@ export default function Checking() {
 
   // Actualizar categoría inline
   const handleCategoryChange = async (transactionId, newCategoryId) => {
-    if (!canEdit) return;
+    if (!canEdit || hasExpenseSplit(rows.find(row => row.id === transactionId))) return;
     try {
       await axios.put(`/api/checking/${transactionId}`, { category_id: newCategoryId || null });
       // Actualizar localmente sin recargar
@@ -337,6 +339,7 @@ export default function Checking() {
                     <Typography variant="body2" fontWeight={700} sx={{ whiteSpace: 'nowrap' }}>{currency(r.amount)}</Typography>
                   </Box>
                   <Stack spacing={1.25}>
+                    <ExpenseSplitControl source="cuenta_corriente" row={r} categories={categories} canEdit={canEdit} onChange={split => setRows(previous => previous.map(item => item.id === r.id ? { ...item, split } : item))}>
                     <Select
                       size="small"
                       value={r.category_id || ''}
@@ -347,9 +350,10 @@ export default function Checking() {
                       <MenuItem value=""><em>Sin categoría</em></MenuItem>
                       {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
                     </Select>
+                    </ExpenseSplitControl>
                     {!!r.notas && <Typography variant="caption" color="text.secondary">{r.notas}</Typography>}
                     <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button size="small" startIcon={<Edit fontSize="small" />} disabled={!canEdit} onClick={() => openEditMove(r)}>Editar</Button>
+                      <Button size="small" startIcon={<Edit fontSize="small" />} disabled={!canEdit || hasExpenseSplit(r)} onClick={() => openEditMove(r)}>Editar</Button>
                       <Button size="small" color="error" startIcon={<Delete fontSize="small" />} disabled={!canDelete} onClick={() => deleteMove(r)}>Eliminar</Button>
                     </Stack>
                   </Stack>
@@ -386,6 +390,7 @@ export default function Checking() {
                     <TableCell sx={{ textTransform:'capitalize' }}>{r.tipo}</TableCell>
                     <TableCell align="right">{currency(r.amount)}</TableCell>
                     <TableCell>
+                      <ExpenseSplitControl source="cuenta_corriente" row={r} categories={categories} canEdit={canEdit} onChange={split => setRows(previous => previous.map(item => item.id === r.id ? { ...item, split } : item))}>
                       <Select
                         size="small"
                         value={r.category_id || ''}
@@ -401,11 +406,12 @@ export default function Checking() {
                         <MenuItem value=""><em>Sin categoría</em></MenuItem>
                         {categories.map(c => (<MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>))}
                       </Select>
+                      </ExpenseSplitControl>
                     </TableCell>
                     <TableCell>{r.notas || ''}</TableCell>
                     <TableCell align="right">
                       <Tooltip title="Editar">
-                        <IconButton size="small" disabled={!canEdit} onClick={()=>openEditMove(r)}><Edit fontSize="small" /></IconButton>
+                        <IconButton size="small" aria-label="Editar" disabled={!canEdit || hasExpenseSplit(r)} onClick={()=>openEditMove(r)}><Edit fontSize="small" /></IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
                         <IconButton size="small" disabled={!canDelete} onClick={()=>deleteMove(r)}><Delete fontSize="small" /></IconButton>

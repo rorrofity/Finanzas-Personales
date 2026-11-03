@@ -1,5 +1,7 @@
 const Checking = require('../models/Checking');
 const db = require('../config/database');
+const { attachSplits } = require('../services/expenseSplitService');
+const { respondToSplitConstraint } = require('../utils/expenseSplitError');
 const XLSX = require('xlsx');
 
 const model = new Checking(db);
@@ -38,19 +40,19 @@ async function list(req, res) {
     if (recent === 'true') {
       const rows = await model.listRecentMonths(req.user.id, 6);
       const total = rows.length;
-      return res.json({ items: rows, total });
+      return res.json({ items: await attachSplits(req.user.id, 'cuenta_corriente', rows), total });
     }
     
     // Si se especifica año/mes, filtrar por ese período
     if (year && month) {
       const { y, m } = ensureValidPeriod(year, month);
       const rows = await model.list(req.user.id, y, m);
-      return res.json({ items: rows, total: rows.length });
+      return res.json({ items: await attachSplits(req.user.id, 'cuenta_corriente', rows), total: rows.length });
     }
     
     // Default: últimos 6 meses
     const rows = await model.listRecentMonths(req.user.id, 6);
-    return res.json({ items: rows, total: rows.length });
+    return res.json({ items: await attachSplits(req.user.id, 'cuenta_corriente', rows), total: rows.length });
   } catch (e) { res.status(400).json({ error: e.message || 'Error al listar movimientos' }); }
 }
 
@@ -106,7 +108,7 @@ async function update(req, res) {
     if (patch.amount !== undefined) { const a = Number(patch.amount); if (!a || a <= 0) return res.status(400).json({ error: 'Monto debe ser > 0' }); }
     const updated = await model.update(req.user.id, id, patch);
     res.json(updated);
-  } catch (e) { res.status(400).json({ error: e.message || 'Error al actualizar movimiento' }); }
+  } catch (e) { if (respondToSplitConstraint(e, res)) return; res.status(400).json({ error: e.message || 'Error al actualizar movimiento' }); }
 }
 
 async function remove(req, res) {

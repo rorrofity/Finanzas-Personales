@@ -50,6 +50,7 @@ export default function ExpenseDetailDrawer({ selection, scope, onClose }) {
             {(data.transactions || []).map((transaction) => <ListItem key={`${transaction.source}:${transaction.id}`} disableGutters divider sx={{ display: 'block', py: 1.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}><Typography variant="body2" color="text.secondary">{formatDateLocal(transaction.fecha)}</Typography><Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>{formatCLP(transaction.amount)}</Typography></Box>
               <Typography variant="body2" sx={{ my: 0.5, overflowWrap: 'anywhere' }}>{transaction.descripcion}</Typography>
+              {transaction.isSplit && <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }} color="text.secondary">Parte atribuida · Total original: {formatCLP(transaction.originalAmount)}</Typography>}
               <Typography variant="caption" color="text.secondary">{SOURCE_NAMES[transaction.source] || transaction.source}</Typography>
             </ListItem>)}
           </List>

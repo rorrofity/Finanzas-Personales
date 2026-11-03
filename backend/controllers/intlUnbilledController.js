@@ -1,5 +1,7 @@
 const IntlUnbilled = require('../models/IntlUnbilled');
 const db = require('../config/database');
+const { attachSplits } = require('../services/expenseSplitService');
+const { respondToSplitConstraint } = require('../utils/expenseSplitError');
 const path = require('path');
 const fs = require('fs');
 const xlsx = require('xlsx');
@@ -79,7 +81,7 @@ async function listByMonth(req, res) {
     const { year, month } = req.query;
     if (!year || !month) return res.status(400).json({ error: 'Se requiere year y month' });
     const rows = await model.listByMonth(req.user.id, parseInt(year, 10), parseInt(month, 10));
-    res.json(rows);
+    res.json(await attachSplits(req.user.id, 'tc_internacional', rows));
   } catch (e) {
     console.error('intl list error', e);
     res.status(500).json({ error: 'Error al listar transacciones internacionales' });
@@ -128,6 +130,7 @@ async function update(req, res) {
     const updated = await model.update(req.user.id, id, req.body || {});
     res.json(updated);
   } catch (e) {
+    if (respondToSplitConstraint(e, res)) return;
     console.error('intl update error', e);
     res.status(400).json({ error: e.message || 'Error al actualizar' });
   }

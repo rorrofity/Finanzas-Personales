@@ -60,6 +60,8 @@ import CreatedByChip from '../components/CreatedByChip';
 import StatCard from '../components/ui/StatCard';
 import UncategorizedFilter, { isUncategorized } from '../components/UncategorizedFilter';
 import { fetchWithCache } from '../services/readCache';
+import ExpenseSplitControl from '../components/ExpenseSplitControl';
+import { hasExpenseSplit } from '../utils/expenseSplits';
 
 const Transactions = () => {
   const theme = useTheme();
@@ -192,6 +194,7 @@ const Transactions = () => {
   };
 
   const handleOpenDialog = (transaction = null) => {
+    if (transaction && hasExpenseSplit(transaction)) return;
     if (transaction) {
       setSelectedTransaction(transaction);
       setFormData({
@@ -404,6 +407,7 @@ const Transactions = () => {
   };
 
   const handleCategoryChange = async (transactionId, newCategoryId) => {
+    if (hasExpenseSplit(transactions.find(t => t.id === transactionId))) return;
     try {
       const response = await axios.put(`/api/transactions/${transactionId}/category`, {
         category_id: newCategoryId
@@ -442,7 +446,7 @@ const Transactions = () => {
     try {
       // Encontrar la transacción actual
       const transaction = transactions.find(t => t.id === transactionId);
-      if (!transaction) return;
+      if (!transaction || hasExpenseSplit(transaction)) return;
 
       // Enviar todos los campos necesarios
       const response = await axios.put(`/api/transactions/${transactionId}`, {
@@ -725,7 +729,7 @@ const Transactions = () => {
                   .slice(visiblePage * rowsPerPage, visiblePage * rowsPerPage + rowsPerPage)
                   .map((transaction) => (
                     <Card key={transaction.id} variant="outlined" sx={{ 
-                      borderLeft: transaction.category_id ? '4px solid #4caf50' : '4px solid #ff9800',
+                      borderLeft: isUncategorized(transaction) ? '4px solid #ff9800' : '4px solid #4caf50',
                     }}>
                       <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
@@ -754,6 +758,7 @@ const Transactions = () => {
                         </Box>
                         
                         <Stack direction="row" spacing={1} alignItems="center">
+                          <ExpenseSplitControl source="tc_nacional" row={transaction} categories={categoriesList} canEdit={canEdit} disabled={isOffline} onChange={split => setTransactions(previous => previous.map(item => item.id === transaction.id ? { ...item, split } : item))}>
                           <Select
                             size="small"
                             value={transaction.category_id || ''}
@@ -767,18 +772,19 @@ const Transactions = () => {
                               <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>
                             ))}
                           </Select>
+                          </ExpenseSplitControl>
                           <Select
                             size="small"
                             value={transaction.tipo}
                             onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
-                            disabled={writeDisabled}
+                            disabled={writeDisabled || hasExpenseSplit(transaction)}
                             sx={{ minWidth: 90, '& .MuiSelect-select': { py: 0.75 } }}
                           >
                             <MenuItem value="gasto">Gasto</MenuItem>
                             <MenuItem value="pago">Pago</MenuItem>
                             <MenuItem value="desestimar">Desest.</MenuItem>
                           </Select>
-                          <IconButton size="small" onClick={() => handleOpenDialog(transaction)} disabled={writeDisabled} aria-label="Editar">
+                          <IconButton size="small" onClick={() => handleOpenDialog(transaction)} disabled={writeDisabled || hasExpenseSplit(transaction)} aria-label="Editar">
                             <EditIcon fontSize="small" />
                           </IconButton>
                           <IconButton size="small" onClick={() => handleDeleteClick(transaction)} disabled={deleteDisabled} aria-label="Eliminar">
@@ -849,6 +855,7 @@ const Transactions = () => {
                           {formatAmount(transaction.monto)}
                         </TableCell>
                         <TableCell>
+                          <ExpenseSplitControl source="tc_nacional" row={transaction} categories={categoriesList} canEdit={canEdit} disabled={isOffline} onChange={split => setTransactions(previous => previous.map(item => item.id === transaction.id ? { ...item, split } : item))}>
                           <Select
                             size="small"
                             value={transaction.category_id || ''}
@@ -871,13 +878,14 @@ const Transactions = () => {
                               </MenuItem>
                             ))}
                           </Select>
+                          </ExpenseSplitControl>
                         </TableCell>
                         <TableCell>
                           <Select
                             size="small"
                             value={transaction.tipo}
                             onChange={(e) => handleTypeChange(transaction.id, e.target.value)}
-                            disabled={writeDisabled}
+                            disabled={writeDisabled || hasExpenseSplit(transaction)}
                             sx={{
                               minWidth: 100,
                               '& .MuiSelect-select': {
@@ -907,7 +915,7 @@ const Transactions = () => {
                             <IconButton
                               size="small"
                               onClick={() => handleOpenDialog(transaction)}
-                              disabled={writeDisabled}
+                              disabled={writeDisabled || hasExpenseSplit(transaction)}
                               aria-label="Editar"
                             >
                               <EditIcon />
